@@ -3,19 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math.io : Multiplayer Equation Arena</title>
+    <title>Math.io - Multiplayer Equation Arena</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
         body { font-family: 'Kanit', sans-serif; background: #1e272e; color: white; overflow: hidden; }
         canvas { display: block; background: #2f3640; }
         
+        #nameModal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-box {
+            background: #2f3640; padding: 35px; border-radius: 12px; text-align: center;
+            display: flex; flex-direction: column; gap: 15px; border: 3px solid #00cec9; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 90%; max-width: 400px;
+        }
+        .modal-box h2 { color: #ffeaa7; margin-bottom: 5px; }
+        .modal-box input {
+            padding: 12px; font-size: 18px; border-radius: 8px; border: none; text-align: center;
+            font-family: 'Kanit', sans-serif; background: #1e272e; color: white; outline: none; border: 2px solid #636e72;
+        }
+        .modal-box input:focus { border-color: #00cec9; }
+        .modal-box button {
+            padding: 12px; font-size: 18px; font-family: 'Kanit', sans-serif; font-weight: bold;
+            background: #00b894; color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        .modal-box button:hover { background: #55efc4; color: #2d3436; }
+
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
         }
         .header { padding: 20px; display: flex; justify-content: space-between; font-size: 22px; font-weight: bold; }
-        .leaderboard { background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; font-size: 16px; min-width: 180px; pointer-events: auto; }
+        .leaderboard { background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; font-size: 15px; min-width: 200px; pointer-events: auto; }
         
         .bottom-panel {
             background: rgba(47, 54, 64, 0.95); padding: 15px; border-top: 4px solid #00cec9;
@@ -34,7 +55,7 @@
         .tile.eq { background: #74b9ff; color: white; }
 
         .controls { display: flex; gap: 10px; }
-        button { padding: 8px 25px; font-size: 16px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        button.action-btn { padding: 8px 25px; font-size: 16px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
         .btn-submit { background: #00b894; color: white; }
         .btn-clear { background: #fab1a0; color: #2d3436; }
         
@@ -44,6 +65,16 @@
 </head>
 <body>
 
+    <!-- หน้าต่างตั้งชื่อก่อนเข้าเกม -->
+    <div id="nameModal">
+        <div class="modal-box">
+            <h2>🎮 Math.io Arena</h2>
+            <p style="color: #b2bec3; font-size: 14px;">กรอกชื่อตัวละครของคุณเพื่อเริ่มเล่น</p>
+            <input type="text" id="playerNameInput" placeholder="ชื่อตัวละคร..." maxlength="15" autocomplete="off">
+            <button onclick="joinGame()">เข้าสู่สนามประลอง</button>
+        </div>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui-layer">
@@ -52,20 +83,20 @@
             <div class="leaderboard">
                 <h3 style="color: #ffeaa7; margin-bottom: 5px;">🏆 อันดับผู้เล่น</h3>
                 <ol id="leaderboardList"></ol>
-                <div style="font-size: 12px; color: #aaa; margin-top: 5px;">ควบคุมด้วยปุ่ม W A S D</div>
+                <div style="font-size: 12px; color: #aaa; margin-top: 5px;">ควบคุมด้วย W A S D / ลูกศร</div>
             </div>
         </div>
 
-        <div class="sys-msg" id="sysMsg">ข้อความแจ้งเตือน</div>
+        <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
 
         <div class="bottom-panel">
-            <div style="font-size: 13px; color: #b2bec3;">คลิกเบี้ยเพื่อนำมาต่อสมการ (ต้องมีเครื่องหมาย =)</div>
+            <div style="font-size: 13px; color: #b2bec3;">คลิกเบี้ยในกระเป๋าเพื่อนำมาต่อสมการ (ต้องมีเครื่องหมาย =)</div>
             <div class="equation-area" id="equationZone"></div>
             <div class="controls">
-                <button class="btn-clear" onclick="returnTiles()">ดึงเบี้ยกลับ</button>
-                <button class="btn-submit" onclick="sendEquation()">ส่งสมการตรวจ!</button>
+                <button class="action-btn btn-clear" onclick="returnTiles()">ดึงเบี้ยกลับ</button>
+                <button class="action-btn btn-submit" onclick="sendEquation()">ส่งสมการตรวจ!</button>
             </div>
-            <div style="font-size: 13px; color: #b2bec3;">กระเป๋าเบี้ยของคุณ (เดินชนเบี้ยเพื่อเก็บ)</div>
+            <div style="font-size: 13px; color: #b2bec3;">กระเป๋าเบี้ย (เดินชนเบี้ยบนแผนที่เพื่อเก็บ)</div>
             <div class="inventory-area" id="inventoryZone"></div>
         </div>
     </div>
@@ -92,16 +123,31 @@
         let inventory = [];
         let equation = [];
         let myScore = 0;
+        let gameStarted = false;
 
         const keys = { w: false, a: false, s: false, d: false };
-        window.addEventListener('keydown', e => setKey(e.key, true));
-        window.addEventListener('keyup', e => setKey(e.key, false));
+        window.addEventListener('keydown', e => {
+            if(!gameStarted) return;
+            setKey(e.key, true);
+        });
+        window.addEventListener('keyup', e => {
+            if(!gameStarted) return;
+            setKey(e.key, false);
+        });
         function setKey(k, state) {
             k = k.toLowerCase();
             if (k === 'w' || k === 'arrowup') keys.w = state;
             if (k === 's' || k === 'arrowdown') keys.s = state;
             if (k === 'a' || k === 'arrowleft') keys.a = state;
             if (k === 'd' || k === 'arrowright') keys.d = state;
+        }
+
+        function joinGame() {
+            const input = document.getElementById('playerNameInput').value.trim();
+            const playerName = input || 'นักคณิตฝึกหัด';
+            socket.emit('setName', playerName);
+            document.getElementById('nameModal').style.display = 'none';
+            gameStarted = true;
         }
 
         socket.on('initGame', (data) => {
@@ -144,8 +190,7 @@
             let list = Object.values(allPlayers).sort((a,b) => b.score - a.score);
             let html = '';
             list.slice(0, 5).forEach((p, i) => {
-                let isMe = (p.socketId === myId);
-                html += `<li>${i+1}. ผู้เล่น (${p.score})</li>`;
+                html += `<li>${i+1}. ${p.name} (${p.score} แต้ม)</li>`;
             });
             document.getElementById('leaderboardList').innerHTML = html;
         });
@@ -198,9 +243,8 @@
             setTimeout(() => msg.classList.remove('show'), 2000);
         }
 
-        // Main Loop
         function gameLoop() {
-            if (myId && players[myId]) {
+            if (gameStarted && myId && players[myId]) {
                 let p = players[myId];
                 let dx = 0, dy = 0, speed = 4;
                 if (keys.w) dy -= speed;
@@ -212,7 +256,6 @@
                     socket.emit('move', { x: p.x + dx, y: p.y + dy });
                 }
 
-                // กล้องติดตามผู้เล่น
                 let camX = p.x - width / 2;
                 let camY = p.y - height / 2;
 
@@ -220,7 +263,7 @@
                 ctx.save();
                 ctx.translate(-camX, -camY);
 
-                // วาดขอบเขตแผนที่
+                // ขอบเขตแผนที่
                 ctx.strokeStyle = '#636e72'; ctx.lineWidth = 6;
                 ctx.strokeRect(0, 0, 1500, 1500);
 
@@ -232,12 +275,19 @@
                     ctx.fillStyle = '#2d3436'; ctx.fillText(t.char, t.x, t.y);
                 });
 
-                // วาดผู้เล่นทุกคน
+                // วาดผู้เล่นทุกคนและชื่อเหนือหัว
                 for (let id in players) {
                     let pl = players[id];
+                    // วงกลมตัวละคร
                     ctx.fillStyle = pl.color;
                     ctx.beginPath(); ctx.arc(pl.x, pl.y, 20, 0, Math.PI * 2); ctx.fill();
                     ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+
+                    // ป้ายชื่อตัวละคร
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 15px Kanit';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(pl.name, pl.x, pl.y - 30);
                 }
 
                 ctx.restore();
