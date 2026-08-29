@@ -10,8 +10,10 @@ app.use(express.static('public'));
 
 const players = {};
 const tiles = [];
+const mysteryBoxes = [];
 
 for (let i = 0; i < 45; i++) spawnTile();
+for (let i = 0; i < 10; i++) spawnMysteryBox();
 
 function spawnTile() {
     const types = [
@@ -31,44 +33,81 @@ function spawnTile() {
     });
 }
 
+function spawnMysteryBox() {
+    mysteryBoxes.push({
+        id: Math.random().toString(36).substr(2, 9),
+        x: Math.random() * 1400 + 50,
+        y: Math.random() * 1400 + 50
+    });
+}
+
 io.on('connection', (socket) => {
     console.log('Player connected:', socket.id);
 
     players[socket.id] = {
         socketId: socket.id,
         name: 'ผู้เล่นนิรนาม',
+        avatar: 'hero',
+        outfitColor: '#3498db',
+        hat: 'none',
         x: 750,
         y: 750,
         score: 0,
-        color: `hsl(${Math.random() * 360}, 100%, 50%)`
+        isMoving: false
     };
 
-    socket.emit('initGame', { id: socket.id, tiles });
+    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes });
 
-    socket.on('setName', (name) => {
+    socket.on('setupPlayer', (data) => {
         if (players[socket.id]) {
-            players[socket.id].name = name ? name.substring(0, 15) : 'ผู้เล่นนิรนาม';
+            players[socket.id].name = data.name ? data.name.substring(0, 15) : 'ผู้เล่นนิรนาม';
+            players[socket.id].avatar = data.avatar || 'hero';
+            players[socket.id].outfitColor = data.outfitColor || '#3498db';
+            players[socket.id].hat = data.hat || 'none';
             io.emit('updateLeaderboard', players);
         }
     });
 
     socket.on('move', (data) => {
         if (players[socket.id]) {
-            players[socket.id].x = Math.max(20, Math.min(1480, data.x));
-            players[socket.id].y = Math.max(20, Math.min(1480, data.y));
+            players[socket.id].x = Math.max(25, Math.min(1475, data.x));
+            players[socket.id].y = Math.max(25, Math.min(1475, data.y));
+            players[socket.id].isMoving = data.isMoving;
 
+            // ตรวจสอบการเก็บเบี้ย
             for (let i = tiles.length - 1; i >= 0; i--) {
                 let dx = players[socket.id].x - tiles[i].x;
                 let dy = players[socket.id].y - tiles[i].y;
                 if (Math.hypot(dx, dy) < 35) {
                     let collectedTile = tiles[i];
                     tiles.splice(i, 1);
-
                     io.emit('tileRemoved', collectedTile.id);
                     socket.emit('tileCollected', collectedTile);
-
                     spawnTile();
                     io.emit('newTile', tiles[tiles.length - 1]);
+                }
+            }
+
+            // ตรวจสอบการชนกล่องปริศนา
+            for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
+                let dx = players[socket.id].x - mysteryBoxes[i].x;
+                let dy = players[socket.id].y - mysteryBoxes[i].y;
+                if (Math.hypot(dx, dy) < 35) {
+                    let box = mysteryBoxes[i];
+                    mysteryBoxes.splice(i, 1);
+                    io.emit('mysteryBoxRemoved', box.id);
+                    
+                    // สร้างโจทย์เลขสุ่มสำหรับกล่องปริศนา
+                    let n1 = Math.floor(Math.random() * 15) + 1;
+                    let n2 = Math.floor(Math.random() * 15) + 1;
+                    let ops = ['+', '-', '*'];
+                    let op = ops[Math.floor(Math.random() * ops.length)];
+                    let ans = eval(`${n1} ${op} ${n2}`);
+                    
+                    socket.emit('openMysteryBox', { q: `${n1} ${op} ${n2} = ?`, ans: ans });
+
+                    spawnMysteryBox();
+                    io.emit('newMysteryBox', mysteryBoxes[mysteryBoxes.length - 1]);
                 }
             }
         }
@@ -82,7 +121,7 @@ io.on('connection', (socket) => {
                 let right = eval(parts[1].replace(/\b0+(\d)/g, '$1'));
 
                 if (left === right) {
-                    players[socket.id].score += eqStr.length * 10;
+                    players[socket.id].score += eqStr.length * 15;
                     socket.emit('equationResult', { success: true, score: players[socket.id].score });
                     io.emit('updateLeaderboard', players);
                 } else {
@@ -93,6 +132,18 @@ io.on('connection', (socket) => {
             }
         } catch (e) {
             socket.emit('equationResult', { success: false, msg: "โครงสร้างทางคณิตศาสตร์ผิดพลาด" });
+        }
+    });
+
+    socket.on('submitMysteryAnswer', (data) => {
+        if (players[socket.id]) {
+            if (parseInt(data.userAns) === parseInt(data.correctAns)) {
+                players[socket.id].score += 50; // โบนัส 50 แต้ม
+                socket.emit('mysteryResult', { success: true, reward: 50 });
+                io.emit('updateLeaderboard', players);
+            } else {
+                socket.emit('mysteryResult', { success: false });
+            }
         }
     });
 
