@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math.io : Multiplayer Equation Arena</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
+        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+        body { font-family: 'Kanit', sans-serif; background: #1e272e; color: white; overflow: hidden; }
+        canvas { display: block; background: #2f3640; }
+        
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .header { padding: 20px; display: flex; justify-content: space-between; font-size: 22px; font-weight: bold; }
+        .leaderboard { background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; font-size: 16px; min-width: 180px; pointer-events: auto; }
+        
+        .bottom-panel {
+            background: rgba(47, 54, 64, 0.95); padding: 15px; border-top: 4px solid #00cec9;
+            pointer-events: auto; display: flex; flex-direction: column; gap: 10px; align-items: center;
+        }
+        .equation-area { background: #1e272e; width: 80%; min-height: 55px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 2px dashed #00cec9; padding: 5px; }
+        .inventory-area { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; min-height: 45px; width: 100%; }
+
+        .tile {
+            width: 40px; height: 45px; font-size: 22px; font-weight: bold; display: flex; justify-content: center; align-items: center;
+            border-radius: 6px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,0.3); transition: 0.1s;
+        }
+        .tile:active { transform: translateY(4px); box-shadow: none; }
+        .tile.num { background: #ffeaa7; color: #2d3436; }
+        .tile.op { background: #ff7675; color: white; }
+        .tile.eq { background: #74b9ff; color: white; }
+
+        .controls { display: flex; gap: 10px; }
+        button { padding: 8px 25px; font-size: 16px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-submit { background: #00b894; color: white; }
+        .btn-clear { background: #fab1a0; color: #2d3436; }
+        
+        .sys-msg { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); font-size: 24px; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); opacity: 0; transition: 0.3s; }
+        .sys-msg.show { opacity: 1; top: 12%; }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="header">
+            <div style="color: #00cec9;">คะแนนสะสม: <span id="scoreDisplay">0</span></div>
+            <div class="leaderboard">
+                <h3 style="color: #ffeaa7; margin-bottom: 5px;">🏆 อันดับผู้เล่น</h3>
+                <ol id="leaderboardList"></ol>
+                <div style="font-size: 12px; color: #aaa; margin-top: 5px;">ควบคุมด้วยปุ่ม W A S D</div>
+            </div>
+        </div>
+
+        <div class="sys-msg" id="sysMsg">ข้อความแจ้งเตือน</div>
+
+        <div class="bottom-panel">
+            <div style="font-size: 13px; color: #b2bec3;">คลิกเบี้ยเพื่อนำมาต่อสมการ (ต้องมีเครื่องหมาย =)</div>
+            <div class="equation-area" id="equationZone"></div>
+            <div class="controls">
+                <button class="btn-clear" onclick="returnTiles()">ดึงเบี้ยกลับ</button>
+                <button class="btn-submit" onclick="sendEquation()">ส่งสมการตรวจ!</button>
+            </div>
+            <div style="font-size: 13px; color: #b2bec3;">กระเป๋าเบี้ยของคุณ (เดินชนเบี้ยเพื่อเก็บ)</div>
+            <div class="inventory-area" id="inventoryZone"></div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let myId = null;
+        let players = {};
+        let tiles = [];
+        let inventory = [];
+        let equation = [];
+        let myScore = 0;
+
+        const keys = { w: false, a: false, s: false, d: false };
+        window.addEventListener('keydown', e => setKey(e.key, true));
+        window.addEventListener('keyup', e => setKey(e.key, false));
+        function setKey(k, state) {
+            k = k.toLowerCase();
+            if (k === 'w' || k === 'arrowup') keys.w = state;
+            if (k === 's' || k === 'arrowdown') keys.s = state;
+            if (k === 'a' || k === 'arrowleft') keys.a = state;
+            if (k === 'd' || k === 'arrowright') keys.d = state;
+        }
+
+        socket.on('initGame', (data) => {
+            myId = data.id;
+            tiles = data.tiles;
+        });
+
+        socket.on('stateUpdate', (serverPlayers) => {
+            players = serverPlayers;
+            if(players[myId]) {
+                myScore = players[myId].score;
+                document.getElementById('scoreDisplay').innerText = myScore;
+            }
+        });
+
+        socket.on('tileCollected', (tile) => {
+            inventory.push(tile);
+            renderUI();
+        });
+
+        socket.on('tileRemoved', (id) => {
+            tiles = tiles.filter(t => t.id !== id);
+        });
+
+        socket.on('newTile', (tile) => {
+            tiles.push(tile);
+        });
+
+        socket.on('equationResult', (res) => {
+            if (res.success) {
+                showMsg("🎉 สมการถูกต้อง! ได้รับแต้มเพิ่ม", "#00b894");
+                equation = [];
+                renderUI();
+            } else {
+                showMsg("❌ " + res.msg, "#ff7675");
+            }
+        });
+
+        socket.on('updateLeaderboard', (allPlayers) => {
+            let list = Object.values(allPlayers).sort((a,b) => b.score - a.score);
+            let html = '';
+            list.slice(0, 5).forEach((p, i) => {
+                let isMe = (p.socketId === myId);
+                html += `<li>${i+1}. ผู้เล่น (${p.score})</li>`;
+            });
+            document.getElementById('leaderboardList').innerHTML = html;
+        });
+
+        function renderUI() {
+            const invZone = document.getElementById('inventoryZone');
+            const eqZone = document.getElementById('equationZone');
+            invZone.innerHTML = ''; eqZone.innerHTML = '';
+
+            inventory.forEach((tile, index) => {
+                let el = document.createElement('div');
+                el.className = `tile ${tile.type}`;
+                el.innerText = tile.char;
+                el.onclick = () => {
+                    equation.push(inventory.splice(index, 1)[0]);
+                    renderUI();
+                };
+                invZone.appendChild(el);
+            });
+
+            equation.forEach((tile, index) => {
+                let el = document.createElement('div');
+                el.className = `tile ${tile.type}`;
+                el.innerText = tile.char;
+                el.onclick = () => {
+                    inventory.push(equation.splice(index, 1)[0]);
+                    renderUI();
+                };
+                eqZone.appendChild(el);
+            });
+        }
+
+        function returnTiles() {
+            inventory = inventory.concat(equation);
+            equation = [];
+            renderUI();
+        }
+
+        function sendEquation() {
+            if (equation.length === 0) return;
+            let eqStr = equation.map(t => t.char).join('');
+            socket.emit('submitEquation', eqStr);
+        }
+
+        function showMsg(text, color) {
+            const msg = document.getElementById('sysMsg');
+            msg.innerText = text;
+            msg.style.color = color;
+            msg.classList.add('show');
+            setTimeout(() => msg.classList.remove('show'), 2000);
+        }
+
+        // Main Loop
+        function gameLoop() {
+            if (myId && players[myId]) {
+                let p = players[myId];
+                let dx = 0, dy = 0, speed = 4;
+                if (keys.w) dy -= speed;
+                if (keys.s) dy += speed;
+                if (keys.a) dx -= speed;
+                if (keys.d) dx += speed;
+
+                if (dx !== 0 || dy !== 0) {
+                    socket.emit('move', { x: p.x + dx, y: p.y + dy });
+                }
+
+                // กล้องติดตามผู้เล่น
+                let camX = p.x - width / 2;
+                let camY = p.y - height / 2;
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.save();
+                ctx.translate(-camX, -camY);
+
+                // วาดขอบเขตแผนที่
+                ctx.strokeStyle = '#636e72'; ctx.lineWidth = 6;
+                ctx.strokeRect(0, 0, 1500, 1500);
+
+                // วาดเบี้ยบนพื้น
+                ctx.font = '20px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                tiles.forEach(t => {
+                    ctx.fillStyle = t.type === 'num' ? '#ffeaa7' : (t.type === 'op' ? '#ff7675' : '#74b9ff');
+                    ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#2d3436'; ctx.fillText(t.char, t.x, t.y);
+                });
+
+                // วาดผู้เล่นทุกคน
+                for (let id in players) {
+                    let pl = players[id];
+                    ctx.fillStyle = pl.color;
+                    ctx.beginPath(); ctx.arc(pl.x, pl.y, 20, 0, Math.PI * 2); ctx.fill();
+                    ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        gameLoop();
+    </script>
+</body>
+</html>
