@@ -11,9 +11,11 @@ app.use(express.static('public'));
 const players = {};
 const tiles = [];
 const mysteryBoxes = [];
+const MAP_SIZE = 4000; // ขยายแผนที่เป็น 4000x4000 สำหรับ 80 คน
 
-for (let i = 0; i < 45; i++) spawnTile();
-for (let i = 0; i < 10; i++) spawnMysteryBox();
+// เพิ่มจำนวนเบี้ยและกล่องให้สมกับแผนที่ใหญ่
+for (let i = 0; i < 150; i++) spawnTile();
+for (let i = 0; i < 35; i++) spawnMysteryBox();
 
 function spawnTile() {
     const types = [
@@ -26,8 +28,8 @@ function spawnTile() {
 
     tiles.push({
         id: Math.random().toString(36).substr(2, 9),
-        x: Math.random() * 1400 + 50,
-        y: Math.random() * 1400 + 50,
+        x: Math.random() * (MAP_SIZE - 200) + 100,
+        y: Math.random() * (MAP_SIZE - 200) + 100,
         char: selected.char,
         type: selected.t
     });
@@ -36,8 +38,8 @@ function spawnTile() {
 function spawnMysteryBox() {
     mysteryBoxes.push({
         id: Math.random().toString(36).substr(2, 9),
-        x: Math.random() * 1400 + 50,
-        y: Math.random() * 1400 + 50
+        x: Math.random() * (MAP_SIZE - 200) + 100,
+        y: Math.random() * (MAP_SIZE - 200) + 100
     });
 }
 
@@ -46,21 +48,21 @@ io.on('connection', (socket) => {
 
     players[socket.id] = {
         socketId: socket.id,
-        name: 'ผู้เล่นนิรนาม',
+        name: 'จอมเวทย์ฝึกหัด',
         avatar: 'hero',
         outfitColor: '#3498db',
         hat: 'none',
-        x: 750,
-        y: 750,
+        x: MAP_SIZE / 2,
+        y: MAP_SIZE / 2,
         score: 0,
         isMoving: false
     };
 
-    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes });
+    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE });
 
     socket.on('setupPlayer', (data) => {
         if (players[socket.id]) {
-            players[socket.id].name = data.name ? data.name.substring(0, 15) : 'ผู้เล่นนิรนาม';
+            players[socket.id].name = data.name ? data.name.substring(0, 15) : 'จอมเวทย์ฝึกหัด';
             players[socket.id].avatar = data.avatar || 'hero';
             players[socket.id].outfitColor = data.outfitColor || '#3498db';
             players[socket.id].hat = data.hat || 'none';
@@ -70,15 +72,15 @@ io.on('connection', (socket) => {
 
     socket.on('move', (data) => {
         if (players[socket.id]) {
-            players[socket.id].x = Math.max(25, Math.min(1475, data.x));
-            players[socket.id].y = Math.max(25, Math.min(1475, data.y));
+            players[socket.id].x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
+            players[socket.id].y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
             players[socket.id].isMoving = data.isMoving;
 
             // ตรวจสอบการเก็บเบี้ย
             for (let i = tiles.length - 1; i >= 0; i--) {
                 let dx = players[socket.id].x - tiles[i].x;
                 let dy = players[socket.id].y - tiles[i].y;
-                if (Math.hypot(dx, dy) < 35) {
+                if (Math.hypot(dx, dy) < 40) {
                     let collectedTile = tiles[i];
                     tiles.splice(i, 1);
                     io.emit('tileRemoved', collectedTile.id);
@@ -88,18 +90,17 @@ io.on('connection', (socket) => {
                 }
             }
 
-            // ตรวจสอบการชนกล่องปริศนา
+            // ตรวจสอบการเก็บกล่องปริศนา
             for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
                 let dx = players[socket.id].x - mysteryBoxes[i].x;
                 let dy = players[socket.id].y - mysteryBoxes[i].y;
-                if (Math.hypot(dx, dy) < 35) {
+                if (Math.hypot(dx, dy) < 40) {
                     let box = mysteryBoxes[i];
                     mysteryBoxes.splice(i, 1);
                     io.emit('mysteryBoxRemoved', box.id);
                     
-                    // สร้างโจทย์เลขสุ่มสำหรับกล่องปริศนา
-                    let n1 = Math.floor(Math.random() * 15) + 1;
-                    let n2 = Math.floor(Math.random() * 15) + 1;
+                    let n1 = Math.floor(Math.random() * 20) + 1;
+                    let n2 = Math.floor(Math.random() * 20) + 1;
                     let ops = ['+', '-', '*'];
                     let op = ops[Math.floor(Math.random() * ops.length)];
                     let ans = eval(`${n1} ${op} ${n2}`);
@@ -138,8 +139,8 @@ io.on('connection', (socket) => {
     socket.on('submitMysteryAnswer', (data) => {
         if (players[socket.id]) {
             if (parseInt(data.userAns) === parseInt(data.correctAns)) {
-                players[socket.id].score += 50; // โบนัส 50 แต้ม
-                socket.emit('mysteryResult', { success: true, reward: 50 });
+                players[socket.id].score += 60;
+                socket.emit('mysteryResult', { success: true });
                 io.emit('updateLeaderboard', players);
             } else {
                 socket.emit('mysteryResult', { success: false });
