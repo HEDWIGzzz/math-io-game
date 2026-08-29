@@ -11,7 +11,7 @@ app.use(express.static('public'));
 const players = {};
 const tiles = [];
 
-for (let i = 0; i < 40; i++) spawnTile();
+for (let i = 0; i < 45; i++) spawnTile();
 
 function spawnTile() {
     const types = [
@@ -45,7 +45,6 @@ io.on('connection', (socket) => {
 
     socket.emit('initGame', { id: socket.id, tiles });
 
-    // รับชื่อที่ผู้เล่นตั้ง
     socket.on('setName', (name) => {
         if (players[socket.id]) {
             players[socket.id].name = name ? name.substring(0, 15) : 'ผู้เล่นนิรนาม';
@@ -61,7 +60,7 @@ io.on('connection', (socket) => {
             for (let i = tiles.length - 1; i >= 0; i--) {
                 let dx = players[socket.id].x - tiles[i].x;
                 let dy = players[socket.id].y - tiles[i].y;
-                if (Math.hypot(dx, dy) < 30) {
+                if (Math.hypot(dx, dy) < 35) {
                     let collectedTile = tiles[i];
                     tiles.splice(i, 1);
 
