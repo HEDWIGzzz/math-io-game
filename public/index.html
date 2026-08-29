@@ -3,47 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - RPG Math Arena</title>
+    <title>Math.io - Magical Castle Arena</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Kanit', sans-serif; background: #1e272e; color: white; overflow: hidden; width: 100vw; height: 100vh; }
-        canvas { display: block; background: #2f3640; width: 100%; height: 100%; }
+        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; }
+        canvas { display: block; background: #151328; width: 100%; height: 100%; }
         
         #nameModal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 100;
+            background: rgba(10, 8, 20, 0.9); display: flex; justify-content: center; align-items: center; z-index: 100;
         }
         .modal-box {
-            background: #2f3640; padding: 25px; border-radius: 12px; text-align: center;
-            display: flex; flex-direction: column; gap: 12px; border: 3px solid #00cec9; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            background: #221e3f; padding: 30px; border-radius: 15px; text-align: center;
+            display: flex; flex-direction: column; gap: 14px; border: 3px solid #9b59b6; box-shadow: 0 0 40px rgba(155, 89, 182, 0.4);
             width: 90%; max-width: 400px;
         }
-        .modal-box h2 { color: #ffeaa7; }
+        .modal-box h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
         .modal-box input, .modal-box select {
-            padding: 10px; font-size: 16px; border-radius: 8px; border: 2px solid #636e72; text-align: center;
-            font-family: 'Kanit', sans-serif; background: #1e272e; color: white; outline: none; width: 100%;
+            padding: 12px; font-size: 16px; border-radius: 8px; border: 2px solid #9b59b6; text-align: center;
+            font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%;
         }
-        .modal-box label { font-size: 14px; color: #b2bec3; text-align: left; }
+        .modal-box label { font-size: 14px; color: #d7bde2; text-align: left; }
         .modal-box button {
             padding: 12px; font-size: 18px; font-family: 'Kanit', sans-serif; font-weight: bold;
-            background: #00b894; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px;
+            background: linear-gradient(135deg, #8e44ad, #3498db); color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
         }
 
-        /* กล่องปริศนา Modal */
         #mysteryModal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 150;
+            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 150;
         }
         .mystery-box {
-            background: #2f3640; padding: 30px; border-radius: 15px; text-align: center;
-            border: 4px solid #f1c40f; box-shadow: 0 0 30px rgba(241, 196, 15, 0.5); width: 90%; max-width: 350px;
+            background: #221e3f; padding: 30px; border-radius: 15px; text-align: center;
+            border: 4px solid #f39c12; box-shadow: 0 0 35px rgba(243, 156, 18, 0.6); width: 90%; max-width: 350px;
             display: flex; flex-direction: column; gap: 15px;
         }
-        .mystery-box h2 { color: #f1c40f; }
+        .mystery-box h2 { color: #f39c12; }
         .mystery-box input {
-            padding: 12px; font-size: 22px; border-radius: 8px; border: 2px solid #f1c40f; text-align: center;
-            font-family: 'Kanit', sans-serif; background: #1e272e; color: white; outline: none;
+            padding: 12px; font-size: 24px; border-radius: 8px; border: 2px solid #f39c12; text-align: center;
+            font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none;
         }
 
         #ui-layer {
@@ -51,41 +51,41 @@
             pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
         }
         .header { padding: 15px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; }
-        .leaderboard { background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; font-size: 14px; min-width: 160px; pointer-events: auto; }
+        .leaderboard { background: rgba(21, 19, 40, 0.85); border: 2px solid #9b59b6; padding: 10px 15px; border-radius: 10px; font-size: 14px; min-width: 180px; pointer-events: auto; }
         
         .bottom-panel {
-            background: rgba(47, 54, 64, 0.95); padding: 10px 15px; border-top: 4px solid #00cec9;
+            background: rgba(21, 19, 40, 0.95); padding: 12px 15px; border-top: 4px solid #9b59b6;
             pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center;
         }
-        .equation-area { background: #1e272e; width: 100%; max-width: 600px; min-height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 2px dashed #00cec9; padding: 5px; }
+        .equation-area { background: #151328; width: 100%; max-width: 650px; min-height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 2px dashed #9b59b6; padding: 5px; }
         .inventory-area { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; min-height: 40px; width: 100%; }
 
         .tile {
             width: 36px; height: 40px; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center;
-            border-radius: 6px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.3);
+            border-radius: 6px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.4);
         }
-        .tile.num { background: #ffeaa7; color: #2d3436; }
-        .tile.op { background: #ff7675; color: white; }
-        .tile.eq { background: #74b9ff; color: white; }
+        .tile.num { background: #f1c40f; color: #2d3436; }
+        .tile.op { background: #e74c3c; color: white; }
+        .tile.eq { background: #3498db; color: white; }
 
         .controls { display: flex; gap: 10px; }
         button.action-btn { padding: 6px 20px; font-size: 15px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
-        .btn-submit { background: #00b894; color: white; }
-        .btn-clear { background: #fab1a0; color: #2d3436; }
+        .btn-submit { background: #2ecc71; color: white; }
+        .btn-clear { background: #e67e22; color: white; }
         
-        .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
+        .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
         #mobileDpad {
-            position: absolute; bottom: 150px; left: 20px; width: 130px; height: 130px;
+            position: absolute; bottom: 160px; left: 20px; width: 130px; height: 130px;
             pointer-events: auto; display: none; z-index: 50;
         }
         .d-btn {
-            position: absolute; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.5);
+            position: absolute; background: rgba(155, 89, 182, 0.3); border: 2px solid rgba(155, 89, 182, 0.7);
             border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center;
             font-size: 20px; font-weight: bold; color: white;
         }
-        .d-btn:active { background: rgba(0,206,201,0.6); }
+        .d-btn:active { background: rgba(155, 89, 182, 0.8); }
         #btnUp { top: 0; left: 42px; }
         #btnDown { bottom: 0; left: 42px; }
         #btnLeft { top: 42px; left: 0; }
@@ -96,47 +96,47 @@
 </head>
 <body>
 
-    <!-- หน้าต่างสร้างตัวละครและแต่งตัว -->
+    <!-- หน้าต่างสร้างตัวละคร -->
     <div id="nameModal">
         <div class="modal-box">
-            <h2>🛡️ สร้างตัวละคร</h2>
+            <h2>🏰 ห้องโถงปราสาทเวทมนตร์</h2>
             <div>
-                <label>ชื่อตัวละคร</label>
-                <input type="text" id="playerNameInput" placeholder="กรอกชื่อ..." maxlength="15" autocomplete="off">
+                <label>ฉายาจอมเวทย์</label>
+                <input type="text" id="playerNameInput" placeholder="ชื่อจอมเวทย์ของคุณ..." maxlength="15" autocomplete="off">
             </div>
             <div>
-                <label>เลือกคลาสตัวละคร</label>
+                <label>สายเวทมนตร์</label>
                 <select id="playerAvatar">
-                    <option value="hero">🦸‍♂️ นักรบผู้กล้า</option>
-                    <option value="wizard">🧙‍♂️ นักเวทย์ฝึกหัด</option>
-                    <option value="robot">🤖 หุ่นยนต์จักรกล</option>
+                    <option value="hero">⚔️ อัศวินผู้พิทักษ์</option>
+                    <option value="wizard">🧙‍♂️ จอมเวทย์โบราณ</option>
+                    <option value="robot">🔮 โกลมเวทมนตร์</option>
                 </select>
             </div>
             <div>
-                <label>สีชุดเสื้อผ้า</label>
-                <input type="color" id="playerColor" value="#3498db" style="height: 40px; cursor: pointer;">
+                <label>สีเสื้อคลุมเวท</label>
+                <input type="color" id="playerColor" value="#9b59b6" style="height: 40px; cursor: pointer;">
             </div>
             <div>
-                <label>หมวก / เครื่องประดับ</label>
+                <label>หมวกเวทมนตร์</label>
                 <select id="playerHat">
                     <option value="none">ไม่มีหมวก</option>
-                    <option value="crown">👑 มงกุฎราชา</option>
-                    <option value="wizard_hat">🎩 หมวกพ่อมด</option>
-                    <option value="cap">🧢 หมวกแก๊ป</option>
+                    <option value="crown">👑 มงกุฎแห่งราชา</option>
+                    <option value="wizard_hat">🎩 หมวกพ่อมดมนตรา</option>
+                    <option value="cap">🪖 หมวกเกราะอัศวิน</option>
                 </select>
             </div>
-            <button onclick="joinGame()">เข้าสู่สนามรบ</button>
+            <button onclick="joinGame()">เข้าสู่ปราสาท (รองรับ 80 คน)</button>
         </div>
     </div>
 
-    <!-- หน้าต่างแก้โจทย์กล่องปริศนา -->
+    <!-- หน้าต่างกล่องปริศนาเวทมนตร์ -->
     <div id="mysteryModal">
         <div class="mystery-box">
-            <h2>🎁 กล่องปริศนาคณิตศาสตร์!</h2>
-            <p style="font-size: 16px; color: #b2bec3;">แก้โจทย์นี้เพื่อรับ +50 คะแนน</p>
-            <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #ffeaa7;">12 + 5 = ?</div>
-            <input type="number" id="mysteryInput" placeholder="คำตอบ...">
-            <button onclick="submitMystery()" style="background: #f1c40f; color: #2d3436;">ยืนยันคำตอบ</button>
+            <h2>✨ กล่องสมบัติเวทมนตร์!</h2>
+            <p style="font-size: 15px; color: #d7bde2;">แก้รูนคาถานี้เพื่อรับ +60 คะแนนโบนัส</p>
+            <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #f1c40f;">15 + 8 = ?</div>
+            <input type="number" id="mysteryInput" placeholder="ผลลัพธ์...">
+            <button onclick="submitMystery()" style="background: #f1c40f; color: #2d3436; font-weight: bold; padding: 10px; border-radius: 8px; border:none; cursor:pointer;">ปลดผนึกเวท!</button>
         </div>
     </div>
 
@@ -151,9 +151,9 @@
 
     <div id="ui-layer">
         <div class="header">
-            <div style="color: #00cec9;">คะแนน: <span id="scoreDisplay">0</span></div>
+            <div style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5);">คะแนน: <span id="scoreDisplay">0</span></div>
             <div class="leaderboard">
-                <h3 style="color: #ffeaa7; margin-bottom: 3px;">🏆 อันดับ</h3>
+                <h3 style="color: #f1c40f; margin-bottom: 3px; text-align: center;">🏆 ทำเนียบคณาจารย์ (80 คน)</h3>
                 <ol id="leaderboardList" style="padding-left: 15px;"></ol>
             </div>
         </div>
@@ -163,8 +163,8 @@
         <div class="bottom-panel">
             <div class="equation-area" id="equationZone"></div>
             <div class="controls">
-                <button class="action-btn btn-clear" onclick="returnTiles()">ล้างสมการ</button>
-                <button class="action-btn btn-submit" onclick="sendEquation()">ส่งตรวจ!</button>
+                <button class="action-btn btn-clear" onclick="returnTiles()">ล้างคาถา</button>
+                <button class="action-btn btn-submit" onclick="sendEquation()">ร่ายคาถาสมการ!</button>
             </div>
             <div class="inventory-area" id="inventoryZone"></div>
         </div>
@@ -177,6 +177,8 @@
         const ctx = canvas.getContext('2d');
         
         let width, height;
+        let MAP_SIZE = 4000;
+
         function resize() {
             width = window.innerWidth;
             height = window.innerHeight;
@@ -223,7 +225,7 @@
         setupTouchButton('btnRight', 'd');
 
         function joinGame() {
-            const name = document.getElementById('playerNameInput').value.trim() || 'นักรบฝึกหัด';
+            const name = document.getElementById('playerNameInput').value.trim() || 'จอมเวทย์ฝึกหัด';
             const avatar = document.getElementById('playerAvatar').value;
             const outfitColor = document.getElementById('playerColor').value;
             const hat = document.getElementById('playerHat').value;
@@ -237,6 +239,7 @@
             myId = data.id;
             tiles = data.tiles;
             mysteryBoxes = data.mysteryBoxes;
+            MAP_SIZE = data.mapSize;
         });
 
         socket.on('stateUpdate', (serverPlayers) => {
@@ -276,19 +279,19 @@
 
         socket.on('mysteryResult', (res) => {
             if (res.success) {
-                showMsg("🎁 ถูกต้อง! รับไปเลย +50 แต้ม", "#f1c40f");
+                showMsg("✨ ปลดผนึกสำเร็จ! ได้รับ +60 คะแนน", "#f1c40f");
             } else {
-                showMsg("❌ ตอบผิด กล่องปริศนาระเบิด!", "#ff7675");
+                showMsg("❌ คาถาผิดพลาด! พลังเวทย์สะท้อนกลับ", "#e74c3c");
             }
         });
 
         socket.on('equationResult', (res) => {
             if (res.success) {
-                showMsg("🎉 สมการถูกต้อง! ได้รับแต้มเพิ่ม", "#00b894");
+                showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71");
                 equation = [];
                 renderUI();
             } else {
-                showMsg("❌ " + res.msg, "#ff7675");
+                showMsg("❌ " + res.msg, "#e74c3c");
             }
         });
 
@@ -342,62 +345,91 @@
             setTimeout(() => msg.classList.remove('show'), 2500);
         }
 
-        // ฟังก์ชันวาดตัวละครคนเดิน
-        function drawHumanAvatar(ctx, x, y, pl, isMoving) {
+        // วาดตัวละครปราสาทเวทมนตร์
+        function drawCastleAvatar(ctx, x, y, pl, isMoving) {
             ctx.save();
             ctx.translate(x, y);
 
-            let walkAnim = isMoving ? Math.sin(Date.now() / 80) * 4 : 0;
+            let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 5 : 0;
 
-            // ตัวเสื้อผ้า
-            ctx.fillStyle = pl.outfitColor || '#3498db';
+            // เสื้อคลุมจอมเวทย์
+            ctx.fillStyle = pl.outfitColor || '#9b59b6';
             ctx.beginPath();
-            ctx.roundRect(-12, -10 + walkAnim/2, 24, 26, 6);
+            ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 8);
             ctx.fill();
-            ctx.lineWidth = 2; ctx.strokeStyle = '#2d3436'; ctx.stroke();
+            ctx.lineWidth = 2; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
 
-            // ขาซ้าย/ขวา
-            ctx.fillStyle = '#2d3436';
-            ctx.fillRect(-8, 14, 5, 10 - walkAnim);
-            ctx.fillRect(3, 14, 5, 10 + walkAnim);
+            // ขา
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(-9, 16, 6, 10 - walkAnim);
+            ctx.fillRect(3, 16, 6, 10 + walkAnim);
 
-            // หัวตัวละคร
-            ctx.fillStyle = '#ffeaa7';
+            // หัว
+            ctx.fillStyle = '#f5b041';
             ctx.beginPath();
-            ctx.arc(0, -18 + walkAnim/2, 12, 0, Math.PI * 2);
+            ctx.arc(0, -18 + walkAnim/2, 13, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
-            // ตาและหน้าตาตามคลาส
-            ctx.fillStyle = '#2d3436';
-            ctx.fillRect(-4, -20 + walkAnim/2, 3, 3);
-            ctx.fillRect(2, -20 + walkAnim/2, 3, 3);
-
-            if (pl.avatar === 'wizard') {
-                ctx.fillStyle = '#9b59b6';
-                ctx.fillRect(-6, -24 + walkAnim/2, 12, 3);
-            } else if (pl.avatar === 'robot') {
-                ctx.fillStyle = '#00cec9';
-                ctx.fillRect(-2, -26 + walkAnim/2, 4, 5); // เสาอากาศ
-            }
+            // ดวงตาเรืองแสง
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(-5, -21 + walkAnim/2, 3, 3);
+            ctx.fillRect(2, -21 + walkAnim/2, 3, 3);
 
             // หมวก / เครื่องประดับ
             if (pl.hat === 'crown') {
                 ctx.fillStyle = '#f1c40f';
                 ctx.beginPath();
-                ctx.moveTo(-10, -28); ctx.lineTo(-10, -35); ctx.lineTo(-5, -31); ctx.lineTo(0, -36); ctx.lineTo(5, -31); ctx.lineTo(10, -35); ctx.lineTo(10, -28);
+                ctx.moveTo(-11, -30); ctx.lineTo(-11, -38); ctx.lineTo(-5, -33); ctx.lineTo(0, -40); ctx.lineTo(5, -33); ctx.lineTo(11, -38); ctx.lineTo(11, -30);
                 ctx.closePath(); ctx.fill(); ctx.stroke();
             } else if (pl.hat === 'wizard_hat') {
                 ctx.fillStyle = '#8e44ad';
                 ctx.beginPath();
-                ctx.moveTo(-14, -26); ctx.lineTo(14, -26); ctx.lineTo(0, -42);
+                ctx.moveTo(-16, -28); ctx.lineTo(16, -28); ctx.lineTo(0, -46);
                 ctx.closePath(); ctx.fill(); ctx.stroke();
             } else if (pl.hat === 'cap') {
-                ctx.fillStyle = '#e74c3c';
+                ctx.fillStyle = '#34495e';
                 ctx.beginPath();
-                ctx.arc(0, -24, 11, Math.PI, 0, false);
+                ctx.arc(0, -25, 12, Math.PI, 0, false);
                 ctx.fill(); ctx.stroke();
             }
+
+            ctx.restore();
+        }
+
+        // วาดฉากหลังพื้นปราสาทเวทมนตร์และลวดลายหิน
+        function drawCastleBackground(camX, camY) {
+            ctx.fillStyle = '#151328';
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.translate(-camX, -camY);
+
+            // ขอบเขตกำแพงปราสาทหนาพิเศษ
+            ctx.strokeStyle = '#4a235a';
+            ctx.lineWidth = 20;
+            ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
+
+            // วาดลายตารางพื้นหินปราสาท
+            ctx.strokeStyle = 'rgba(155, 89, 182, 0.08)';
+            ctx.lineWidth = 2;
+            let gridSize = 100;
+            for (let x = 0; x <= MAP_SIZE; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, MAP_SIZE); ctx.stroke();
+            }
+            for (let y = 0; y <= MAP_SIZE; y += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(MAP_SIZE, y); ctx.stroke();
+            }
+
+            // วาดสัญลักษณ์วงเวทมนตร์กลางปราสาท
+            ctx.strokeStyle = 'rgba(52, 152, 219, 0.15)';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(MAP_SIZE/2, MAP_SIZE/2, 400, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(MAP_SIZE/2, MAP_SIZE/2, 250, 0, Math.PI * 2);
+            ctx.stroke();
 
             ctx.restore();
         }
@@ -405,7 +437,7 @@
         function gameLoop() {
             if (gameStarted && myId && players[myId]) {
                 let p = players[myId];
-                let dx = 0, dy = 0, speed = 4.5;
+                let dx = 0, dy = 0, speed = 5;
                 if (keys.w) dy -= speed;
                 if (keys.s) dy += speed;
                 if (keys.a) dx -= speed;
@@ -439,40 +471,38 @@
                 let camX = me.x - (width / 2);
                 let camY = me.y - (height / 2);
 
-                ctx.clearRect(0, 0, width, height);
+                // วาดฉากหลังปราสาท
+                drawCastleBackground(camX, camY);
+
                 ctx.save();
                 ctx.translate(-camX, -camY);
 
-                // ขอบเขตแผนที่
-                ctx.strokeStyle = '#636e72'; ctx.lineWidth = 6;
-                ctx.strokeRect(0, 0, 1500, 1500);
-
-                // วาดเบี้ยบนพื้น
+                // วาดเบี้ยเวทมนตร์บนพื้น
                 ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 tiles.forEach(t => {
-                    ctx.fillStyle = t.type === 'num' ? '#ffeaa7' : (t.type === 'op' ? '#ff7675' : '#74b9ff');
-                    ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = '#2d3436'; ctx.fillText(t.char, t.x, t.y);
+                    ctx.fillStyle = t.type === 'num' ? '#f1c40f' : (t.type === 'op' ? '#e74c3c' : '#3498db');
+                    ctx.beginPath(); ctx.arc(t.x, t.y, 18, 0, Math.PI * 2); ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+                    ctx.fillStyle = '#ffffff'; ctx.fillText(t.char, t.x, t.y);
                 });
 
-                // วาดกล่องปริศนา
+                // วาดกล่องสมบัติเวทมนตร์
                 mysteryBoxes.forEach(b => {
-                    ctx.fillStyle = '#f1c40f';
-                    ctx.fillRect(b.x - 16, b.y - 16, 32, 32);
-                    ctx.lineWidth = 2; ctx.strokeStyle = '#d35400'; ctx.strokeRect(b.x - 16, b.y - 16, 32, 32);
-                    ctx.fillStyle = '#2d3436'; ctx.font = 'bold 20px Kanit'; ctx.fillText('?', b.x, b.y);
+                    ctx.fillStyle = '#f39c12';
+                    ctx.fillRect(b.x - 18, b.y - 18, 36, 36);
+                    ctx.lineWidth = 2; ctx.strokeStyle = '#f1c40f'; ctx.strokeRect(b.x - 18, b.y - 18, 36, 36);
+                    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px Kanit'; ctx.fillText('?', b.x, b.y);
                 });
 
-                // วาดตัวละครผู้เล่นทุกคน
+                // วาดตัวละครผู้เล่นทั้งหมดในปราสาท
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
-                    drawHumanAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
+                    drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
 
-                    // ป้ายชื่อ
                     ctx.fillStyle = '#ffffff';
                     ctx.font = 'bold 14px Kanit';
                     ctx.textAlign = 'center';
-                    ctx.fillText(pl.name, pl.x, pl.y - 45);
+                    ctx.fillText(pl.name, pl.x, pl.y - 50);
                 }
 
                 ctx.restore();
