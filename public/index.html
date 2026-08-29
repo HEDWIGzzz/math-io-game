@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - Multiplayer Equation Arena</title>
+    <title>Math.io - RPG Math Arena</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -15,19 +15,35 @@
             background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 100;
         }
         .modal-box {
-            background: #2f3640; padding: 30px; border-radius: 12px; text-align: center;
-            display: flex; flex-direction: column; gap: 15px; border: 3px solid #00cec9; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            width: 90%; max-width: 380px;
+            background: #2f3640; padding: 25px; border-radius: 12px; text-align: center;
+            display: flex; flex-direction: column; gap: 12px; border: 3px solid #00cec9; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 90%; max-width: 400px;
         }
         .modal-box h2 { color: #ffeaa7; }
-        .modal-box input {
-            padding: 12px; font-size: 18px; border-radius: 8px; border: 2px solid #636e72; text-align: center;
-            font-family: 'Kanit', sans-serif; background: #1e272e; color: white; outline: none;
+        .modal-box input, .modal-box select {
+            padding: 10px; font-size: 16px; border-radius: 8px; border: 2px solid #636e72; text-align: center;
+            font-family: 'Kanit', sans-serif; background: #1e272e; color: white; outline: none; width: 100%;
         }
-        .modal-box input:focus { border-color: #00cec9; }
+        .modal-box label { font-size: 14px; color: #b2bec3; text-align: left; }
         .modal-box button {
             padding: 12px; font-size: 18px; font-family: 'Kanit', sans-serif; font-weight: bold;
-            background: #00b894; color: white; border: none; border-radius: 8px; cursor: pointer;
+            background: #00b894; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px;
+        }
+
+        /* กล่องปริศนา Modal */
+        #mysteryModal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 150;
+        }
+        .mystery-box {
+            background: #2f3640; padding: 30px; border-radius: 15px; text-align: center;
+            border: 4px solid #f1c40f; box-shadow: 0 0 30px rgba(241, 196, 15, 0.5); width: 90%; max-width: 350px;
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .mystery-box h2 { color: #f1c40f; }
+        .mystery-box input {
+            padding: 12px; font-size: 22px; border-radius: 8px; border: 2px solid #f1c40f; text-align: center;
+            font-family: 'Kanit', sans-serif; background: #1e272e; color: white; outline: none;
         }
 
         #ui-layer {
@@ -60,7 +76,6 @@
         .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 2px 5px rgba(0,0,0,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
-        /* ปุ่มบังคับทิศทางบนมือถือ (Virtual D-Pad) */
         #mobileDpad {
             position: absolute; bottom: 150px; left: 20px; width: 130px; height: 130px;
             pointer-events: auto; display: none; z-index: 50;
@@ -68,7 +83,7 @@
         .d-btn {
             position: absolute; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.5);
             border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center;
-            font-size: 20px; font-weight: bold; color: white; user-select: none;
+            font-size: 20px; font-weight: bold; color: white;
         }
         .d-btn:active { background: rgba(0,206,201,0.6); }
         #btnUp { top: 0; left: 42px; }
@@ -76,25 +91,57 @@
         #btnLeft { top: 42px; left: 0; }
         #btnRight { top: 42px; right: 0; }
 
-        @media (pointer: coarse) {
-            #mobileDpad { display: block; }
-        }
+        @media (pointer: coarse) { #mobileDpad { display: block; } }
     </style>
 </head>
 <body>
 
+    <!-- หน้าต่างสร้างตัวละครและแต่งตัว -->
     <div id="nameModal">
         <div class="modal-box">
-            <h2>🎮 Math.io Arena</h2>
-            <p style="color: #b2bec3; font-size: 13px;">กรอกชื่อตัวละครของคุณ</p>
-            <input type="text" id="playerNameInput" placeholder="ชื่อตัวละคร..." maxlength="15" autocomplete="off">
-            <button onclick="joinGame()">เข้าสู่สนามประลอง</button>
+            <h2>🛡️ สร้างตัวละคร</h2>
+            <div>
+                <label>ชื่อตัวละคร</label>
+                <input type="text" id="playerNameInput" placeholder="กรอกชื่อ..." maxlength="15" autocomplete="off">
+            </div>
+            <div>
+                <label>เลือกคลาสตัวละคร</label>
+                <select id="playerAvatar">
+                    <option value="hero">🦸‍♂️ นักรบผู้กล้า</option>
+                    <option value="wizard">🧙‍♂️ นักเวทย์ฝึกหัด</option>
+                    <option value="robot">🤖 หุ่นยนต์จักรกล</option>
+                </select>
+            </div>
+            <div>
+                <label>สีชุดเสื้อผ้า</label>
+                <input type="color" id="playerColor" value="#3498db" style="height: 40px; cursor: pointer;">
+            </div>
+            <div>
+                <label>หมวก / เครื่องประดับ</label>
+                <select id="playerHat">
+                    <option value="none">ไม่มีหมวก</option>
+                    <option value="crown">👑 มงกุฎราชา</option>
+                    <option value="wizard_hat">🎩 หมวกพ่อมด</option>
+                    <option value="cap">🧢 หมวกแก๊ป</option>
+                </select>
+            </div>
+            <button onclick="joinGame()">เข้าสู่สนามรบ</button>
+        </div>
+    </div>
+
+    <!-- หน้าต่างแก้โจทย์กล่องปริศนา -->
+    <div id="mysteryModal">
+        <div class="mystery-box">
+            <h2>🎁 กล่องปริศนาคณิตศาสตร์!</h2>
+            <p style="font-size: 16px; color: #b2bec3;">แก้โจทย์นี้เพื่อรับ +50 คะแนน</p>
+            <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #ffeaa7;">12 + 5 = ?</div>
+            <input type="number" id="mysteryInput" placeholder="คำตอบ...">
+            <button onclick="submitMystery()" style="background: #f1c40f; color: #2d3436;">ยืนยันคำตอบ</button>
         </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
-    <!-- ปุ่มจำลองทิศทางสำหรับมือถือ -->
     <div id="mobileDpad">
         <div class="d-btn" id="btnUp">▲</div>
         <div class="d-btn" id="btnLeft">◀</div>
@@ -142,12 +189,14 @@
 
         let myId = null;
         let players = {};
-        let renderPlayers = {}; // สำหรับ Smooth Interpolation
+        let renderPlayers = {};
         let tiles = [];
+        let mysteryBoxes = [];
         let inventory = [];
         let equation = [];
         let myScore = 0;
         let gameStarted = false;
+        let currentMysteryAns = null;
 
         const keys = { w: false, a: false, s: false, d: false };
         window.addEventListener('keydown', e => { if(gameStarted) setKey(e.key, true); });
@@ -160,7 +209,6 @@
             if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
-        // ระบบควบคุมบนมือถือ (Touch D-Pad)
         function setupTouchButton(id, keyName) {
             const btn = document.getElementById(id);
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
@@ -175,8 +223,12 @@
         setupTouchButton('btnRight', 'd');
 
         function joinGame() {
-            const input = document.getElementById('playerNameInput').value.trim();
-            socket.emit('setName', input || 'นักคณิตฝึกหัด');
+            const name = document.getElementById('playerNameInput').value.trim() || 'นักรบฝึกหัด';
+            const avatar = document.getElementById('playerAvatar').value;
+            const outfitColor = document.getElementById('playerColor').value;
+            const hat = document.getElementById('playerHat').value;
+
+            socket.emit('setupPlayer', { name, avatar, outfitColor, hat });
             document.getElementById('nameModal').style.display = 'none';
             gameStarted = true;
         }
@@ -184,6 +236,7 @@
         socket.on('initGame', (data) => {
             myId = data.id;
             tiles = data.tiles;
+            mysteryBoxes = data.mysteryBoxes;
         });
 
         socket.on('stateUpdate', (serverPlayers) => {
@@ -199,17 +252,39 @@
             renderUI();
         });
 
-        socket.on('tileRemoved', (id) => {
-            tiles = tiles.filter(t => t.id !== id);
+        socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
+        socket.on('newTile', (tile) => { tiles.push(tile); });
+
+        socket.on('mysteryBoxRemoved', (id) => { mysteryBoxes = mysteryBoxes.filter(b => b.id !== id); });
+        socket.on('newMysteryBox', (box) => { mysteryBoxes.push(box); });
+
+        socket.on('openMysteryBox', (data) => {
+            currentMysteryAns = data.ans;
+            document.getElementById('mysteryQuestion').innerText = data.q;
+            document.getElementById('mysteryInput').value = '';
+            document.getElementById('mysteryModal').style.display = 'flex';
+            document.getElementById('mysteryInput').focus();
         });
 
-        socket.on('newTile', (tile) => {
-            tiles.push(tile);
+        function submitMystery() {
+            let userAns = document.getElementById('mysteryInput').value;
+            if (userAns !== '') {
+                socket.emit('submitMysteryAnswer', { userAns, correctAns: currentMysteryAns });
+                document.getElementById('mysteryModal').style.display = 'none';
+            }
+        }
+
+        socket.on('mysteryResult', (res) => {
+            if (res.success) {
+                showMsg("🎁 ถูกต้อง! รับไปเลย +50 แต้ม", "#f1c40f");
+            } else {
+                showMsg("❌ ตอบผิด กล่องปริศนาระเบิด!", "#ff7675");
+            }
         });
 
         socket.on('equationResult', (res) => {
             if (res.success) {
-                showMsg("🎉 ถูกต้อง! ได้รับแต้มเพิ่ม", "#00b894");
+                showMsg("🎉 สมการถูกต้อง! ได้รับแต้มเพิ่ม", "#00b894");
                 equation = [];
                 renderUI();
             } else {
@@ -264,7 +339,67 @@
             msg.innerText = text;
             msg.style.color = color;
             msg.classList.add('show');
-            setTimeout(() => msg.classList.remove('show'), 2000);
+            setTimeout(() => msg.classList.remove('show'), 2500);
+        }
+
+        // ฟังก์ชันวาดตัวละครคนเดิน
+        function drawHumanAvatar(ctx, x, y, pl, isMoving) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            let walkAnim = isMoving ? Math.sin(Date.now() / 80) * 4 : 0;
+
+            // ตัวเสื้อผ้า
+            ctx.fillStyle = pl.outfitColor || '#3498db';
+            ctx.beginPath();
+            ctx.roundRect(-12, -10 + walkAnim/2, 24, 26, 6);
+            ctx.fill();
+            ctx.lineWidth = 2; ctx.strokeStyle = '#2d3436'; ctx.stroke();
+
+            // ขาซ้าย/ขวา
+            ctx.fillStyle = '#2d3436';
+            ctx.fillRect(-8, 14, 5, 10 - walkAnim);
+            ctx.fillRect(3, 14, 5, 10 + walkAnim);
+
+            // หัวตัวละคร
+            ctx.fillStyle = '#ffeaa7';
+            ctx.beginPath();
+            ctx.arc(0, -18 + walkAnim/2, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // ตาและหน้าตาตามคลาส
+            ctx.fillStyle = '#2d3436';
+            ctx.fillRect(-4, -20 + walkAnim/2, 3, 3);
+            ctx.fillRect(2, -20 + walkAnim/2, 3, 3);
+
+            if (pl.avatar === 'wizard') {
+                ctx.fillStyle = '#9b59b6';
+                ctx.fillRect(-6, -24 + walkAnim/2, 12, 3);
+            } else if (pl.avatar === 'robot') {
+                ctx.fillStyle = '#00cec9';
+                ctx.fillRect(-2, -26 + walkAnim/2, 4, 5); // เสาอากาศ
+            }
+
+            // หมวก / เครื่องประดับ
+            if (pl.hat === 'crown') {
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath();
+                ctx.moveTo(-10, -28); ctx.lineTo(-10, -35); ctx.lineTo(-5, -31); ctx.lineTo(0, -36); ctx.lineTo(5, -31); ctx.lineTo(10, -35); ctx.lineTo(10, -28);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            } else if (pl.hat === 'wizard_hat') {
+                ctx.fillStyle = '#8e44ad';
+                ctx.beginPath();
+                ctx.moveTo(-14, -26); ctx.lineTo(14, -26); ctx.lineTo(0, -42);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            } else if (pl.hat === 'cap') {
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.arc(0, -24, 11, Math.PI, 0, false);
+                ctx.fill(); ctx.stroke();
+            }
+
+            ctx.restore();
         }
 
         function gameLoop() {
@@ -276,21 +411,26 @@
                 if (keys.a) dx -= speed;
                 if (keys.d) dx += speed;
 
-                if (dx !== 0 || dy !== 0) {
-                    socket.emit('move', { x: p.x + dx, y: p.y + dy });
+                let isMoving = (dx !== 0 || dy !== 0);
+                if (isMoving) {
+                    socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
+                } else {
+                    socket.emit('move', { x: p.x, y: p.y, isMoving: false });
                 }
 
-                // Smooth Interpolation สำหรับผู้เล่นทุกคน
+                // Smooth Interpolation
                 for (let id in players) {
                     if (!renderPlayers[id]) {
-                        renderPlayers[id] = { x: players[id].x, y: players[id].y, name: players[id].name, color: players[id].color };
+                        renderPlayers[id] = { x: players[id].x, y: players[id].y, name: players[id].name, avatar: players[id].avatar, outfitColor: players[id].outfitColor, hat: players[id].hat, isMoving: false };
                     }
                     renderPlayers[id].x += (players[id].x - renderPlayers[id].x) * 0.25;
                     renderPlayers[id].y += (players[id].y - renderPlayers[id].y) * 0.25;
                     renderPlayers[id].name = players[id].name;
-                    renderPlayers[id].color = players[id].color;
+                    renderPlayers[id].avatar = players[id].avatar;
+                    renderPlayers[id].outfitColor = players[id].outfitColor;
+                    renderPlayers[id].hat = players[id].hat;
+                    renderPlayers[id].isMoving = players[id].isMoving;
                 }
-                // ลบผู้เล่นที่ออกเกม
                 for (let id in renderPlayers) {
                     if (!players[id]) delete renderPlayers[id];
                 }
@@ -303,11 +443,11 @@
                 ctx.save();
                 ctx.translate(-camX, -camY);
 
-                // พื้นหลังและขอบเขต
+                // ขอบเขตแผนที่
                 ctx.strokeStyle = '#636e72'; ctx.lineWidth = 6;
                 ctx.strokeRect(0, 0, 1500, 1500);
 
-                // วาดเบี้ย
+                // วาดเบี้ยบนพื้น
                 ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 tiles.forEach(t => {
                     ctx.fillStyle = t.type === 'num' ? '#ffeaa7' : (t.type === 'op' ? '#ff7675' : '#74b9ff');
@@ -315,17 +455,24 @@
                     ctx.fillStyle = '#2d3436'; ctx.fillText(t.char, t.x, t.y);
                 });
 
-                // วาดผู้เล่น
+                // วาดกล่องปริศนา
+                mysteryBoxes.forEach(b => {
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.fillRect(b.x - 16, b.y - 16, 32, 32);
+                    ctx.lineWidth = 2; ctx.strokeStyle = '#d35400'; ctx.strokeRect(b.x - 16, b.y - 16, 32, 32);
+                    ctx.fillStyle = '#2d3436'; ctx.font = 'bold 20px Kanit'; ctx.fillText('?', b.x, b.y);
+                });
+
+                // วาดตัวละครผู้เล่นทุกคน
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
-                    ctx.fillStyle = pl.color;
-                    ctx.beginPath(); ctx.arc(pl.x, pl.y, 20, 0, Math.PI * 2); ctx.fill();
-                    ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+                    drawHumanAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
 
+                    // ป้ายชื่อ
                     ctx.fillStyle = '#ffffff';
                     ctx.font = 'bold 14px Kanit';
                     ctx.textAlign = 'center';
-                    ctx.fillText(pl.name, pl.x, pl.y - 28);
+                    ctx.fillText(pl.name, pl.x, pl.y - 45);
                 }
 
                 ctx.restore();
