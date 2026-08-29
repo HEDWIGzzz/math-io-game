@@ -73,7 +73,7 @@
         .btn-submit { background: #2ecc71; color: white; }
         .btn-clear { background: #e67e22; color: white; }
         
-        .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); opacity: 0; transition: 0.3s; pointer-events: none; }
+        .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
         #mobileDpad {
@@ -96,13 +96,12 @@
 </head>
 <body>
 
-    <!-- หน้าต่างสร้างตัวละคร -->
     <div id="nameModal">
         <div class="modal-box">
-            <h2>🏰 ห้องโถงปราสาทเวทมนตร์</h2>
+            <h2>🏰 ปราสาทมหาเวทย์ (80 คน)</h2>
             <div>
                 <label>ฉายาจอมเวทย์</label>
-                <input type="text" id="playerNameInput" placeholder="ชื่อจอมเวทย์ของคุณ..." maxlength="15" autocomplete="off">
+                <input type="text" id="playerNameInput" placeholder="ชื่อของคุณ..." maxlength="15" autocomplete="off">
             </div>
             <div>
                 <label>สายเวทมนตร์</label>
@@ -117,23 +116,21 @@
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 40px; cursor: pointer;">
             </div>
             <div>
-                <label>หมวกเวทมนตร์</label>
+                <label>หมวกเริ่มต้น</label>
                 <select id="playerHat">
                     <option value="none">ไม่มีหมวก</option>
-                    <option value="crown">👑 มงกุฎแห่งราชา</option>
                     <option value="wizard_hat">🎩 หมวกพ่อมดมนตรา</option>
                     <option value="cap">🪖 หมวกเกราะอัศวิน</option>
                 </select>
             </div>
-            <button onclick="joinGame()">เข้าสู่ปราสาท (รองรับ 80 คน)</button>
+            <button onclick="joinGame()">เข้าสู่ปราสาทเวทมนตร์</button>
         </div>
     </div>
 
-    <!-- หน้าต่างกล่องปริศนาเวทมนตร์ -->
     <div id="mysteryModal">
         <div class="mystery-box">
             <h2>✨ กล่องสมบัติเวทมนตร์!</h2>
-            <p style="font-size: 15px; color: #d7bde2;">แก้รูนคาถานี้เพื่อรับ +60 คะแนนโบนัส</p>
+            <p style="font-size: 15px; color: #d7bde2;">แก้รูนคาถานี้เพื่อรับ +60 คะแนน</p>
             <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #f1c40f;">15 + 8 = ?</div>
             <input type="number" id="mysteryInput" placeholder="ผลลัพธ์...">
             <button onclick="submitMystery()" style="background: #f1c40f; color: #2d3436; font-weight: bold; padding: 10px; border-radius: 8px; border:none; cursor:pointer;">ปลดผนึกเวท!</button>
@@ -153,7 +150,7 @@
         <div class="header">
             <div style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5);">คะแนน: <span id="scoreDisplay">0</span></div>
             <div class="leaderboard">
-                <h3 style="color: #f1c40f; margin-bottom: 3px; text-align: center;">🏆 ทำเนียบคณาจารย์ (80 คน)</h3>
+                <h3 style="color: #f1c40f; margin-bottom: 3px; text-align: center;">🏆 ทำเนียบจอมเวทย์ (80 คน)</h3>
                 <ol id="leaderboardList" style="padding-left: 15px;"></ol>
             </div>
         </div>
@@ -345,8 +342,8 @@
             setTimeout(() => msg.classList.remove('show'), 2500);
         }
 
-        // วาดตัวละครปราสาทเวทมนตร์
-        function drawCastleAvatar(ctx, x, y, pl, isMoving) {
+        // วาดตัวละคร พร้อมมงกุฎทองคำวิบวับสำหรับอันดับ 1
+        function drawCastleAvatar(ctx, x, y, pl, isMoving, isTop1) {
             ctx.save();
             ctx.translate(x, y);
 
@@ -371,18 +368,13 @@
             ctx.fill();
             ctx.stroke();
 
-            // ดวงตาเรืองแสง
+            // ตา
             ctx.fillStyle = '#3498db';
             ctx.fillRect(-5, -21 + walkAnim/2, 3, 3);
             ctx.fillRect(2, -21 + walkAnim/2, 3, 3);
 
-            // หมวก / เครื่องประดับ
-            if (pl.hat === 'crown') {
-                ctx.fillStyle = '#f1c40f';
-                ctx.beginPath();
-                ctx.moveTo(-11, -30); ctx.lineTo(-11, -38); ctx.lineTo(-5, -33); ctx.lineTo(0, -40); ctx.lineTo(5, -33); ctx.lineTo(11, -38); ctx.lineTo(11, -30);
-                ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else if (pl.hat === 'wizard_hat') {
+            // หมวกพื้นฐาน
+            if (pl.hat === 'wizard_hat') {
                 ctx.fillStyle = '#8e44ad';
                 ctx.beginPath();
                 ctx.moveTo(-16, -28); ctx.lineTo(16, -28); ctx.lineTo(0, -46);
@@ -394,10 +386,45 @@
                 ctx.fill(); ctx.stroke();
             }
 
+            // ถ้าเป็นอันดับ 1 จะมีมงกุฎสีทองวิบวับลอยอยู่บนหัว
+            if (isTop1) {
+                let crownFloat = Math.sin(Date.now() / 150) * 4;
+                let sparkleAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.5;
+
+                ctx.save();
+                ctx.translate(0, -40 + crownFloat);
+                
+                // มงกุฎทองคำ
+                ctx.fillStyle = '#f1c40f';
+                ctx.strokeStyle = '#b7950b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-14, 0);
+                ctx.lineTo(-14, -14);
+                ctx.lineTo(-7, -7);
+                ctx.lineTo(0, -18);
+                ctx.lineTo(7, -7);
+                ctx.lineTo(14, -14);
+                ctx.lineTo(14, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // ประกายวิบวับรอบมงกุฎ
+                ctx.fillStyle = `rgba(255, 255, 255, ${sparkleAlpha})`;
+                ctx.beginPath();
+                ctx.arc(-16 + Math.sin(Date.now()/80)*8, -12, 3, 0, Math.PI*2);
+                ctx.arc(16 + Math.cos(Date.now()/80)*8, -12, 3, 0, Math.PI*2);
+                ctx.arc(0 + Math.sin(Date.now()/60)*12, -24, 2.5, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
             ctx.restore();
         }
 
-        // วาดฉากหลังพื้นปราสาทเวทมนตร์และลวดลายหิน
+        // วาดแผนที่ปราสาทและสิ่งปลูกสร้างตรงกลาง
         function drawCastleBackground(camX, camY) {
             ctx.fillStyle = '#151328';
             ctx.fillRect(0, 0, width, height);
@@ -405,12 +432,51 @@
             ctx.save();
             ctx.translate(-camX, -camY);
 
-            // ขอบเขตกำแพงปราสาทหนาพิเศษ
+            // ขอบเขตกําแพงปราสาทรอบนอก
             ctx.strokeStyle = '#4a235a';
-            ctx.lineWidth = 20;
+            ctx.lineWidth = 25;
             ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-            // วาดลายตารางพื้นหินปราสาท
+            // --- สิ่งปลูกสร้าง: ปราสาทมหาเวทย์ตรงกลางแผนที่ ---
+            let cx = MAP_SIZE / 2;
+            let cy = MAP_SIZE / 2;
+
+            // ฐานปราสาทหลัก
+            ctx.fillStyle = '#221e3f';
+            ctx.strokeStyle = '#9b59b6';
+            ctx.lineWidth = 6;
+            ctx.fillRect(cx - 350, cy - 350, 700, 700);
+            ctx.strokeRect(cx - 350, cy - 350, 700, 700);
+
+            // ลานพิธีด้านใน
+            ctx.fillStyle = '#1b1734';
+            ctx.fillRect(cx - 250, cy - 250, 500, 500);
+
+            // หอคอย 4 มุมปราสาท
+            let towerSize = 100;
+            ctx.fillStyle = '#2d2650';
+            ctx.fillRect(cx - 380, cy - 380, towerSize, towerSize);
+            ctx.fillRect(cx + 280, cy - 380, towerSize, towerSize);
+            ctx.fillRect(cx - 380, cy + 280, towerSize, towerSize);
+            ctx.fillRect(cx + 280, cy + 280, towerSize, towerSize);
+            ctx.strokeRect(cx - 380, cy - 380, towerSize, towerSize);
+            ctx.strokeRect(cx + 280, cy - 380, towerSize, towerSize);
+            ctx.strokeRect(cx - 380, cy + 280, towerSize, towerSize);
+            ctx.strokeRect(cx + 280, cy + 280, towerSize, towerSize);
+
+            // ประตูเวทมนตร์เรืองแสงตรงกลาง
+            ctx.fillStyle = '#f1c40f';
+            ctx.fillRect(cx - 60, cy + 250, 120, 100);
+            ctx.strokeStyle = '#d35400'; ctx.lineWidth = 4;
+            ctx.strokeRect(cx - 60, cy + 250, 120, 100);
+
+            // วงเวทมนตร์ยักษ์กลางปราสาท
+            ctx.strokeStyle = 'rgba(241, 196, 15, 0.2)';
+            ctx.lineWidth = 6;
+            ctx.beginPath(); ctx.arc(cx, cy, 320, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, 180, 0, Math.PI * 2); ctx.stroke();
+
+            // ลวดลายตารางพื้นหิน
             ctx.strokeStyle = 'rgba(155, 89, 182, 0.08)';
             ctx.lineWidth = 2;
             let gridSize = 100;
@@ -420,16 +486,6 @@
             for (let y = 0; y <= MAP_SIZE; y += gridSize) {
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(MAP_SIZE, y); ctx.stroke();
             }
-
-            // วาดสัญลักษณ์วงเวทมนตร์กลางปราสาท
-            ctx.strokeStyle = 'rgba(52, 152, 219, 0.15)';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.arc(MAP_SIZE/2, MAP_SIZE/2, 400, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(MAP_SIZE/2, MAP_SIZE/2, 250, 0, Math.PI * 2);
-            ctx.stroke();
 
             ctx.restore();
         }
@@ -450,10 +506,14 @@
                     socket.emit('move', { x: p.x, y: p.y, isMoving: false });
                 }
 
+                // ค้นหาผู้เล่นที่อยู่อันดับ 1 (คะแนนสูงสุด)
+                let sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
+                let topPlayerId = sortedPlayers.length > 0 ? sortedPlayers[0].socketId : null;
+
                 // Smooth Interpolation
                 for (let id in players) {
                     if (!renderPlayers[id]) {
-                        renderPlayers[id] = { x: players[id].x, y: players[id].y, name: players[id].name, avatar: players[id].avatar, outfitColor: players[id].outfitColor, hat: players[id].hat, isMoving: false };
+                        renderPlayers[id] = { x: players[id].x, y: players[id].y, name: players[id].name, avatar: players[id].avatar, outfitColor: players[id].outfitColor, hat: players[id].hat, score: players[id].score, isMoving: false };
                     }
                     renderPlayers[id].x += (players[id].x - renderPlayers[id].x) * 0.25;
                     renderPlayers[id].y += (players[id].y - renderPlayers[id].y) * 0.25;
@@ -461,6 +521,7 @@
                     renderPlayers[id].avatar = players[id].avatar;
                     renderPlayers[id].outfitColor = players[id].outfitColor;
                     renderPlayers[id].hat = players[id].hat;
+                    renderPlayers[id].score = players[id].score;
                     renderPlayers[id].isMoving = players[id].isMoving;
                 }
                 for (let id in renderPlayers) {
@@ -471,13 +532,12 @@
                 let camX = me.x - (width / 2);
                 let camY = me.y - (height / 2);
 
-                // วาดฉากหลังปราสาท
                 drawCastleBackground(camX, camY);
 
                 ctx.save();
                 ctx.translate(-camX, -camY);
 
-                // วาดเบี้ยเวทมนตร์บนพื้น
+                // วาดเบี้ย
                 ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 tiles.forEach(t => {
                     ctx.fillStyle = t.type === 'num' ? '#f1c40f' : (t.type === 'op' ? '#e74c3c' : '#3498db');
@@ -486,7 +546,7 @@
                     ctx.fillStyle = '#ffffff'; ctx.fillText(t.char, t.x, t.y);
                 });
 
-                // วาดกล่องสมบัติเวทมนตร์
+                // วาดกล่องสมบัติ
                 mysteryBoxes.forEach(b => {
                     ctx.fillStyle = '#f39c12';
                     ctx.fillRect(b.x - 18, b.y - 18, 36, 36);
@@ -494,15 +554,16 @@
                     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px Kanit'; ctx.fillText('?', b.x, b.y);
                 });
 
-                // วาดตัวละครผู้เล่นทั้งหมดในปราสาท
+                // วาดตัวละครทั้งหมด พร้อมเช็กว่าใครคืออันดับ 1
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
-                    drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
+                    let isTop1 = (id === topPlayerId && pl.score > 0);
+                    drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving, isTop1);
 
-                    ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 14px Kanit';
+                    ctx.fillStyle = isTop1 ? '#f1c40f' : '#ffffff';
+                    ctx.font = isTop1 ? 'bold 16px Kanit' : 'bold 14px Kanit';
                     ctx.textAlign = 'center';
-                    ctx.fillText(pl.name, pl.x, pl.y - 50);
+                    ctx.fillText(pl.name, pl.x, pl.y - 55);
                 }
 
                 ctx.restore();
