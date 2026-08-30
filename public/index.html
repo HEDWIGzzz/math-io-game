@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - Clean 4 Teams Edition</title>
+    <title>Math.io - Smooth Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
@@ -110,7 +110,6 @@
         </div>
     </div>
 
-    <!-- เมนูเลือกปราสาทโจมตี -->
     <div id="attackModal" class="modal" style="display: none;">
         <div class="box" style="max-width: 300px;">
             <h3>🏰 เลือกปราสาทเป้าหมาย</h3>
@@ -138,8 +137,8 @@
         window.addEventListener('resize', resize);
         resize();
 
-        let myId = null, myTeam = 'red', isHost = false, gameStarted = false;
-        let players = {}, bases = {}, tiles = [], inventory = [], equation = [];
+        let myId = null, myTeam = 'red', isHost = false;
+        let players = {}, renderPlayers = {}, bases = {}, tiles = [], inventory = [], equation = [];
         const teamColors = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
 
         socket.on('init', (data) => {
@@ -241,7 +240,6 @@
             setTimeout(() => m.classList.remove('show'), 2500);
         }
 
-        // ควบคุมการเดินด้วยคีย์บอร์ด
         const keys = { w: false, a: false, s: false, d: false };
         window.addEventListener('keydown', e => setKey(e.key, true));
         window.addEventListener('keyup', e => setKey(e.key, false));
@@ -256,7 +254,7 @@
         function gameLoop() {
             if (myId && players[myId] && players[myId].joined && !isHost) {
                 let p = players[myId];
-                let speed = 4, dx = 0, dy = 0;
+                let speed = 5, dx = 0, dy = 0;
                 if (keys.w) dy -= speed; if (keys.s) dy += speed;
                 if (keys.a) dx -= speed; if (keys.d) dx += speed;
                 if (dx !== 0 || dy !== 0) {
@@ -264,19 +262,35 @@
                 }
             }
 
-            // เรนเดอร์แผนที่
+            // ระบบ Interpolation (Lerp) เกลี่ยตำแหน่งผู้เล่นให้ลื่นไหล
+            for (let id in players) {
+                let serverPl = players[id];
+                if (!renderPlayers[id]) {
+                    renderPlayers[id] = { ...serverPl };
+                } else {
+                    renderPlayers[id].x += (serverPl.x - renderPlayers[id].x) * 0.3;
+                    renderPlayers[id].y += (serverPl.y - renderPlayers[id].y) * 0.3;
+                    renderPlayers[id].name = serverPl.name;
+                    renderPlayers[id].team = serverPl.team;
+                    renderPlayers[id].color = serverPl.color;
+                    renderPlayers[id].joined = serverPl.joined;
+                    renderPlayers[id].isHost = serverPl.isHost;
+                }
+            }
+            for (let id in renderPlayers) {
+                if (!players[id]) delete renderPlayers[id];
+            }
+
             ctx.fillStyle = '#151328'; ctx.fillRect(0, 0, width, height);
 
-            if (players[myId]) {
-                let me = players[myId];
+            if (renderPlayers[myId]) {
+                let me = renderPlayers[myId];
                 let camX = me.x - width / 2, camY = me.y - height / 2;
 
                 ctx.save(); ctx.translate(-camX, -camY);
 
-                // วาดขอบแผนที่
                 ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 20; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-                // วาดปราสาท 4 มุม
                 for (let k in bases) {
                     let b = bases[k];
                     ctx.fillStyle = teamColors[k] + '66';
@@ -289,7 +303,6 @@
                     ctx.fillText(`HP: ${b.hp}`, b.x, b.y + 80);
                 }
 
-                // วาดเบี้ยบนพื้น
                 tiles.forEach(t => {
                     ctx.fillStyle = '#f1c40f';
                     ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, Math.PI * 2); ctx.fill();
@@ -297,9 +310,8 @@
                     ctx.fillText(t.char, t.x, t.y);
                 });
 
-                // วาดผู้เล่นทุกคน
-                for (let id in players) {
-                    let pl = players[id];
+                for (let id in renderPlayers) {
+                    let pl = renderPlayers[id];
                     if (!pl.joined || pl.isHost) continue;
                     ctx.fillStyle = teamColors[pl.team] || '#fff';
                     ctx.beginPath(); ctx.arc(pl.x, pl.y, 14, 0, Math.PI * 2); ctx.fill();
