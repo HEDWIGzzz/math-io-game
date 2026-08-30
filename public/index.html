@@ -3,327 +3,756 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - Smooth Edition</title>
+    <title>Math.io - 4 Teams Castle Raid</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
-        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
-        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; }
-        canvas { display: block; background: #151328; width: 100%; height: 100%; }
-
-        .modal {
+        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; touch-action: none; }
+        canvas { display: block; background: #151328; width: 100%; height: 100%; touch-action: none; }
+        
+        .screen-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 8, 20, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100;
+            background: rgba(10, 8, 20, 0.96); display: flex; justify-content: center; align-items: center; z-index: 100;
+            overflow-y: auto; padding: 20px;
         }
-        .box {
+        .modal-box {
             background: #221e3f; padding: 25px; border-radius: 16px; text-align: center;
-            border: 3px solid #9b59b6; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 12px;
+            display: flex; flex-direction: column; gap: 14px; border: 3px solid #9b59b6; box-shadow: 0 0 40px rgba(155, 89, 182, 0.4);
+            width: 100%; max-width: 420px; max-height: 92vh; overflow-y: auto;
         }
-        input, select {
-            padding: 12px; font-size: 15px; border-radius: 8px; border: 2px solid #9b59b6;
-            background: #151328; color: white; text-align: center; font-family: 'Kanit'; outline: none; width: 100%;
+        .modal-box h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); font-size: 24px; }
+        .modal-box input, .modal-box select {
+            padding: 12px; font-size: 15px; border-radius: 8px; border: 2px solid #9b59b6; text-align: center;
+            font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%;
         }
-        button {
-            padding: 12px; font-size: 16px; font-family: 'Kanit'; font-weight: bold; border-radius: 8px;
-            border: none; cursor: pointer; width: 100%; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        .modal-box label { font-size: 13px; color: #d7bde2; text-align: left; font-weight: bold; }
+        .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; padding: 14px; font-size: 18px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .btn-host-login { background: linear-gradient(135deg, #e74c3c, #8e44ad); color: white; width: 100%; padding: 12px; font-size: 16px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; box-shadow: 0 4px 15px rgba(231,76,60,0.4); }
+
+        #previewCanvas { background: #151328; border: 2px dashed #9b59b6; border-radius: 12px; margin: 0 auto; display: block; cursor: grab; }
+        .class-desc { background: rgba(155, 89, 182, 0.15); border: 1px solid #9b59b6; padding: 10px; border-radius: 8px; font-size: 13px; color: #f39c12; text-align: left; }
+
+        #waitingBanner {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(231, 76, 60, 0.95); border: 3px solid #f1c40f; padding: 30px 45px;
+            border-radius: 18px; font-size: 18px; font-weight: bold; z-index: 85; display: none; text-align: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); pointer-events: auto;
         }
-        .btn-play { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; }
-        .btn-host { background: linear-gradient(135deg, #e74c3c, #8e44ad); color: white; }
+        .host-start-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none;
+            padding: 12px 28px; border-radius: 10px; font-family: 'Kanit'; font-weight: bold; font-size: 18px;
+            cursor: pointer; margin-top: 15px; display: inline-block; box-shadow: 0 4px 20px rgba(46,204,113,0.5);
+        }
 
-        #ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
-        .hud-top { display: flex; justify-content: space-around; background: rgba(21,19,40,0.9); padding: 10px; border-bottom: 2px solid #f1c40f; pointer-events: auto; }
-        .hud-base { text-align: center; font-size: 11px; width: 22%; }
-        .hp-bar { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin-top: 2px; }
-        .hp-fill { height: 100%; width: 100%; transition: width 0.2s; }
+        #virtualJoystick { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; display: block; }
+        #joystickBase { position: absolute; width: 110px; height: 110px; border-radius: 50%; background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7); transform: translate(-50%, -50%); display: none; pointer-events: none; }
+        #joystickThumb { position: absolute; width: 55px; height: 55px; border-radius: 50%; background: rgba(155, 89, 182, 0.85); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
 
-        .bottom-panel { background: rgba(21,19,40,0.95); padding: 10px; border-top: 3px solid #9b59b6; pointer-events: auto; display: flex; flex-direction: column; gap: 6px; align-items: center; }
-        .eq-box { width: 100%; max-width: 600px; min-height: 45px; background: #151328; border: 2px dashed #9b59b6; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 5px; }
-        .inv-box { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; min-height: 35px; }
-        .tile { width: 34px; height: 38px; font-size: 18px; font-weight: bold; display: flex; justify-content: center; align-items: center; border-radius: 6px; cursor: pointer; background: #f1c40f; color: #2d3436; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
+        .header { padding: 15px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; align-items: flex-start; }
+        
+        .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 10px 15px; border-radius: 10px; font-size: 12px; min-width: 250px; pointer-events: auto; }
+        .team-score-box { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: bold; font-size: 11px; }
+        
+        .bases-hud-container {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 8px 15px;
+            border-radius: 12px; display: flex; gap: 10px; pointer-events: auto; z-index: 75; width: 580px; justify-content: space-around;
+        }
+        .base-hud { width: 23%; text-align: center; }
+        .base-hp-bar { width: 100%; height: 10px; background: #2c3e50; border-radius: 5px; overflow: hidden; margin-top: 2px; border: 1px solid #fff; }
+        .red-hp-fill { width: 100%; height: 100%; background: #e74c3c; transition: width 0.2s; }
+        .blue-hp-fill { width: 100%; height: 100%; background: #3498db; transition: width 0.2s; }
+        .green-hp-fill { width: 100%; height: 100%; background: #2ecc71; transition: width 0.2s; }
+        .yellow-hp-fill { width: 100%; height: 100%; background: #f1c40f; transition: width 0.2s; }
 
-        .btn-float { position: absolute; right: 20px; bottom: 130px; width: 75px; height: 75px; border-radius: 50%; background: #e74c3c; border: 2px solid white; color: white; font-weight: bold; font-size: 11px; cursor: pointer; pointer-events: auto; display: flex; justify-content: center; align-items: center; text-align: center; }
+        .skill-btn-hud {
+            position: absolute; right: 25px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
+            background: linear-gradient(135deg, #3498db, #2980b9); border: 3px solid #fff; color: white;
+            font-family: 'Kanit'; font-weight: bold; font-size: 12px; text-align: center;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(52, 152, 219, 0.7); z-index: 70; line-height: 1.1;
+        }
+        .attack-base-btn {
+            position: absolute; right: 125px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
+            background: linear-gradient(135deg, #e74c3c, #f39c12); border: 3px solid #fff; color: white;
+            font-family: 'Kanit'; font-weight: bold; font-size: 10px; text-align: center;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(231, 76, 60, 0.7); z-index: 70; line-height: 1.1;
+        }
 
-        #msgBox { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: bold; text-shadow: 0 0 10px #000; pointer-events: none; opacity: 0; transition: 0.3s; z-index: 90; }
-        #msgBox.show { opacity: 1; top: 12%; }
+        .host-config-btn {
+            background: linear-gradient(135deg, #f39c12, #d35400); color: white; border: none;
+            padding: 8px 14px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; font-size: 14px;
+            cursor: pointer; pointer-events: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; margin-left: 10px;
+        }
+
+        .bottom-panel { background: rgba(21, 19, 40, 0.95); padding: 12px 15px; border-top: 4px solid #9b59b6; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        .equation-area { background: #151328; width: 100%; max-width: 650px; min-height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 2px dashed #9b59b6; padding: 5px; }
+        .inventory-area { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; min-height: 40px; width: 100%; }
+
+        .tile { width: 36px; height: 40px; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center; border-radius: 6px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.4); }
+        .tile.num { background: #f1c40f; color: #2d3436; }
+        .tile.op { background: #e74c3c; color: white; }
+        .tile.eq { background: #3498db; color: white; }
+
+        .controls { display: flex; gap: 10px; }
+        button.action-btn { padding: 6px 20px; font-size: 15px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-submit { background: #2ecc71; color: white; }
+        .btn-clear { background: #e67e22; color: white; }
+        .btn-drop { background: #8e44ad; color: white; }
+        
+        .sys-msg { position: absolute; top: 14%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 80; }
+        .sys-msg.show { opacity: 1; top: 12%; }
     </style>
 </head>
 <body>
 
-    <div id="loginModal" class="modal">
-        <div class="box">
-            <h2 style="color: #f1c40f;">✨ MATH.IO CASTLE RAID</h2>
+    <div id="setupModal" class="screen-layer">
+        <div class="modal-box">
+            <h2>✨ 4 TEAMS CASTLE ARENA</h2>
+            <canvas id="previewCanvas" width="140" height="140"></canvas>
             <div>
-                <label style="font-size:12px; color:#d7bde2;">ชื่อผู้เล่น</label>
-                <input type="text" id="nameInput" placeholder="พิมพ์ชื่อของคุณ..." maxlength="15">
+                <label>ชื่อผู้เล่น (Username)</label>
+                <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ..." maxlength="15" autocomplete="off">
             </div>
             <div>
-                <label style="font-size:12px; color:#d7bde2;">เลือกทีม</label>
-                <select id="teamSelect">
-                    <option value="red" id="optRed">🔴 ทีมแดง [0/10]</option>
-                    <option value="blue" id="optBlue">🔵 ทีมน้ำเงิน [0/10]</option>
-                    <option value="green" id="optGreen">🟢 ทีมเขียว [0/10]</option>
-                    <option value="yellow" id="optYellow">🟡 ทีมเหลือง [0/10]</option>
+                <label>เลือกทีม (SELECT TEAM)</label>
+                <select id="playerTeam">
+                    <option value="red" id="optRed">🔴 ทีมแดง (Red Team) [0/10]</option>
+                    <option value="blue" id="optBlue">🔵 ทีมน้ำเงิน (Blue Team) [0/10]</option>
+                    <option value="green" id="optGreen">🟢 ทีมเขียว (Green Team) [0/10]</option>
+                    <option value="yellow" id="optYellow">🟡 ทีมเหลือง (Yellow Team) [0/10]</option>
                 </select>
             </div>
             <div>
-                <label style="font-size:12px; color:#d7bde2;">เลือกอาชีพ</label>
-                <select id="classSelect">
-                    <option value="Warrior">⚔️ Warrior</option>
+                <label>เลือกสายอาชีพ (SELECT CLASS)</label>
+                <select id="playerClass" onchange="onClassChange()">
                     <option value="Assassin">🗡️ Assassin</option>
+                    <option value="Warrior">⚔️ Warrior</option>
+                    <option value="Tank">🛡️ Tank</option>
+                    <option value="Archer">🏹 Archer</option>
                     <option value="Mage">🔮 Mage</option>
+                    <option value="Support">✨ Support</option>
+                    <option value="Monk">🥋 Monk</option>
+                    <option value="Berserker">🔥 Berserker</option>
                 </select>
             </div>
+            <div class="class-desc" id="classDescription"><b>ASSASSIN</b><br>สกิล: ป่วนผู้เล่นทีมอื่น</div>
             <div>
-                <label style="font-size:12px; color:#d7bde2;">สีตัวละคร</label>
-                <input type="color" id="colorInput" value="#9b59b6" style="height: 35px; cursor: pointer;">
+                <label>สีตัวละคร (OUTFIT COLOR)</label>
+                <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
             </div>
-            <button class="btn-play" onclick="joinGame(false)">▶ เข้าสู่สนามรบ</button>
-            <button class="btn-host" onclick="joinGame(true)">👑 เข้าสู่ระบบ Host</button>
+            <button class="btn-enter" onclick="joinGame()">▶ เข้าสู่สนามรบทันที</button>
+            <button class="btn-host-login" onclick="loginAsHost()">👑 เข้าสู่ระบบ Host (Admin)</button>
         </div>
     </div>
 
-    <div id="msgBox">แจ้งเตือน</div>
-
-    <canvas id="canvas"></canvas>
-
-    <div id="ui">
-        <div class="hud-top">
-            <div class="hud-base"><span style="color:#e74c3c">🔴 แดง</span><div class="hp-bar"><div id="hpRed" class="hp-fill" style="background:#e74c3c"></div></div><span id="txtRed">3000</span></div>
-            <div class="hud-base"><span style="color:#3498db">🔵 น้ำเงิน</span><div class="hp-bar"><div id="hpBlue" class="hp-fill" style="background:#3498db"></div></div><span id="txtBlue">3000</span></div>
-            <div class="hud-base"><span style="color:#2ecc71">🟢 เขียว</span><div class="hp-bar"><div id="hpGreen" class="hp-fill" style="background:#2ecc71"></div></div><span id="txtGreen">3000</span></div>
-            <div class="hud-base"><span style="color:#f1c40f">🟡 เหลือง</span><div class="hp-bar"><div id="hpYellow" class="hp-fill" style="background:#f1c40f"></div></div><span id="txtYellow">3000</span></div>
-        </div>
-
-        <div style="padding: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="background: rgba(0,0,0,0.6); padding: 5px 12px; border-radius: 8px; font-size: 14px;">คะแนน: <span id="scoreDisplay" style="color:#f1c40f; font-weight:bold;">0</span></div>
-            <button onclick="window.location.reload()" style="background:#e74c3c; width:80px; padding:6px; font-size:12px;">ออกเกม</button>
-        </div>
-
-        <button class="btn-float" onclick="openAttackMenu()">🏰 ถล่ม<br>ปราสาท</button>
-
-        <div class="bottom-panel">
-            <div class="eq-box" id="eqZone"></div>
-            <div style="display: flex; gap: 8px;">
-                <button onclick="clearEq()" style="background:#e67e22; width:100px; padding:6px; font-size:13px;">ล้าง</button>
-                <button onclick="sendEq()" style="background:#2ecc71; width:150px; padding:6px; font-size:13px;">ร่ายคาถา!</button>
+    <!-- ⚙️ หน้าต่างตั้งค่าเกมสำหรับ Host -->
+    <div id="hostConfigModal" class="screen-layer" style="display:none;">
+        <div class="modal-box" style="border: 3px solid #f39c12; max-width: 380px;">
+            <h2 style="color: #f39c12;">⚙️ แผงควบคุมตั้งค่าเกม (Host)</h2>
+            <div>
+                <label>พลังชีวิตฐานสูงสุด (Base Max HP)</label>
+                <input type="number" id="cfgBaseHp" value="3000" step="500">
             </div>
-            <div class="inv-box" id="invZone"></div>
+            <div>
+                <label>ตัวคูณคะแนนสมการ (Score Multiplier)</label>
+                <input type="number" id="cfgScoreMul" value="15" step="1">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button onclick="saveHostSettings()" style="background:#2ecc71; color:white; font-weight:bold; padding:10px; border-radius:8px; border:none; cursor:pointer; flex:1;">บันทึกการตั้งค่า</button>
+                <button onclick="toggleHostConfig(false)" style="background:#e74c3c; color:white; font-weight:bold; padding:10px; border-radius:8px; border:none; cursor:pointer; flex:1;">ปิด</button>
+            </div>
         </div>
     </div>
 
-    <div id="attackModal" class="modal" style="display: none;">
-        <div class="box" style="max-width: 300px;">
-            <h3>🏰 เลือกปราสาทเป้าหมาย</h3>
-            <button onclick="attack('red')" style="background:#e74c3c;">🔴 ปราสาทแดง</button>
-            <button onclick="attack('blue')" style="background:#3498db;">🔵 ปราสาทน้ำเงิน</button>
-            <button onclick="attack('green')" style="background:#2ecc71;">🟢 ปราสาทเขียว</button>
-            <button onclick="attack('yellow')" style="background:#f1c40f; color:#333;">🟡 ปราสาทเหลือง</button>
-            <button onclick="document.getElementById('attackModal').style.display='none'" style="background:#555;">ยกเลิก</button>
+    <div id="waitingBanner">
+        <div id="waitingText">⏳ กำลังรอผู้เล่นเข้าห้อง (0/40 คน)</div>
+        <div id="hostButtonContainer" style="display: none;">
+            <button class="host-start-btn" onclick="forceStartGame()">🚀 เริ่มเกมทันที (สำหรับ Host)</button>
+        </div>
+    </div>
+
+    <div id="mysteryModal" class="screen-layer" style="display:none;">
+        <div class="mystery-box" style="background:#221e3f; padding:30px; border-radius:15px; text-align:center; border:4px solid #f39c12; width:90%; max-width:350px;">
+            <h2 style="color:#f39c12;">✨ กล่องสมบัติเวทมนตร์!</h2>
+            <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #f1c40f; margin: 15px 0;">15 + 8 = ?</div>
+            <input type="number" id="mysteryInput" placeholder="ผลลัพธ์..." style="padding:10px; font-size:20px; width:100%; text-align:center; background:#151328; color:#fff; border:2px solid #f39c12; border-radius:8px;">
+            <button onclick="submitMystery()" style="background: #f39c12; color: #2d3436; font-weight: bold; padding: 10px; border-radius: 8px; border:none; cursor:pointer; margin-top:15px; width:100%;">ปลดผนึกเวท!</button>
+        </div>
+    </div>
+
+    <div id="virtualJoystick">
+        <div id="joystickBase">
+            <div id="joystickThumb"></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="bases-hud-container">
+            <div class="base-hud">
+                <div style="font-size: 10px; color: #e74c3c; font-weight: bold;">🔴 แดง</div>
+                <div class="base-hp-bar"><div class="red-hp-fill" id="redHpFill"></div></div>
+                <div style="font-size: 9px; color: #d7bde2;" id="redHpText">3000</div>
+            </div>
+            <div class="base-hud">
+                <div style="font-size: 10px; color: #3498db; font-weight: bold;">🔵 น้ำเงิน</div>
+                <div class="base-hp-bar"><div class="blue-hp-fill" id="blueHpFill"></div></div>
+                <div style="font-size: 9px; color: #d7bde2;" id="blueHpText">3000</div>
+            </div>
+            <div class="base-hud">
+                <div style="font-size: 10px; color: #2ecc71; font-weight: bold;">🟢 เขียว</div>
+                <div class="base-hp-bar"><div class="green-hp-fill" id="greenHpFill"></div></div>
+                <div style="font-size: 9px; color: #d7bde2;" id="greenHpText">3000</div>
+            </div>
+            <div class="base-hud">
+                <div style="font-size: 10px; color: #f1c40f; font-weight: bold;">🟡 เหลือง</div>
+                <div class="base-hp-bar"><div class="yellow-hp-fill" id="yellowHpFill"></div></div>
+                <div style="font-size: 9px; color: #d7bde2;" id="yellowHpText">3000</div>
+            </div>
+        </div>
+
+        <div class="header">
+            <div style="display: flex; align-items: center; gap: 10px;" id="playerInfoSection">
+                <div style="color: #f1c40f;">คะแนน: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
+                <button id="hostConfigBtn" class="host-config-btn" onclick="toggleHostConfig(true)">⚙️ ตั้งค่า</button>
+            </div>
+            <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 ออก</button>
+            
+            <div class="leaderboard">
+                <div class="team-score-box">
+                    <span style="color: #e74c3c;">🔴แดง</span>
+                    <span style="color: #3498db;">🔵น้ำเงิน</span>
+                    <span style="color: #2ecc71;">🟢เขียว</span>
+                    <span style="color: #f1c40f;">🟡เหลือง</span>
+                </div>
+                <hr style="border:0; border-top:1px solid #555; margin: 4px 0;">
+                <h3 style="color: #f39c12; margin-bottom: 2px; text-align: center; font-size: 13px;">🏆 ดาเมจถล่มฐานสูงสุด</h3>
+                <ol id="bossLeaderboardList" style="padding-left: 15px;"></ol>
+            </div>
+        </div>
+
+        <button class="attack-base-btn" id="attackBaseBtn" onclick="openAttackMenu()">🏰 โจมตีฐาน<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
+        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลป่วน</button>
+
+        <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
+
+        <div class="bottom-panel" id="bottomPanel">
+            <div class="equation-area" id="equationZone"></div>
+            <div class="controls">
+                <button class="action-btn btn-clear" onclick="returnTiles()">ล้างคาถา</button>
+                <button class="action-btn btn-drop" onclick="dropTile()">🗑️ ทิ้งเบี้ย</button>
+                <button class="action-btn btn-submit" onclick="sendEquation()">ร่ายคาถาสมการ!</button>
+            </div>
+            <div class="inventory-area" id="inventoryZone"></div>
+        </div>
+    </div>
+
+    <!-- เมนูเลือกฐานที่จะโจมตี -->
+    <div id="attackMenuModal" class="screen-layer" style="display:none;">
+        <div class="modal-box" style="border: 3px solid #e74c3c; max-width: 320px;">
+            <h2 style="color: #e74c3c;">🏰 เลือกฐานศัตรูที่ต้องการถล่ม</h2>
+            <button onclick="attackBase('red')" style="background:#e74c3c; color:white; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🔴 โจมตีฐานแดง</button>
+            <button onclick="attackBase('blue')" style="background:#3498db; color:white; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🔵 โจมตีฐานน้ำเงิน</button>
+            <button onclick="attackBase('green')" style="background:#2ecc71; color:white; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🟢 โจมตีฐานเขียว</button>
+            <button onclick="attackBase('yellow')" style="background:#f1c40f; color:#2d3436; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🟡 โจมตีฐานเหลือง</button>
+            <button onclick="document.getElementById('attackMenuModal').style.display='none'" style="background:#555; color:white; font-weight:bold; padding:10px; border-radius:8px; border:none; cursor:pointer;">ยกเลิก</button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        // Polyfill สำหรับ roundRect ป้องกันปัญหาในเบราว์เซอร์เก่า
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
 
-        let width, height, MAP_SIZE = 3000;
+        const socket = io();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height, MAP_SIZE = 4000;
         function resize() {
             width = window.innerWidth; height = window.innerHeight;
-            canvas.width = width * window.devicePixelRatio;
+            canvas.width = width * window.devicePixelRatio; 
             canvas.height = height * window.devicePixelRatio;
             ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
         }
         window.addEventListener('resize', resize);
         resize();
 
-        let myId = null, myTeam = 'red', isHost = false;
-        let players = {}, renderPlayers = {}, bases = {}, tiles = [], inventory = [], equation = [];
-        const teamColors = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
+        let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
+        let myScore = 0, myTeam = 'red', gameStarted = false, isHost = false, previewAngle = 0, currentMysteryAns = null;
+        let redBase = { x: 800, y: 800, hp: 3000, maxHp: 3000, name: 'Red Fortress', team: 'red', isAlive: true };
+        let blueBase = { x: MAP_SIZE - 800, y: 800, hp: 3000, maxHp: 3000, name: 'Blue Fortress', team: 'blue', isAlive: true };
+        let greenBase = { x: 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Green Fortress', team: 'green', isAlive: true };
+        let yellowBase = { x: MAP_SIZE - 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Yellow Fortress', team: 'yellow', isAlive: true };
 
-        socket.on('init', (data) => {
-            myId = data.id; MAP_SIZE = data.mapSize; bases = data.bases; tiles = data.tiles;
-            updateTeamCounts(data.teamCounts);
-        });
+        let floatingTexts = [], activeEffect = null, effectTimer = 0;
+        let skillVisualEffects = [];
+        let hostCamX = MAP_SIZE / 2, hostCamY = MAP_SIZE / 2;
 
-        socket.on('teamCounts', (counts) => { updateTeamCounts(counts); });
-
-        function updateTeamCounts(counts) {
-            document.getElementById('optRed').innerText = `🔴 ทีมแดง [${counts.red}/10]`;
-            document.getElementById('optBlue').innerText = `🔵 ทีมน้ำเงิน [${counts.blue}/10]`;
-            document.getElementById('optGreen').innerText = `🟢 ทีมเขียว [${counts.green}/10]`;
-            document.getElementById('optYellow').innerText = `🟡 ทีมเหลือง [${counts.yellow}/10]`;
+        function addFloatingText(text, x, y, color = '#f1c40f') {
+            floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
         }
 
-        function joinGame(hostFlag) {
-            let name = document.getElementById('nameInput').value.trim();
-            if (!name) { alert("กรุณากรอกชื่อผู้เล่นก่อน"); return; }
-            myTeam = document.getElementById('teamSelect').value;
+        function openAttackMenu() { document.getElementById('attackMenuModal').style.display = 'flex'; }
+        function attackBase(targetTeam) {
+            document.getElementById('attackMenuModal').style.display = 'none';
+            socket.emit('attackBase', targetTeam);
+        }
+        function castPrankSkill() { socket.emit('castSkill'); }
+        function forceStartGame() { socket.emit('forceStartGame'); }
+        
+        function toggleHostConfig(show) {
+            document.getElementById('hostConfigModal').style.display = show ? 'flex' : 'none';
+        }
 
+        function saveHostSettings() {
+            let maxHp = document.getElementById('cfgBaseHp').value;
+            let mul = document.getElementById('cfgScoreMul').value;
+            socket.emit('updateGameSettings', { baseMaxHp: maxHp, scoreMultiplier: mul });
+            toggleHostConfig(false);
+        }
+
+        const pCanvas = document.getElementById('previewCanvas');
+        let isDragging = false, lastMouseX = 0;
+        pCanvas.addEventListener('pointerdown', (e) => { isDragging = true; lastMouseX = e.clientX; });
+        window.addEventListener('pointermove', (e) => { if (!isDragging) return; previewAngle += (e.clientX - lastMouseX) * 0.02; lastMouseX = e.clientX; updatePreview(); });
+        window.addEventListener('pointerup', () => { isDragging = false; });
+
+        function updatePreview() {
+            let pCtx = pCanvas.getContext('2d');
+            pCtx.setTransform(1, 0, 0, 1, 0, 0);
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            pCtx.save(); pCtx.translate(pCanvas.width / 2, pCanvas.height / 2 + 10); pCtx.rotate(previewAngle);
+            drawCastleAvatar(pCtx, 0, 0, { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, team: document.getElementById('playerTeam').value }, true);
+            pCtx.restore();
+        }
+        updatePreview();
+
+        const classInfo = {
+            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมอื่น (Blind)”', 
+            'Warrior': '“นักรบสมดุลในสมรภูมิ (Stun)”',
+            'Tank': '“เกราะหนาป้องกันตัว (Heavy Slow)”', 
+            'Archer': '“ยิงโจมตีระยะไกล (Slow)”',
+            'Mage': '“เวทมนตร์แช่แข็ง (Freeze)”', 
+            'Support': '“สนับสนุนเพื่อนร่วมทีม (Drain)”',
+            'Monk': '“หมัดคอมโบสลับทิศทาง (Confuse)”', 
+            'Berserker': '“บ้าคลั่งในสงคราม (Burn)”'
+        };
+        function onClassChange() {
+            let cls = document.getElementById('playerClass').value;
+            document.getElementById('classDescription').innerHTML = `<b>${cls.toUpperCase()}</b><br>${classInfo[cls]}`;
+            updatePreview();
+        }
+
+        document.getElementById('playerTeam').addEventListener('change', updatePreview);
+
+        function joinGame() {
+            let name = document.getElementById('playerNameInput').value.trim();
+            if (!name) { alert("กรุณากรอกชื่อผู้เล่นก่อนเข้าเกม"); return; }
             socket.emit('joinGame', {
-                name,
-                team: myTeam,
-                class: document.getElementById('classSelect').value,
-                color: document.getElementById('colorInput').value,
-                password: hostFlag ? '007007' : ''
+                name: name,
+                hostPassword: '',
+                playerClass: document.getElementById('playerClass').value,
+                outfitColor: document.getElementById('playerColor').value,
+                team: document.getElementById('playerTeam').value
             });
         }
 
-        socket.on('joined', (res) => {
+        function loginAsHost() {
+            let pwd = prompt("🔑 กรุณากรอกรหัสผ่าน Host (007007):");
+            if (pwd === "007007") {
+                socket.emit('joinGame', {
+                    name: "Host (Do)",
+                    hostPassword: "007007",
+                    playerClass: "Warrior",
+                    outfitColor: "#f1c40f"
+                });
+            } else if (pwd !== null) {
+                alert("❌ รหัสผ่าน Host ไม่ถูกต้อง!");
+            }
+        }
+
+        socket.on('joinResult', (res) => {
             if (res.success) {
                 isHost = res.isHost;
-                document.getElementById('loginModal').style.display = 'none';
-                document.getElementById('ui').style.display = 'flex';
-                showMsg(isHost ? "👑 โหมด Host พร้อมควบคุมเกม" : "⚔️ เข้าสู่สนามรบสำเร็จ!", "#f1c40f");
+                gameStarted = res.gameStarted;
+                document.getElementById('setupModal').style.display = 'none';
+                document.getElementById('ui-layer').style.display = 'flex';
+                
+                if (isHost) {
+                    document.getElementById('hostConfigBtn').style.display = 'inline-block';
+                    document.getElementById('bottomPanel').style.display = 'none';
+                    document.getElementById('attackBaseBtn').style.display = 'none';
+                    document.getElementById('skillBtnHud').style.display = 'none';
+                    document.getElementById('playerInfoSection').innerHTML = `<div style="color: #f1c40f; font-weight: bold;">👑 Host Mode</div>`;
+                    showMsg("👑 ยินดีต้อนรับ Host! จัดการตั้งค่าและเริ่มเกมได้เลย", "#f1c40f");
+                } else {
+                    showMsg("⚔️ เข้าสู่สนามรบ 4 ทีม 4 ปราสาท!", "#f1c40f");
+                }
+
+                if (gameStarted) {
+                    document.getElementById('waitingBanner').style.display = 'none';
+                }
             } else {
-                alert(res.msg);
+                alert(res.msg || "❌ ไม่สามารถเข้าสู่เกมได้");
             }
         });
 
-        socket.on('msg', (text) => { showMsg(text, "#f1c40f"); });
-        socket.on('updateTiles', (newTiles) => { tiles = newTiles; });
+        socket.on('teamCountsUpdate', (counts) => {
+            document.getElementById('optRed').innerText = `🔴 ทีมแดง (Red Team) [${counts.red}/10]`;
+            document.getElementById('optBlue').innerText = `🔵 ทีมน้ำเงิน (Blue Team) [${counts.blue}/10]`;
+            document.getElementById('optGreen').innerText = `🟢 ทีมเขียว (Green Team) [${counts.green}/10]`;
+            document.getElementById('optYellow').innerText = `🟡 ทีมเหลือง (Yellow Team) [${counts.yellow}/10]`;
+        });
 
-        socket.on('state', (data) => {
-            players = data.players; bases = data.bases;
+        socket.on('gameStartedEvent', (data) => {
+            gameStarted = true;
+            document.getElementById('waitingBanner').style.display = 'none';
+            showMsg(data.msg, "#2ecc71");
+        });
+
+        socket.on('gameOverEvent', (data) => {
+            showMsg(data.msg, "#f1c40f");
+            setTimeout(() => { window.location.reload(); }, 6000);
+        });
+
+        const teamNamesMap = { red: 'ทีมแดง 🔴', blue: 'ทีมน้ำเงิน 🔵', green: 'ทีมเขียว 🟢', yellow: 'ทีมเหลือง 🟡' };
+        const teamColorsMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
+
+        socket.on('stateUpdate', (data) => {
+            players = data.players;
+            if (data.redBase && data.blueBase && data.greenBase && data.yellowBase) {
+                redBase = data.redBase; blueBase = data.blueBase; greenBase = data.greenBase; yellowBase = data.yellowBase;
+                updateBasesHUD();
+            }
+            if (!isHost && players[myId]) {
+                myScore = players[myId].score;
+                myTeam = players[myId].team || 'red';
+                document.getElementById('scoreDisplay').innerText = myScore;
+                let badge = document.getElementById('myTeamBadge');
+                badge.innerText = teamNamesMap[myTeam];
+                badge.style.color = teamColorsMap[myTeam];
+            }
+        });
+
+        socket.on('basesUpdate', (data) => {
+            redBase = data.redBase; blueBase = data.blueBase; greenBase = data.greenBase; yellowBase = data.yellowBase;
             updateBasesHUD();
         });
 
-        socket.on('tileCollected', (tile) => {
-            inventory.push(tile);
-            renderUI();
+        socket.on('roomStatus', (data) => {
+            let banner = document.getElementById('waitingBanner');
+            if (!data.gameStarted && !gameStarted) {
+                document.getElementById('waitingText').innerText = `⏳ กำลังรอผู้เล่นเข้าห้อง (${data.count}/${data.required} คน)`;
+                if (isHost) {
+                    document.getElementById('hostButtonContainer').style.display = 'block';
+                }
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+            }
         });
 
-        socket.on('eqResult', (res) => {
-            if (res.success) {
-                showMsg(`🌟 สำเร็จ! +${res.earned} แต้ม`, "#2ecc71");
-                document.getElementById('scoreDisplay').innerText = res.score;
-                equation = []; renderUI();
-            } else {
-                showMsg("❌ " + res.msg, "#e74c3c");
-            }
+        socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
+        socket.on('trolledEffect', (data) => { if(!isHost) { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 4000; } });
+        
+        socket.on('playerCastSkill', (data) => {
+            skillVisualEffects.push({
+                x: data.x, y: data.y, radius: 10, maxRadius: 200, alpha: 1.0,
+                playerClass: data.playerClass, team: data.team
+            });
         });
 
         function updateBasesHUD() {
-            ['red', 'blue', 'green', 'yellow'].forEach(t => {
-                let b = bases[t];
-                if (b) {
-                    let pct = Math.max(0, (b.hp / b.maxHp) * 100);
-                    document.getElementById(`hp${t.charAt(0).toUpperCase() + t.slice(1)}`).style.width = pct + '%';
-                    document.getElementById(`txt${t.charAt(0).toUpperCase() + t.slice(1)}`).innerText = b.hp;
-                }
-            });
-        }
+            let redPct = Math.max(0, (redBase.hp / redBase.maxHp) * 100);
+            let bluePct = Math.max(0, (blueBase.hp / blueBase.maxHp) * 100);
+            let greenPct = Math.max(0, (greenBase.hp / greenBase.maxHp) * 100);
+            let yellowPct = Math.max(0, (yellowBase.hp / yellowBase.maxHp) * 100);
 
-        function renderUI() {
-            const inv = document.getElementById('invZone'), eq = document.getElementById('eqZone');
-            inv.innerHTML = ''; eq.innerHTML = '';
-            inventory.forEach((t, i) => {
-                let el = document.createElement('div'); el.className = 'tile'; el.innerText = t.char;
-                el.onclick = () => { equation.push(inventory.splice(i, 1)[0]); renderUI(); };
-                inv.appendChild(el);
-            });
-            equation.forEach((t, i) => {
-                let el = document.createElement('div'); el.className = 'tile'; el.innerText = t.char;
-                el.onclick = () => { inventory.push(equation.splice(i, 1)[0]); renderUI(); };
-                eq.appendChild(el);
-            });
-        }
-
-        function clearEq() { inventory = inventory.concat(equation); equation = []; renderUI(); }
-        function sendEq() { if (equation.length > 0) socket.emit('submitEquation', equation.map(t => t.char).join('')); }
-        function openAttackMenu() { document.getElementById('attackModal').style.display = 'flex'; }
-        function attack(team) { document.getElementById('attackModal').style.display = 'none'; socket.emit('attackBase', team); }
-
-        function showMsg(text, color) {
-            let m = document.getElementById('msgBox');
-            m.innerText = text; m.style.color = color; m.classList.add('show');
-            setTimeout(() => m.classList.remove('show'), 2500);
+            document.getElementById('redHpFill').style.width = redPct + '%';
+            document.getElementById('redHpText').innerText = redBase.hp;
+            document.getElementById('blueHpFill').style.width = bluePct + '%';
+            document.getElementById('blueHpText').innerText = blueBase.hp;
+            document.getElementById('greenHpFill').style.width = greenPct + '%';
+            document.getElementById('greenHpText').innerText = greenBase.hp;
+            document.getElementById('yellowHpFill').style.width = yellowPct + '%';
+            document.getElementById('yellowHpText').innerText = yellowBase.hp;
         }
 
         const keys = { w: false, a: false, s: false, d: false };
-        window.addEventListener('keydown', e => setKey(e.key, true));
-        window.addEventListener('keyup', e => setKey(e.key, false));
+        window.addEventListener('keydown', e => { if(gameStarted) setKey(e.key, true); });
+        window.addEventListener('keyup', e => { if(gameStarted) setKey(e.key, false); });
         function setKey(k, state) {
             k = k.toLowerCase();
-            if (k === 'w' || k === 'arrowup') keys.w = state;
-            if (k === 's' || k === 'arrowdown') keys.s = state;
-            if (k === 'a' || k === 'arrowleft') keys.a = state;
-            if (k === 'd' || k === 'arrowright') keys.d = state;
+            let isConfused = (!isHost && activeEffect === 'confuse' && Date.now() < effectTimer);
+            let isRev = (!isHost && (activeEffect === 'blind' || isConfused) && Date.now() < effectTimer);
+            if (k === 'w' || k === 'arrowup') keys[isRev ? 's' : 'w'] = state;
+            if (k === 's' || k === 'arrowdown') keys[isRev ? 'w' : 's'] = state;
+            if (k === 'a' || k === 'arrowleft') keys[isRev ? 'd' : 'a'] = state;
+            if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
+        }
+
+        const joystickBase = document.getElementById('joystickBase');
+        const joystickThumb = document.getElementById('joystickThumb');
+        let joystickTouchId = null;
+        let joystickCenter = { x: 0, y: 0 };
+
+        window.addEventListener('touchstart', (e) => {
+            if (!gameStarted || isHost) return;
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            let touch = e.changedTouches[0];
+            if (touch.clientX < window.innerWidth / 2 && joystickTouchId === null) {
+                joystickTouchId = touch.identifier;
+                joystickCenter = { x: touch.clientX, y: touch.clientY };
+                joystickBase.style.display = 'block';
+                joystickBase.style.left = touch.clientX + 'px';
+                joystickBase.style.top = touch.clientY + 'px';
+                joystickThumb.style.transform = `translate(-50%, -50%) translate(0px, 0px)`;
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (joystickTouchId === null || isHost) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                if (touch.identifier === joystickTouchId) {
+                    let dx = touch.clientX - joystickCenter.x;
+                    let dy = touch.clientY - joystickCenter.y;
+                    let dist = Math.hypot(dx, dy);
+                    let maxDist = 40;
+                    if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
+                    joystickThumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+                    keys.w = dy < -10; keys.s = dy > 10; keys.a = dx < -10; keys.d = dx > 10;
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            if (joystickTouchId === null || isHost) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i];
+                if (touch.identifier === joystickTouchId) {
+                    joystickTouchId = null;
+                    joystickBase.style.display = 'none';
+                    keys.w = false; keys.s = false; keys.a = false; keys.d = false;
+                }
+            }
+        });
+
+        socket.on('initGame', (data) => {
+            myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize;
+            redBase = data.redBase; blueBase = data.blueBase; greenBase = data.greenBase; yellowBase = data.yellowBase;
+            if (data.teamCounts) {
+                document.getElementById('optRed').innerText = `🔴 ทีมแดง (Red Team) [${data.teamCounts.red}/10]`;
+                document.getElementById('optBlue').innerText = `🔵 ทีมน้ำเงิน (Blue Team) [${data.teamCounts.blue}/10]`;
+                document.getElementById('optGreen').innerText = `🟢 ทีมเขียว (Green Team) [${data.teamCounts.green}/10]`;
+                document.getElementById('optYellow').innerText = `🟡 ทีมเหลือง (Yellow Team) [${data.teamCounts.yellow}/10]`;
+            }
+            updateBasesHUD();
+            if (data.gameStarted) { gameStarted = true; document.getElementById('waitingBanner').style.display = 'none'; }
+        });
+        socket.on('tileCollected', (tile) => { if(!isHost) { inventory.push(tile); renderUI(); } });
+        socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
+        socket.on('newTile', (tile) => { tiles.push(tile); });
+        socket.on('mysteryBoxRemoved', (id) => { mysteryBoxes = mysteryBoxes.filter(b => b.id !== id); });
+        socket.on('newMysteryBox', (box) => { mysteryBoxes.push(box); });
+
+        socket.on('openMysteryBox', (data) => {
+            if (isHost) return;
+            currentMysteryAns = data.ans;
+            document.getElementById('mysteryQuestion').innerText = data.q;
+            document.getElementById('mysteryInput').value = '';
+            document.getElementById('mysteryModal').style.display = 'flex';
+            document.getElementById('mysteryInput').focus();
+        });
+        function submitMystery() { let ans = document.getElementById('mysteryInput').value; if (ans !== '') { socket.emit('submitMysteryAnswer', { userAns: ans, correctAns: currentMysteryAns }); document.getElementById('mysteryModal').style.display = 'none'; } }
+        socket.on('mysteryResult', (res) => { showMsg(res.success ? "✨ ปลดผนึกสำเร็จ! +60 แต้ม" : "❌ ผิดพลาด!", res.success ? "#f1c40f" : "#e74c3c"); });
+        
+        socket.on('equationResult', (res) => { 
+            if (res.success) { 
+                showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); 
+                equation = []; renderUI(); 
+                if (renderPlayers[myId]) { addFloatingText(`+${res.earnedScore} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 50, '#2ecc71'); }
+            } else { showMsg("❌ " + res.msg, "#e74c3c"); } 
+        });
+
+        socket.on('updateLeaderboard', (allPlayers) => {
+            let list = Object.values(allPlayers);
+            let baseSorted = [...list].filter(p => !p.isHost).sort((a,b) => (b.baseDamage || 0) - (a.baseDamage || 0));
+            let html = '';
+            baseSorted.slice(0, 5).forEach((p, i) => {
+                let color = teamColorsMap[p.team] || '#fff';
+                html += `<li>${i+1}. <span style="color:${color};">${p.name}</span> (${p.baseDamage || 0} DMG)</li>`;
+            });
+            document.getElementById('bossLeaderboardList').innerHTML = html;
+        });
+
+        function renderUI() {
+            if (isHost) return;
+            const invZone = document.getElementById('inventoryZone'), eqZone = document.getElementById('equationZone');
+            invZone.innerHTML = ''; eqZone.innerHTML = '';
+            inventory.forEach((tile, index) => { let el = document.createElement('div'); el.className = `tile ${tile.type}`; el.innerText = tile.char; el.onclick = () => { equation.push(inventory.splice(index, 1)[0]); renderUI(); }; invZone.appendChild(el); });
+            equation.forEach((tile, index) => { let el = document.createElement('div'); el.className = `tile ${tile.type}`; el.innerText = tile.char; el.onclick = () => { inventory.push(equation.splice(index, 1)[0]); renderUI(); }; eqZone.appendChild(el); });
+        }
+        function returnTiles() { if(!isHost) { inventory = inventory.concat(equation); equation = []; renderUI(); } }
+        function dropTile() { if (!isHost && inventory.length > 0) { socket.emit('dropTile', inventory.pop()); renderUI(); } }
+        function sendEquation() { if (!isHost && equation.length > 0) { socket.emit('submitEquation', equation.map(t => t.char).join('')); } }
+        function showMsg(text, color) { const msg = document.getElementById('sysMsg'); msg.innerText = text; msg.style.color = color; msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2500); }
+
+        function drawCastleAvatar(ctx, x, y, pl, isMoving) {
+            ctx.save(); ctx.translate(x, y);
+            let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
+            ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
+            ctx.beginPath(); ctx.ellipse(0, 20, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = pl.outfitColor || '#9b59b6';
+            ctx.beginPath(); ctx.roundRect(-14, -12 + walkAnim/2, 28, 28, 8); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#1b1b2f'; ctx.stroke();
+            ctx.fillStyle = '#1b1b2f'; ctx.fillRect(-9, 18, 6, 10 - walkAnim); ctx.fillRect(3, 18, 6, 10 + walkAnim);
+            ctx.fillStyle = '#f5b041'; ctx.beginPath(); ctx.arc(0, -20 + walkAnim/2, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawFortress(ctx, base, color, label) {
+            ctx.save(); ctx.translate(base.x, base.y);
+            ctx.fillStyle = color; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.roundRect(-70, -70, 140, 140, 16); ctx.fill(); ctx.stroke();
+
+            ctx.fillRect(-85, -85, 35, 35); ctx.strokeRect(-85, -85, 35, 35);
+            ctx.fillRect(50, -85, 35, 35); ctx.strokeRect(50, -85, 35, 35);
+            ctx.fillRect(-85, 50, 35, 35); ctx.strokeRect(-85, 50, 35, 35);
+            ctx.fillRect(50, 50, 35, 35); ctx.strokeRect(50, 50, 35, 35);
+
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px Kanit'; ctx.textAlign = 'center';
+            ctx.fillText(`🏰 ${label}`, 0, -95);
+            ctx.fillText(`HP: ${base.hp}/${base.maxHp}`, 0, 110);
+            ctx.restore();
+        }
+
+        function drawBackground(camX, camY) {
+            ctx.fillStyle = '#151328'; ctx.fillRect(0, 0, width, height);
+            ctx.save(); ctx.translate(-camX, -camY);
+            ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 25; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
+            ctx.restore();
         }
 
         function gameLoop() {
-            if (myId && players[myId] && players[myId].joined && !isHost) {
-                let p = players[myId];
-                let speed = 5, dx = 0, dy = 0;
-                if (keys.w) dy -= speed; if (keys.s) dy += speed;
-                if (keys.a) dx -= speed; if (keys.d) dx += speed;
-                if (dx !== 0 || dy !== 0) {
-                    socket.emit('move', { x: p.x + dx, y: p.y + dy });
+            if (gameStarted && myId) {
+                if (!isHost && players[myId]) {
+                    let p = players[myId];
+                    let dx = 0, dy = 0, speed = 5;
+                    if (activeEffect && Date.now() < effectTimer) {
+                        if (activeEffect === 'slow') speed = 3;
+                        if (activeEffect === 'heavySlow' || activeEffect === 'freeze' || activeEffect === 'burn') speed = 1.5;
+                    }
+                    if (keys.w) dy -= speed; if (keys.s) dy += speed;
+                    if (keys.a) dx -= speed; if (keys.d) dx += speed;
+                    if (dx !== 0 || dy !== 0) socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
+                    else socket.emit('move', { x: p.x, y: p.y, isMoving: false });
+                } else if (isHost) {
+                    let camSpeed = 12;
+                    if (keys.w) hostCamY -= camSpeed; if (keys.s) hostCamY += camSpeed;
+                    if (keys.a) hostCamX -= camSpeed; if (keys.d) hostCamX += camSpeed;
+                    hostCamX = Math.max(100, Math.min(MAP_SIZE - 100, hostCamX));
+                    hostCamY = Math.max(100, Math.min(MAP_SIZE - 100, hostCamY));
                 }
-            }
 
-            // ระบบ Interpolation (Lerp) เกลี่ยตำแหน่งผู้เล่นให้ลื่นไหล
-            for (let id in players) {
-                let serverPl = players[id];
-                if (!renderPlayers[id]) {
-                    renderPlayers[id] = { ...serverPl };
+                for (let id in players) {
+                    let serverPl = players[id];
+                    if (!renderPlayers[id]) renderPlayers[id] = { ...serverPl };
+                    else {
+                        renderPlayers[id].targetX = serverPl.x; renderPlayers[id].targetY = serverPl.y;
+                        renderPlayers[id].name = serverPl.name; renderPlayers[id].playerClass = serverPl.playerClass;
+                        renderPlayers[id].outfitColor = serverPl.outfitColor; renderPlayers[id].team = serverPl.team;
+                        renderPlayers[id].isMoving = serverPl.isMoving; renderPlayers[id].isHost = serverPl.isHost;
+                    }
+                    if (renderPlayers[id].targetX !== undefined) {
+                        renderPlayers[id].x += (renderPlayers[id].targetX - renderPlayers[id].x) * 0.3;
+                        renderPlayers[id].y += (renderPlayers[id].targetY - renderPlayers[id].y) * 0.3;
+                    }
+                }
+                for (let id in renderPlayers) if (!players[id]) delete renderPlayers[id];
+
+                let camX, camY;
+                if (isHost) {
+                    camX = hostCamX - (width / 2); camY = hostCamY - (height / 2);
                 } else {
-                    renderPlayers[id].x += (serverPl.x - renderPlayers[id].x) * 0.3;
-                    renderPlayers[id].y += (serverPl.y - renderPlayers[id].y) * 0.3;
-                    renderPlayers[id].name = serverPl.name;
-                    renderPlayers[id].team = serverPl.team;
-                    renderPlayers[id].color = serverPl.color;
-                    renderPlayers[id].joined = serverPl.joined;
-                    renderPlayers[id].isHost = serverPl.isHost;
+                    let me = renderPlayers[myId] || players[myId];
+                    camX = me.x - (width / 2); camY = me.y - (height / 2);
+                    if (activeEffect && Date.now() < effectTimer) { camX += (Math.random() - 0.5) * 20; camY += (Math.random() - 0.5) * 20; }
                 }
-            }
-            for (let id in renderPlayers) {
-                if (!players[id]) delete renderPlayers[id];
-            }
 
-            ctx.fillStyle = '#151328'; ctx.fillRect(0, 0, width, height);
-
-            if (renderPlayers[myId]) {
-                let me = renderPlayers[myId];
-                let camX = me.x - width / 2, camY = me.y - height / 2;
-
+                drawBackground(camX, camY);
                 ctx.save(); ctx.translate(-camX, -camY);
 
-                ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 20; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
+                drawFortress(ctx, redBase, 'rgba(231, 76, 60, 0.4)', redBase.name);
+                drawFortress(ctx, blueBase, 'rgba(52, 152, 219, 0.4)', blueBase.name);
+                drawFortress(ctx, greenBase, 'rgba(46, 204, 113, 0.4)', greenBase.name);
+                drawFortress(ctx, yellowBase, 'rgba(241, 196, 15, 0.4)', yellowBase.name);
 
-                for (let k in bases) {
-                    let b = bases[k];
-                    ctx.fillStyle = teamColors[k] + '66';
-                    ctx.strokeStyle = teamColors[k];
-                    ctx.lineWidth = 4;
-                    ctx.fillRect(b.x - 60, b.y - 60, 120, 120);
-                    ctx.strokeRect(b.x - 60, b.y - 60, 120, 120);
-                    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
-                    ctx.fillText(`🏰 ${b.name}`, b.x, b.y - 75);
-                    ctx.fillText(`HP: ${b.hp}`, b.x, b.y + 80);
+                for (let i = skillVisualEffects.length - 1; i >= 0; i--) {
+                    let fx = skillVisualEffects[i];
+                    fx.radius += 8; fx.alpha -= 0.025;
+                    if (fx.alpha <= 0 || fx.radius >= fx.maxRadius) { skillVisualEffects.splice(i, 1); continue; }
+                    ctx.save(); ctx.globalAlpha = fx.alpha;
+                    ctx.strokeStyle = teamColorsMap[fx.team] || '#fff';
+                    ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.stroke();
+                    ctx.fillStyle = teamColorsMap[fx.team] ? teamColorsMap[fx.team] + '33' : 'rgba(255,255,255,0.2)';
+                    ctx.fill(); ctx.restore();
                 }
 
                 tiles.forEach(t => {
-                    ctx.fillStyle = '#f1c40f';
-                    ctx.beginPath(); ctx.arc(t.x, t.y, 16, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = '#2d3436'; ctx.font = 'bold 16px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillStyle = t.type === 'num' ? '#f1c40f' : (t.type === 'op' ? '#e74c3c' : '#3498db');
+                    ctx.beginPath(); ctx.arc(t.x, t.y, 18, 0, Math.PI * 2); ctx.fill();
+                    ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+                    ctx.fillStyle = '#ffffff'; ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                     ctx.fillText(t.char, t.x, t.y);
+                });
+
+                mysteryBoxes.forEach(b => {
+                    ctx.fillStyle = '#f39c12'; ctx.fillRect(b.x - 18, b.y - 18, 36, 36);
+                    ctx.lineWidth = 2; ctx.strokeStyle = '#f1c40f'; ctx.strokeRect(b.x - 18, b.y - 18, 36, 36);
+                    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText('?', b.x, b.y);
                 });
 
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
-                    if (!pl.joined || pl.isHost) continue;
-                    ctx.fillStyle = teamColors[pl.team] || '#fff';
-                    ctx.beginPath(); ctx.arc(pl.x, pl.y, 14, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = pl.color || '#9b59b6';
-                    ctx.fillRect(pl.x - 10, pl.y - 25, 20, 12);
-                    ctx.fillStyle = '#fff'; ctx.font = '12px Kanit'; ctx.textAlign = 'center';
-                    ctx.fillText(pl.name, pl.x, pl.y - 35);
+                    if (!pl.loggedIn || pl.isHost) continue;
+                    drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
+                    ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
+                    ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
+                    ctx.fillText(`${pl.name} [${pl.playerClass}]`, pl.x, pl.y - 65);
+                }
+
+                for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                    let ft = floatingTexts[i];
+                    ft.y += ft.vy; ft.alpha -= 0.02;
+                    if (ft.alpha <= 0) { floatingTexts.splice(i, 1); continue; }
+                    ctx.save(); ctx.globalAlpha = ft.alpha; ctx.fillStyle = ft.color;
+                    ctx.font = 'bold 24px Kanit'; ctx.textAlign = 'center';
+                    ctx.fillText(ft.text, ft.x, ft.y);
+                    ctx.restore();
                 }
 
                 ctx.restore();
             }
-
             requestAnimationFrame(gameLoop);
         }
         gameLoop();
