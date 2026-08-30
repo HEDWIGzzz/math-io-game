@@ -3,51 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - 4 Teams Castle Raid</title>
+    <title>Math.io - 4 Teams Castle Arena</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
-        * { 
-            box-sizing: border-box; 
-            user-select: none; 
-            margin: 0; 
-            padding: 0; 
-            -webkit-tap-highlight-color: transparent; 
-            touch-action: none; 
-        }
-        body { 
-            font-family: 'Kanit', sans-serif; 
-            background: #0f0c1b; 
-            color: white; 
-            overflow: hidden; 
-            width: 100vw; 
-            height: 100vh; 
-            touch-action: none; 
-        }
-        canvas { 
-            display: block; 
-            background: #151328; 
-            width: 100%; 
-            height: 100%; 
-            touch-action: none; 
-        }
+        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: none; }
+        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; touch-action: none; }
+        canvas { display: block; background: #151328; width: 100%; height: 100%; touch-action: none; }
         
         .screen-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(10, 8, 20, 0.96); display: flex; justify-content: center; align-items: center; z-index: 100;
-            overflow-y: auto; padding: 20px;
-            touch-action: auto;
+            overflow-y: auto; padding: 20px; touch-action: auto;
         }
         .modal-box {
             background: #221e3f; padding: 25px; border-radius: 16px; text-align: center;
             display: flex; flex-direction: column; gap: 14px; border: 3px solid #9b59b6; box-shadow: 0 0 40px rgba(155, 89, 182, 0.4);
-            width: 100%; max-width: 420px; max-height: 92vh; overflow-y: auto;
-            touch-action: auto;
+            width: 100%; max-width: 420px; max-height: 92vh; overflow-y: auto; touch-action: auto;
         }
         .modal-box h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); font-size: 24px; }
         .modal-box input, .modal-box select {
             padding: 12px; font-size: 15px; border-radius: 8px; border: 2px solid #9b59b6; text-align: center;
-            font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%;
-            touch-action: auto;
+            font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%; touch-action: auto;
         }
         .modal-box label { font-size: 13px; color: #d7bde2; text-align: left; font-weight: bold; }
         .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; padding: 14px; font-size: 18px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
@@ -152,17 +128,17 @@
             <div>
                 <label>เลือกสายอาชีพ (SELECT CLASS)</label>
                 <select id="playerClass" onchange="onClassChange()">
-                    <option value="Assassin">🗡️ Assassin</option>
-                    <option value="Warrior">⚔️ Warrior</option>
-                    <option value="Tank">🛡️ Tank</option>
-                    <option value="Archer">🏹 Archer</option>
-                    <option value="Mage">🔮 Mage</option>
-                    <option value="Support">✨ Support</option>
-                    <option value="Monk">🥋 Monk</option>
-                    <option value="Berserker">🔥 Berserker</option>
+                    <option value="Assassin">🗡️ Assassin (สายพุ่งความเร็ว)</option>
+                    <option value="Warrior">⚔️ Warrior (สายทำลายฐาน)</option>
+                    <option value="Tank">🛡️ Tank (สายซ่อมแซมฐาน)</option>
+                    <option value="Archer">🏹 Archer (สายสโลว์ศัตรู)</option>
+                    <option value="Mage">🔮 Mage (สายดูดเบี้ยเลข)</option>
+                    <option value="Support">✨ Support (สายโบนัสคะแนน)</option>
+                    <option value="Monk">🥋 Monk (สายชำระล้างดีบัฟ)</option>
+                    <option value="Berserker">🔥 Berserker (สายคะแนนคูณสอง)</option>
                 </select>
             </div>
-            <div class="class-desc" id="classDescription"><b>ASSASSIN</b><br>สกิล: ป่วนผู้เล่นทีมอื่น</div>
+            <div class="class-desc" id="classDescription"><b>ASSASSIN</b><br>สกิล: Dash พุ่งทะยานเพิ่มความเร็ว</div>
             <div>
                 <label>สีตัวละคร (OUTFIT COLOR)</label>
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
@@ -260,7 +236,7 @@
         </div>
 
         <button class="attack-base-btn" id="attackBaseBtn" onclick="tryAttackNearestBase()">🏰 โจมตีฐาน<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
-        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลป่วน</button>
+        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลอาชีพ</button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
 
@@ -277,7 +253,6 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Polyfill สำหรับ roundRect ป้องกันปัญหาในเบราว์เซอร์เก่า
         if (!CanvasRenderingContext2D.prototype.roundRect) {
             CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
                 if (w < 2 * r) r = w / 2;
@@ -317,7 +292,7 @@
         let greenBase = { x: 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Green Fortress', team: 'green', isAlive: true };
         let yellowBase = { x: MAP_SIZE - 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Yellow Fortress', team: 'yellow', isAlive: true };
 
-        let floatingTexts = [], activeEffect = null, effectTimer = 0;
+        let floatingTexts = [], activeBuff = null, buffTimer = 0;
         let skillVisualEffects = [];
         let hostCamX = MAP_SIZE / 2, hostCamY = MAP_SIZE / 2;
 
@@ -325,14 +300,13 @@
             floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
         }
 
-        // ระบบโจมตีอัตโนมัติไปยังปราสาทศัตรูที่อยู่ใกล้ที่สุดในระยะ
         function tryAttackNearestBase() {
             if (!renderPlayers[myId]) return;
             let me = renderPlayers[myId];
             let basesMap = { red: redBase, blue: blueBase, green: greenBase, yellow: yellowBase };
             
             let nearestTeam = null;
-            let minDistance = 450; // ระยะโจมตีสูงสุด
+            let minDistance = 450;
 
             for (let teamKey in basesMap) {
                 let base = basesMap[teamKey];
@@ -396,14 +370,14 @@
         updatePreview();
 
         const classInfo = {
-            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมอื่น (Blind)”', 
-            'Warrior': '“นักรบสมดุลในสมรภูมิ (Stun)”',
-            'Tank': '“เกราะหนาป้องกันตัว (Heavy Slow)”', 
-            'Archer': '“ยิงโจมตีระยะไกล (Slow)”',
-            'Mage': '“เวทมนตร์แช่แข็ง (Freeze)”', 
-            'Support': '“สนับสนุนเพื่อนร่วมทีม (Drain)”',
-            'Monk': '“หมัดคอมโบสลับทิศทาง (Confuse)”', 
-            'Berserker': '“บ้าคลั่งในสงคราม (Burn)”'
+            'Assassin': '“Dash พุ่งทะยานเพิ่มความเร็วเคลื่อนที่ +50%”', 
+            'Warrior': '“เพิ่มพลังโจมตีฐานเด็ดขาด 200 ดาเมจ”',
+            'Tank': '“ซ่อมแซมและฟื้นฟู HP ฐานทีมตัวเอง +150”', 
+            'Archer': '“ยิงศรลดความเร็วศัตรูรอบตัว -30%”',
+            'Mage': '“เวทดูดเบี้ยตัวเลขและเครื่องหมายเข้าหาตัว”', 
+            'Support': '“เพิ่มโบนัสคะแนนสมการให้ตัวเอง +30%”',
+            'Monk': '“ชำระล้างสถานะสโลว์และดีบัฟทั้งหมด”', 
+            'Berserker': '“เสีย 20 แต้ม แลกกับคะแนนสมการคูณสอง (×2)”'
         };
         function onClassChange() {
             let cls = document.getElementById('playerClass').value;
@@ -519,7 +493,19 @@
         });
 
         socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
-        socket.on('trolledEffect', (data) => { if(!isHost) { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 4000; } });
+        
+        socket.on('applyBuff', (data) => {
+            activeBuff = data.type;
+            buffTimer = Date.now() + data.duration;
+        });
+
+        socket.on('trolledEffect', (data) => { 
+            if(!isHost && activeBuff !== 'cleanse') { 
+                showMsg(data.msg, "#e74c3c"); 
+                activeBuff = data.type; 
+                buffTimer = Date.now() + data.duration; 
+            } 
+        });
         
         socket.on('playerCastSkill', (data) => {
             skillVisualEffects.push({
@@ -549,12 +535,10 @@
         window.addEventListener('keyup', e => { if(gameStarted) setKey(e.key, false); });
         function setKey(k, state) {
             k = k.toLowerCase();
-            let isConfused = (!isHost && activeEffect === 'confuse' && Date.now() < effectTimer);
-            let isRev = (!isHost && (activeEffect === 'blind' || isConfused) && Date.now() < effectTimer);
-            if (k === 'w' || k === 'arrowup') keys[isRev ? 's' : 'w'] = state;
-            if (k === 's' || k === 'arrowdown') keys[isRev ? 'w' : 's'] = state;
-            if (k === 'a' || k === 'arrowleft') keys[isRev ? 'd' : 'a'] = state;
-            if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
+            if (k === 'w' || k === 'arrowup') keys.w = state;
+            if (k === 's' || k === 'arrowdown') keys.s = state;
+            if (k === 'a' || k === 'arrowleft') keys.a = state;
+            if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
         const joystickBase = document.getElementById('joystickBase');
@@ -635,6 +619,19 @@
         function submitMystery() { let ans = document.getElementById('mysteryInput').value; if (ans !== '') { socket.emit('submitMysteryAnswer', { userAns: ans, correctAns: currentMysteryAns }); document.getElementById('mysteryModal').style.display = 'none'; } }
         socket.on('mysteryResult', (res) => { showMsg(res.success ? "✨ ปลดผนึกสำเร็จ! +60 แต้ม" : "❌ ผิดพลาด!", res.success ? "#f1c40f" : "#e74c3c"); });
         
+        socket.on('checkDoubleScore', (data) => {
+            let earned = data.earned;
+            if (activeBuff === 'doubleScore' && Date.now() < buffTimer) {
+                earned *= 2;
+                activeBuff = null; // ใช้แล้วหมดไป
+                showMsg("🔥 Berserker คูณสองคะแนนสำเร็จ!", "#f1c40f");
+            } else if (activeBuff === 'scoreBoost' && Date.now() < buffTimer) {
+                earned = Math.round(earned * 1.3);
+                showMsg("✨ Support บูสต์คะแนน +30%!", "#2ecc71");
+            }
+            socket.emit('submitEquationFinal', { earned });
+        });
+
         socket.on('equationResult', (res) => { 
             if (res.success) { 
                 showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); 
@@ -694,10 +691,14 @@
                 if (!isHost && players[myId]) {
                     let p = players[myId];
                     let dx = 0, dy = 0, speed = 5;
-                    if (activeEffect && Date.now() < effectTimer) {
-                        if (activeEffect === 'slow') speed = 3;
-                        if (activeEffect === 'heavySlow' || activeEffect === 'freeze' || activeEffect === 'burn') speed = 1.5;
+                    
+                    if (activeBuff && Date.now() < buffTimer) {
+                        if (activeBuff === 'speedBoost') speed = 7.5; // Assassin เร็วขึ้น
+                        else if (activeBuff === 'slow') speed = 3.0; // โดนธนูสโลว์
+                    } else if (activeBuff && Date.now() >= buffTimer) {
+                        if (activeBuff === 'speedBoost' || activeBuff === 'slow') activeBuff = null;
                     }
+
                     if (keys.w) dy -= speed; if (keys.s) dy += speed;
                     if (keys.a) dx -= speed; if (keys.d) dx += speed;
                     if (dx !== 0 || dy !== 0) socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
@@ -732,7 +733,6 @@
                 } else {
                     let me = renderPlayers[myId] || players[myId];
                     camX = me.x - (width / 2); camY = me.y - (height / 2);
-                    if (activeEffect && Date.now() < effectTimer) { camX += (Math.random() - 0.5) * 20; camY += (Math.random() - 0.5) * 20; }
                 }
 
                 drawBackground(camX, camY);
