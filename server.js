@@ -240,8 +240,20 @@ io.on('connection', (socket) => {
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
         p.isMoving = data.isMoving;
 
+        // ระบบเก็บเบี้ย (Tiles)
+        for (let i = tiles.length - 1; i >= 0; i--) {
+            if (Math.hypot(p.x - tiles[i].x, p.y - tiles[i].y) < 45) {
+                let collectedTile = tiles.splice(i, 1)[0];
+                io.emit('tileRemoved', collectedTile.id);
+                socket.emit('tileCollected', collectedTile);
+                spawnTile();
+                io.emit('newTile', tiles[tiles.length - 1]);
+            }
+        }
+
+        // ระบบเก็บกล่องสมบัติ
         for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
-            if (Math.hypot(p.x - mysteryBoxes[i].x, p.y - mysteryBoxes[i].y) < 40) {
+            if (Math.hypot(p.x - mysteryBoxes[i].x, p.y - mysteryBoxes[i].y) < 45) {
                 let box = mysteryBoxes.splice(i, 1)[0];
                 io.emit('mysteryBoxRemoved', box.id);
                 let n1 = Math.floor(Math.random() * 20) + 1, n2 = Math.floor(Math.random() * 20) + 1;
