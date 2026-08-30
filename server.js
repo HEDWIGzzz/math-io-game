@@ -19,8 +19,10 @@ let gameSettings = {
     scoreMultiplier: 15
 };
 
-let redBase = { x: 800, y: MAP_SIZE / 2, hp: 3000, maxHp: 3000, name: 'Red Fortress', isAlive: true };
-let blueBase = { x: MAP_SIZE - 800, y: MAP_SIZE / 2, hp: 3000, maxHp: 3000, name: 'Blue Fortress', isAlive: true };
+let redBase = { x: 800, y: 800, hp: 3000, maxHp: 3000, name: 'Red Fortress', team: 'red', isAlive: true };
+let blueBase = { x: MAP_SIZE - 800, y: 800, hp: 3000, maxHp: 3000, name: 'Blue Fortress', team: 'blue', isAlive: true };
+let greenBase = { x: 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Green Fortress', team: 'green', isAlive: true };
+let yellowBase = { x: MAP_SIZE - 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Yellow Fortress', team: 'yellow', isAlive: true };
 
 const AMATH_SCORES = {
     "0": 1, "1": 1, "2": 1, "3": 1,
@@ -110,7 +112,7 @@ io.on('connection', (socket) => {
         loggedIn: false
     };
 
-    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, redBase, blueBase, settings: gameSettings, gameStarted: globalGameStarted });
+    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, redBase, blueBase, greenBase, yellowBase, settings: gameSettings, gameStarted: globalGameStarted });
 
     socket.on('joinGame', (data) => {
         let name = data.name ? data.name.trim() : 'Player';
@@ -118,28 +120,60 @@ io.on('connection', (socket) => {
 
         let isHostUser = (data.hostPassword === '007007' || name.toLowerCase() === 'do' || name === 'โด้');
 
-        let redCount = 0, blueCount = 0;
+        if (isHostUser) {
+            let p = activePlayers[socket.id];
+            p.name = 'Host (โด้)';
+            p.playerClass = data.playerClass || 'Warrior';
+            p.outfitColor = data.outfitColor || '#f1c40f';
+            p.team = 'host';
+            p.isHost = true;
+            p.loggedIn = true;
+            p.x = MAP_SIZE / 2;
+            p.y = MAP_SIZE / 2;
+
+            let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
+            io.emit('roomStatus', { count: totalIngame, required: 40, gameStarted: globalGameStarted });
+            socket.emit('joinResult', { success: true, team: 'host', isHost: true, gameStarted: globalGameStarted });
+            io.emit('updateLeaderboard', activePlayers);
+            return;
+        }
+
+        let requestedTeam = data.team || 'red';
+        if (!['red', 'blue', 'green', 'yellow'].includes(requestedTeam)) {
+            requestedTeam = 'red';
+        }
+
+        // ตรวจสอบจำนวนสมาชิกในทีมที่เลือก (จำกัดทีมละ 10 คน)
+        let teamCount = 0;
         for (let id in activePlayers) {
-            if (activePlayers[id].loggedIn && !activePlayers[id].isHost) {
-                if (activePlayers[id].team === 'red') redCount++;
-                else blueCount++;
+            let pl = activePlayers[id];
+            if (pl.loggedIn && !pl.isHost && pl.team === requestedTeam) {
+                teamCount++;
             }
         }
-        let assignedTeam = isHostUser ? 'host' : (redCount <= blueCount ? 'red' : 'blue');
+
+        if (teamCount >= 10) {
+            socket.emit('joinResult', { success: false, msg: '❌ ทีมนี้เต็มแล้ว (จำกัด 10 คนต่อทีม)' });
+            return;
+        }
 
         let p = activePlayers[socket.id];
-        p.name = isHostUser ? 'Host (โด้)' : name;
+        p.name = name;
         p.playerClass = data.playerClass || 'Warrior';
         p.outfitColor = data.outfitColor || '#9b59b6';
-        p.team = assignedTeam;
-        p.isHost = isHostUser;
+        p.team = requestedTeam;
+        p.isHost = false;
         p.loggedIn = true;
-        p.x = assignedTeam === 'red' ? 1000 : MAP_SIZE - 1000;
-        p.y = MAP_SIZE / 2 + (Math.random() - 0.5) * 400;
+
+        // กำหนดจุดเกิดตามทีมที่เลือก
+        if (requestedTeam === 'red') { p.x = 1200; p.y = 1200; }
+        else if (requestedTeam === 'blue') { p.x = MAP_SIZE - 1200; p.y = 1200; }
+        else if (requestedTeam === 'green') { p.x = 1200; p.y = MAP_SIZE - 1200; }
+        else if (requestedTeam === 'yellow') { p.x = MAP_SIZE - 1200; p.y = MAP_SIZE - 1200; }
 
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
-        io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
-        socket.emit('joinResult', { success: true, team: assignedTeam, isHost: isHostUser, gameStarted: globalGameStarted });
+        io.emit('roomStatus', { count: totalIngame, required: 40, gameStarted: globalGameStarted });
+        socket.emit('joinResult', { success: true, team: requestedTeam, isHost: false, gameStarted: globalGameStarted });
         io.emit('updateLeaderboard', activePlayers);
     });
 
@@ -147,7 +181,7 @@ io.on('connection', (socket) => {
         let p = activePlayers[socket.id];
         if (p && p.isHost) {
             globalGameStarted = true;
-            io.emit('gameStartedEvent', { msg: '🚀 โด้ (Host) สั่งเริ่มศึกถล่มฐานแล้ว!' });
+            io.emit('gameStartedEvent', { msg: '🚀 โด้ (Host) สั่งเริ่มศึก 4 ปราสาทแล้ว!' });
         }
     });
 
@@ -159,27 +193,38 @@ io.on('connection', (socket) => {
 
             redBase.maxHp = gameSettings.baseMaxHp;
             blueBase.maxHp = gameSettings.baseMaxHp;
+            greenBase.maxHp = gameSettings.baseMaxHp;
+            yellowBase.maxHp = gameSettings.baseMaxHp;
+
             if (redBase.hp > redBase.maxHp) redBase.hp = redBase.maxHp;
             if (blueBase.hp > blueBase.maxHp) blueBase.hp = blueBase.maxHp;
+            if (greenBase.hp > greenBase.maxHp) greenBase.hp = greenBase.maxHp;
+            if (yellowBase.hp > yellowBase.maxHp) yellowBase.hp = yellowBase.maxHp;
 
-            io.emit('settingsUpdated', { settings: gameSettings, redBase, blueBase });
+            io.emit('settingsUpdated', { settings: gameSettings, redBase, blueBase, greenBase, yellowBase });
             socket.emit('skillResult', { success: true, msg: '⚙️ บันทึกการตั้งค่าฐานสำเร็จ!' });
         }
     });
 
-    socket.on('attackBase', () => {
+    socket.on('attackBase', (targetTeam) => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.isHost) return;
 
-        let targetBase = p.team === 'red' ? blueBase : redBase;
+        let basesMap = { red: redBase, blue: blueBase, green: greenBase, yellow: yellowBase };
+        let targetBase = basesMap[targetTeam];
+
+        if (!targetBase || targetBase.team === p.team) {
+            socket.emit('skillResult', { success: false, msg: '❌ ไม่สามารถโจมตีฐานทีมตัวเองได้!' });
+            return;
+        }
         if (!targetBase.isAlive) {
-            socket.emit('skillResult', { success: false, msg: '🏰 ฐานฝ่ายตรงข้ามถูกทำลายไปแล้ว!' });
+            socket.emit('skillResult', { success: false, msg: '🏰 ฐานนี้ถูกทำลายไปแล้ว!' });
             return;
         }
 
         let dist = Math.hypot(p.x - targetBase.x, p.y - targetBase.y);
-        if (dist > 400) {
-            socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากฐานฝ่ายตรงข้ามเกินไป' });
+        if (dist > 450) {
+            socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากฐานเป้าหมายเกินไป' });
             return;
         }
 
@@ -197,13 +242,12 @@ io.on('connection', (socket) => {
         if (targetBase.hp <= 0) {
             targetBase.hp = 0;
             targetBase.isAlive = false;
-            let winnerTeamName = p.team === 'red' ? 'ทีมสีแดง (Red Team)' : 'ทีมสีน้ำเงิน (Blue Team)';
-            io.emit('gameOverEvent', { msg: `🎉 ${winnerTeamName} ถล่มฐานทัพข้าศึกราบคาบ!` });
+            io.emit('gameOverEvent', { msg: `💥 ฐาน ${targetBase.name} ถูกถล่มราบคาบ!` });
         }
 
-        io.emit('basesUpdate', { redBase, blueBase });
+        io.emit('basesUpdate', { redBase, blueBase, greenBase, yellowBase });
         io.emit('updateLeaderboard', activePlayers);
-        socket.emit('skillResult', { success: true, msg: `🔥 โจมตีฐานฝ่ายตรงข้ามเสียหาย ${damage} แต้ม!` });
+        socket.emit('skillResult', { success: true, msg: `🔥 โจมตี ${targetBase.name} เสียหาย ${damage} แต้ม!` });
     });
 
     socket.on('castSkill', () => {
@@ -229,7 +273,7 @@ io.on('connection', (socket) => {
             }
         }
         io.emit('playerCastSkill', { socketId: socket.id, x: p.x, y: p.y, playerClass: p.playerClass, team: p.team });
-        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนทีมตรงข้ามสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
+        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนทีมอื่นสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
     });
 
     socket.on('move', (data) => {
@@ -240,7 +284,6 @@ io.on('connection', (socket) => {
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
         p.isMoving = data.isMoving;
 
-        // ระบบเก็บเบี้ย (Tiles)
         for (let i = tiles.length - 1; i >= 0; i--) {
             if (Math.hypot(p.x - tiles[i].x, p.y - tiles[i].y) < 45) {
                 let collectedTile = tiles.splice(i, 1)[0];
@@ -251,7 +294,6 @@ io.on('connection', (socket) => {
             }
         }
 
-        // ระบบเก็บกล่องสมบัติ
         for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
             if (Math.hypot(p.x - mysteryBoxes[i].x, p.y - mysteryBoxes[i].y) < 45) {
                 let box = mysteryBoxes.splice(i, 1)[0];
@@ -310,13 +352,13 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         delete activePlayers[socket.id];
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
-        io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
+        io.emit('roomStatus', { count: totalIngame, required: 40, gameStarted: globalGameStarted });
         io.emit('updateLeaderboard', activePlayers);
     });
 });
 
 setInterval(() => {
-    io.emit('stateUpdate', { players: activePlayers, redBase, blueBase });
+    io.emit('stateUpdate', { players: activePlayers, redBase, blueBase, greenBase, yellowBase });
 }, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
