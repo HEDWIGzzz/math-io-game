@@ -27,6 +27,7 @@
         }
         .modal-box label { font-size: 13px; color: #d7bde2; text-align: left; font-weight: bold; }
         .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; padding: 14px; font-size: 18px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .btn-host-login { background: linear-gradient(135deg, #e74c3c, #8e44ad); color: white; width: 100%; padding: 12px; font-size: 16px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; box-shadow: 0 4px 15px rgba(231,76,60,0.4); }
 
         #previewCanvas { background: #151328; border: 2px dashed #9b59b6; border-radius: 12px; margin: 0 auto; display: block; cursor: grab; }
         .class-desc { background: rgba(155, 89, 182, 0.15); border: 1px solid #9b59b6; padding: 10px; border-radius: 8px; font-size: 13px; color: #f39c12; text-align: left; }
@@ -114,10 +115,6 @@
                 <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ..." maxlength="15" autocomplete="off">
             </div>
             <div>
-                <label>🔑 รหัสผ่านโฮส (Admin Password - 007007)</label>
-                <input type="password" id="hostPasswordInput" placeholder="ใส่รหัส 007007 เพื่อเป็น Host..." autocomplete="off">
-            </div>
-            <div>
                 <label>เลือกสายอาชีพ (SELECT CLASS)</label>
                 <select id="playerClass" onchange="onClassChange()">
                     <option value="Assassin">🗡️ Assassin</option>
@@ -136,6 +133,7 @@
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
             </div>
             <button class="btn-enter" onclick="joinGame()">▶ เข้าสู่สนามรบทันที</button>
+            <button class="btn-host-login" onclick="loginAsHost()">👑 เข้าสู่ระบบ Host (Admin)</button>
         </div>
     </div>
 
@@ -305,14 +303,27 @@
 
         function joinGame() {
             let name = document.getElementById('playerNameInput').value.trim();
-            let hostPassword = document.getElementById('hostPasswordInput').value.trim();
             if (!name) { alert("กรุณากรอกชื่อผู้เล่นก่อนเข้าเกม"); return; }
             socket.emit('joinGame', {
                 name: name,
-                hostPassword: hostPassword,
+                hostPassword: '',
                 playerClass: document.getElementById('playerClass').value,
                 outfitColor: document.getElementById('playerColor').value
             });
+        }
+
+        function loginAsHost() {
+            let pwd = prompt("🔑 กรุณากรอกรหัสผ่าน Host (007007):");
+            if (pwd === "007007") {
+                socket.emit('joinGame', {
+                    name: "Host (Do)",
+                    hostPassword: "007007",
+                    playerClass: "Warrior",
+                    outfitColor: "#f1c40f"
+                });
+            } else if (pwd !== null) {
+                alert("❌ รหัสผ่าน Host ไม่ถูกต้อง!");
+            }
         }
 
         socket.on('joinResult', (res) => {
@@ -418,7 +429,6 @@
             if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
         }
 
-        // Virtual Joystick บนมือถือ
         const joystickBase = document.getElementById('joystickBase');
         const joystickThumb = document.getElementById('joystickThumb');
         let joystickTouchId = null;
@@ -537,7 +547,6 @@
             ctx.fillStyle = color; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
             ctx.beginPath(); ctx.roundRect(-70, -70, 140, 140, 16); ctx.fill(); ctx.stroke();
 
-            // Towers
             ctx.fillRect(-85, -85, 35, 35); ctx.strokeRect(-85, -85, 35, 35);
             ctx.fillRect(50, -85, 35, 35); ctx.strokeRect(50, -85, 35, 35);
             ctx.fillRect(-85, 50, 35, 35); ctx.strokeRect(-85, 50, 35, 35);
@@ -605,7 +614,6 @@
                 drawBackground(camX, camY);
                 ctx.save(); ctx.translate(-camX, -camY);
 
-                // วาดฐานทัพทั้งสองฝ่าย
                 drawFortress(ctx, redBase, 'rgba(231, 76, 60, 0.4)', redBase.name);
                 drawFortress(ctx, blueBase, 'rgba(52, 152, 219, 0.4)', blueBase.name);
 
