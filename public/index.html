@@ -609,11 +609,25 @@
                 let sorted = Object.values(players).sort((a,b) => b.score - a.score);
                 let topId = sorted.length > 0 ? sorted[0].socketId : null;
 
+                // อัปเดตพิกัดตัวละครพร้อมทำ Interpolation (Lerp) อย่างสมูท
                 for (let id in players) {
-                    if (!renderPlayers[id]) renderPlayers[id] = { ...players[id] };
-                    renderPlayers[id].x += (players[id].x - renderPlayers[id].x) * 0.25;
-                    renderPlayers[id].y += (players[id].y - renderPlayers[id].y) * 0.25;
-                    Object.assign(renderPlayers[id], players[id]);
+                    let serverPl = players[id];
+                    if (!renderPlayers[id]) {
+                        renderPlayers[id] = { ...serverPl };
+                    } else {
+                        renderPlayers[id].targetX = serverPl.x;
+                        renderPlayers[id].targetY = serverPl.y;
+                        renderPlayers[id].name = serverPl.name;
+                        renderPlayers[id].playerClass = serverPl.playerClass;
+                        renderPlayers[id].outfitColor = serverPl.outfitColor;
+                        renderPlayers[id].hat = serverPl.hat;
+                        renderPlayers[id].score = serverPl.score;
+                        renderPlayers[id].isMoving = serverPl.isMoving;
+                    }
+                    if (renderPlayers[id].targetX !== undefined) {
+                        renderPlayers[id].x += (renderPlayers[id].targetX - renderPlayers[id].x) * 0.3;
+                        renderPlayers[id].y += (renderPlayers[id].targetY - renderPlayers[id].y) * 0.3;
+                    }
                 }
                 for (let id in renderPlayers) if (!players[id]) delete renderPlayers[id];
 
