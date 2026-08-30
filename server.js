@@ -96,7 +96,13 @@ io.on('connection', (socket) => {
                 socket.emit('authResult', { success: false, msg: 'ชื่อนี้มีผู้ใช้งานแล้ว กรุณาเลือกชื่ออื่นหรือเข้าสู่ระบบ' });
                 return;
             }
-            playersDb[name] = { password: password, score: 0 };
+            playersDb[name] = { 
+                password: password, 
+                score: 0, 
+                avatar: 'hero', 
+                outfitColor: '#3498db', 
+                hat: 'none' 
+            };
             saveDatabase(playersDb);
         } else {
             if (!playersDb[name]) {
@@ -111,8 +117,18 @@ io.on('connection', (socket) => {
 
         activePlayers[socket.id].name = name;
         activePlayers[socket.id].score = playersDb[name].score || 0;
+        activePlayers[socket.id].avatar = playersDb[name].avatar || 'hero';
+        activePlayers[socket.id].outfitColor = playersDb[name].outfitColor || '#3498db';
+        activePlayers[socket.id].hat = playersDb[name].hat || 'none';
 
-        socket.emit('authResult', { success: true, score: activePlayers[socket.id].score });
+        // ส่งข้อมูลตัวละครเดิมกลับไปให้หน้าแต่งตัว
+        socket.emit('authResult', { 
+            success: true, 
+            score: activePlayers[socket.id].score,
+            avatar: activePlayers[socket.id].avatar,
+            outfitColor: activePlayers[socket.id].outfitColor,
+            hat: activePlayers[socket.id].hat
+        });
     });
 
     // ขั้นที่ 2: บันทึกการตกแต่งตัวละครและเข้าเกม
@@ -124,6 +140,14 @@ io.on('connection', (socket) => {
         p.outfitColor = data.outfitColor || '#3498db';
         p.hat = data.hat || 'none';
         p.loggedIn = true;
+
+        // บันทึกลง Database
+        if (playersDb[p.name]) {
+            playersDb[p.name].avatar = p.avatar;
+            playersDb[p.name].outfitColor = p.outfitColor;
+            playersDb[p.name].hat = p.hat;
+            saveDatabase(playersDb);
+        }
 
         io.emit('updateLeaderboard', activePlayers);
     });
