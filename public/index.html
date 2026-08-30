@@ -6,24 +6,48 @@
     <title>Math.io - 4 Teams Castle Raid</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
-        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; touch-action: none; }
-        canvas { display: block; background: #151328; width: 100%; height: 100%; touch-action: none; }
+        * { 
+            box-sizing: border-box; 
+            user-select: none; 
+            margin: 0; 
+            padding: 0; 
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: none; /* ป้องกันการซูมและเลื่อนหน้าจออัตโนมัติของมือถือ */
+        }
+        body { 
+            font-family: 'Kanit', sans-serif; 
+            background: #0f0c1b; 
+            color: white; 
+            overflow: hidden; 
+            width: 100vw; 
+            height: 100vh; 
+            touch-action: none; 
+        }
+        canvas { 
+            display: block; 
+            background: #151328; 
+            width: 100%; 
+            height: 100%; 
+            touch-action: none; 
+        }
         
         .screen-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(10, 8, 20, 0.96); display: flex; justify-content: center; align-items: center; z-index: 100;
             overflow-y: auto; padding: 20px;
+            touch-action: auto; /* ยอมให้เลื่อนในหน้าต่างเมนูตั้งค่าได้ */
         }
         .modal-box {
             background: #221e3f; padding: 25px; border-radius: 16px; text-align: center;
             display: flex; flex-direction: column; gap: 14px; border: 3px solid #9b59b6; box-shadow: 0 0 40px rgba(155, 89, 182, 0.4);
             width: 100%; max-width: 420px; max-height: 92vh; overflow-y: auto;
+            touch-action: auto;
         }
         .modal-box h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); font-size: 24px; }
         .modal-box input, .modal-box select {
             padding: 12px; font-size: 15px; border-radius: 8px; border: 2px solid #9b59b6; text-align: center;
             font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%;
+            touch-action: auto;
         }
         .modal-box label { font-size: 13px; color: #d7bde2; text-align: left; font-weight: bold; }
         .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; padding: 14px; font-size: 18px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
@@ -285,7 +309,6 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        // ประกาศตัวแปร mapping สีและชื่อทีมไว้ด้านบนสุด ป้องกัน Error ตอนเรนเดอร์พรีวิว
         const teamNamesMap = { red: 'ทีมแดง 🔴', blue: 'ทีมน้ำเงิน 🔵', green: 'ทีมเขียว 🟢', yellow: 'ทีมเหลือง 🟡' };
         const teamColorsMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
 
@@ -532,6 +555,7 @@
         window.addEventListener('touchstart', (e) => {
             if (!gameStarted || isHost) return;
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            e.preventDefault(); // ป้องกันการซูมหรือเลื่อนจอ
             let touch = e.changedTouches[0];
             if (touch.clientX < window.innerWidth / 2 && joystickTouchId === null) {
                 joystickTouchId = touch.identifier;
@@ -545,6 +569,7 @@
 
         window.addEventListener('touchmove', (e) => {
             if (joystickTouchId === null || isHost) return;
+            e.preventDefault();
             for (let i = 0; i < e.changedTouches.length; i++) {
                 let touch = e.changedTouches[i];
                 if (touch.identifier === joystickTouchId) {
