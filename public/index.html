@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - Red vs Blue Base Raid</title>
+    <title>Math.io - 4 Teams Castle Raid</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -51,18 +51,20 @@
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
         .header { padding: 15px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; align-items: flex-start; }
         
-        .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 10px 15px; border-radius: 10px; font-size: 12px; min-width: 230px; pointer-events: auto; }
-        .team-score-box { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; }
+        .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 10px 15px; border-radius: 10px; font-size: 12px; min-width: 250px; pointer-events: auto; }
+        .team-score-box { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: bold; font-size: 11px; }
         
         .bases-hud-container {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
             background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 8px 15px;
-            border-radius: 12px; display: flex; gap: 20px; pointer-events: auto; z-index: 75; width: 420px; justify-content: space-around;
+            border-radius: 12px; display: flex; gap: 10px; pointer-events: auto; z-index: 75; width: 580px; justify-content: space-around;
         }
-        .base-hud { width: 45%; text-align: center; }
-        .base-hp-bar { width: 100%; height: 12px; background: #2c3e50; border-radius: 6px; overflow: hidden; margin-top: 3px; border: 1px solid #fff; }
+        .base-hud { width: 23%; text-align: center; }
+        .base-hp-bar { width: 100%; height: 10px; background: #2c3e50; border-radius: 5px; overflow: hidden; margin-top: 2px; border: 1px solid #fff; }
         .red-hp-fill { width: 100%; height: 100%; background: #e74c3c; transition: width 0.2s; }
         .blue-hp-fill { width: 100%; height: 100%; background: #3498db; transition: width 0.2s; }
+        .green-hp-fill { width: 100%; height: 100%; background: #2ecc71; transition: width 0.2s; }
+        .yellow-hp-fill { width: 100%; height: 100%; background: #f1c40f; transition: width 0.2s; }
 
         .skill-btn-hud {
             position: absolute; right: 25px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
@@ -108,11 +110,20 @@
 
     <div id="setupModal" class="screen-layer">
         <div class="modal-box">
-            <h2>✨ MAGE CASTLE ARENA</h2>
+            <h2>✨ 4 TEAMS CASTLE ARENA</h2>
             <canvas id="previewCanvas" width="140" height="140"></canvas>
             <div>
                 <label>ชื่อผู้เล่น (Username)</label>
                 <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ..." maxlength="15" autocomplete="off">
+            </div>
+            <div>
+                <label>เลือกทีม (SELECT TEAM)</label>
+                <select id="playerTeam">
+                    <option value="red">🔴 ทีมแดง (Red Team)</option>
+                    <option value="blue">🔵 ทีมน้ำเงิน (Blue Team)</option>
+                    <option value="green">🟢 ทีมเขียว (Green Team)</option>
+                    <option value="yellow">🟡 ทีมเหลือง (Yellow Team)</option>
+                </select>
             </div>
             <div>
                 <label>เลือกสายอาชีพ (SELECT CLASS)</label>
@@ -127,7 +138,7 @@
                     <option value="Berserker">🔥 Berserker</option>
                 </select>
             </div>
-            <div class="class-desc" id="classDescription"><b>ASSASSIN</b><br>สกิล: ป่วนผู้เล่นทีมตรงข้าม</div>
+            <div class="class-desc" id="classDescription"><b>ASSASSIN</b><br>สกิล: ป่วนผู้เล่นทีมอื่น</div>
             <div>
                 <label>สีตัวละคร (OUTFIT COLOR)</label>
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
@@ -157,7 +168,7 @@
     </div>
 
     <div id="waitingBanner">
-        <div id="waitingText">⏳ กำลังรอผู้เล่นเข้าห้อง (0/20 คน)</div>
+        <div id="waitingText">⏳ กำลังรอผู้เล่นเข้าห้อง (0/40 คน)</div>
         <div id="hostButtonContainer" style="display: none;">
             <button class="host-start-btn" onclick="forceStartGame()">🚀 เริ่มเกมทันที (สำหรับ Host)</button>
         </div>
@@ -183,37 +194,49 @@
     <div id="ui-layer">
         <div class="bases-hud-container">
             <div class="base-hud">
-                <div style="font-size: 11px; color: #e74c3c; font-weight: bold;">🔴 ฐานแดง</div>
+                <div style="font-size: 10px; color: #e74c3c; font-weight: bold;">🔴 แดง</div>
                 <div class="base-hp-bar"><div class="red-hp-fill" id="redHpFill"></div></div>
-                <div style="font-size: 10px; color: #d7bde2;" id="redHpText">3000 / 3000</div>
+                <div style="font-size: 9px; color: #d7bde2;" id="redHpText">3000</div>
             </div>
             <div class="base-hud">
-                <div style="font-size: 11px; color: #3498db; font-weight: bold;">🔵 ฐานน้ำเงิน</div>
+                <div style="font-size: 10px; color: #3498db; font-weight: bold;">🔵 น้ำเงิน</div>
                 <div class="base-hp-bar"><div class="blue-hp-fill" id="blueHpFill"></div></div>
-                <div style="font-size: 10px; color: #d7bde2;" id="blueHpText">3000 / 3000</div>
+                <div style="font-size: 9px; color: #d7bde2;" id="blueHpText">3000</div>
+            </div>
+            <div class="base-hud">
+                <div style="font-size: 10px; color: #2ecc71; font-weight: bold;">🟢 เขียว</div>
+                <div class="base-hp-bar"><div class="green-hp-fill" id="greenHpFill"></div></div>
+                <div style="font-size: 9px; color: #d7bde2;" id="greenHpText">3000</div>
+            </div>
+            <div class="base-hud">
+                <div style="font-size: 10px; color: #f1c40f; font-weight: bold;">🟡 เหลือง</div>
+                <div class="base-hp-bar"><div class="yellow-hp-fill" id="yellowHpFill"></div></div>
+                <div style="font-size: 9px; color: #d7bde2;" id="yellowHpText">3000</div>
             </div>
         </div>
 
         <div class="header">
             <div style="display: flex; align-items: center; gap: 10px;" id="playerInfoSection">
-                <div style="color: #f1c40f;">คะแนนส่วนตัว: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
-                <button id="hostConfigBtn" class="host-config-btn" onclick="toggleHostConfig(true)">⚙️ ตั้งค่าเกม</button>
+                <div style="color: #f1c40f;">คะแนน: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
+                <button id="hostConfigBtn" class="host-config-btn" onclick="toggleHostConfig(true)">⚙️ ตั้งค่า</button>
             </div>
-            <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 ออกจากเกม</button>
+            <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 ออก</button>
             
             <div class="leaderboard">
                 <div class="team-score-box">
-                    <span style="color: #e74c3c;">🔴 ทีมแดง DMG</span>
-                    <span style="color: #3498db;">🔵 ทีมน้ำเงิน DMG</span>
+                    <span style="color: #e74c3c;">🔴แดง</span>
+                    <span style="color: #3498db;">🔵น้ำเงิน</span>
+                    <span style="color: #2ecc71;">🟢เขียว</span>
+                    <span style="color: #f1c40f;">🟡เหลือง</span>
                 </div>
                 <hr style="border:0; border-top:1px solid #555; margin: 4px 0;">
-                <h3 style="color: #f39c12; margin-bottom: 2px; text-align: center;">🏆 ดาเมจถล่มฐานสูงสุด</h3>
+                <h3 style="color: #f39c12; margin-bottom: 2px; text-align: center; font-size: 13px;">🏆 ดาเมจถล่มฐานสูงสุด</h3>
                 <ol id="bossLeaderboardList" style="padding-left: 15px;"></ol>
             </div>
         </div>
 
-        <button class="attack-base-btn" id="attackBaseBtn" onclick="attackBase()">🏰 โจมตีฐานข้าศึก<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
-        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลป่วนทีม</button>
+        <button class="attack-base-btn" id="attackBaseBtn" onclick="openAttackMenu()">🏰 โจมตีฐาน<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
+        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลป่วน</button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
 
@@ -228,6 +251,18 @@
         </div>
     </div>
 
+    <!-- เมนูเลือกฐานที่จะโจมตี -->
+    <div id="attackMenuModal" class="screen-layer" style="display:none;">
+        <div class="modal-box" style="border: 3px solid #e74c3c; max-width: 320px;">
+            <h2 style="color: #e74c3c;">🏰 เลือกฐานศัตรูที่ต้องการถล่ม</h2>
+            <button onclick="attackBase('red')" style="background:#e74c3c; color:white; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🔴 โจมตีฐานแดง</button>
+            <button onclick="attackBase('blue')" style="background:#3498db; color:white; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🔵 โจมตีฐานน้ำเงิน</button>
+            <button onclick="attackBase('green')" style="background:#2ecc71; color:white; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🟢 โจมตีฐานเขียว</button>
+            <button onclick="attackBase('yellow')" style="background:#f1c40f; color:#2d3436; font-weight:bold; padding:12px; border-radius:8px; border:none; cursor:pointer;">🟡 โจมตีฐานเหลือง</button>
+            <button onclick="document.getElementById('attackMenuModal').style.display='none'" style="background:#555; color:white; font-weight:bold; padding:10px; border-radius:8px; border:none; cursor:pointer;">ยกเลิก</button>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -239,7 +274,6 @@
             width = window.innerWidth; height = window.innerHeight;
             canvas.width = width * window.devicePixelRatio; 
             canvas.height = height * window.devicePixelRatio;
-            // ใช้ setTransform ป้องกันสเกลทับซ้อนจนค้าง
             ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
         }
         window.addEventListener('resize', resize);
@@ -247,8 +281,11 @@
 
         let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
         let myScore = 0, myTeam = 'red', gameStarted = false, isHost = false, previewAngle = 0, currentMysteryAns = null;
-        let redBase = { x: 800, y: 2000, hp: 3000, maxHp: 3000, name: 'Red Fortress', isAlive: true };
-        let blueBase = { x: 3200, y: 2000, hp: 3000, maxHp: 3000, name: 'Blue Fortress', isAlive: true };
+        let redBase = { x: 800, y: 800, hp: 3000, maxHp: 3000, name: 'Red Fortress', team: 'red', isAlive: true };
+        let blueBase = { x: MAP_SIZE - 800, y: 800, hp: 3000, maxHp: 3000, name: 'Blue Fortress', team: 'blue', isAlive: true };
+        let greenBase = { x: 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Green Fortress', team: 'green', isAlive: true };
+        let yellowBase = { x: MAP_SIZE - 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Yellow Fortress', team: 'yellow', isAlive: true };
+
         let floatingTexts = [], activeEffect = null, effectTimer = 0;
         let skillVisualEffects = [];
         let hostCamX = MAP_SIZE / 2, hostCamY = MAP_SIZE / 2;
@@ -257,7 +294,11 @@
             floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
         }
 
-        function attackBase() { socket.emit('attackBase'); }
+        function openAttackMenu() { document.getElementById('attackMenuModal').style.display = 'flex'; }
+        function attackBase(targetTeam) {
+            document.getElementById('attackMenuModal').style.display = 'none';
+            socket.emit('attackBase', targetTeam);
+        }
         function castPrankSkill() { socket.emit('castSkill'); }
         function forceStartGame() { socket.emit('forceStartGame'); }
         
@@ -283,13 +324,13 @@
             pCtx.setTransform(1, 0, 0, 1, 0, 0);
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
             pCtx.save(); pCtx.translate(pCanvas.width / 2, pCanvas.height / 2 + 10); pCtx.rotate(previewAngle);
-            drawCastleAvatar(pCtx, 0, 0, { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, team: 'red' }, true);
+            drawCastleAvatar(pCtx, 0, 0, { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, team: document.getElementById('playerTeam').value }, true);
             pCtx.restore();
         }
         updatePreview();
 
         const classInfo = {
-            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมตรงข้าม (Blind)”', 
+            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมอื่น (Blind)”', 
             'Warrior': '“นักรบสมดุลในสมรภูมิ (Stun)”',
             'Tank': '“เกราะหนาป้องกันตัว (Heavy Slow)”', 
             'Archer': '“ยิงโจมตีระยะไกล (Slow)”',
@@ -304,6 +345,8 @@
             updatePreview();
         }
 
+        document.getElementById('playerTeam').addEventListener('change', updatePreview);
+
         function joinGame() {
             let name = document.getElementById('playerNameInput').value.trim();
             if (!name) { alert("กรุณากรอกชื่อผู้เล่นก่อนเข้าเกม"); return; }
@@ -311,7 +354,8 @@
                 name: name,
                 hostPassword: '',
                 playerClass: document.getElementById('playerClass').value,
-                outfitColor: document.getElementById('playerColor').value
+                outfitColor: document.getElementById('playerColor').value,
+                team: document.getElementById('playerTeam').value
             });
         }
 
@@ -341,15 +385,17 @@
                     document.getElementById('bottomPanel').style.display = 'none';
                     document.getElementById('attackBaseBtn').style.display = 'none';
                     document.getElementById('skillBtnHud').style.display = 'none';
-                    document.getElementById('playerInfoSection').innerHTML = `<div style="color: #f1c40f; font-weight: bold;">👑 โหมด Host (ผู้สังเกตการณ์)</div>`;
-                    showMsg("👑 ยินดีต้อนรับ Host! คุณสามารถกดเริ่มเกม ดูผู้เล่น และตั้งค่าเกมได้", "#f1c40f");
+                    document.getElementById('playerInfoSection').innerHTML = `<div style="color: #f1c40f; font-weight: bold;">👑 Host Mode</div>`;
+                    showMsg("👑 ยินดีต้อนรับ Host! จัดการตั้งค่าและเริ่มเกมได้เลย", "#f1c40f");
                 } else {
-                    showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue Base Raid!", "#f1c40f");
+                    showMsg("⚔️ เข้าสู่สนามรบ 4 ทีม 4 ปราสาท!", "#f1c40f");
                 }
 
                 if (gameStarted) {
                     document.getElementById('waitingBanner').style.display = 'none';
                 }
+            } else {
+                alert(res.msg || "❌ ไม่สามารถเข้าสู่เกมได้");
             }
         });
 
@@ -364,11 +410,13 @@
             setTimeout(() => { window.location.reload(); }, 6000);
         });
 
+        const teamNamesMap = { red: 'ทีมแดง 🔴', blue: 'ทีมน้ำเงิน 🔵', green: 'ทีมเขียว 🟢', yellow: 'ทีมเหลือง 🟡' };
+        const teamColorsMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
+
         socket.on('stateUpdate', (data) => {
             players = data.players;
-            if (data.redBase && data.blueBase) {
-                redBase = data.redBase;
-                blueBase = data.blueBase;
+            if (data.redBase && data.blueBase && data.greenBase && data.yellowBase) {
+                redBase = data.redBase; blueBase = data.blueBase; greenBase = data.greenBase; yellowBase = data.yellowBase;
                 updateBasesHUD();
             }
             if (!isHost && players[myId]) {
@@ -376,14 +424,13 @@
                 myTeam = players[myId].team || 'red';
                 document.getElementById('scoreDisplay').innerText = myScore;
                 let badge = document.getElementById('myTeamBadge');
-                badge.innerText = myTeam === 'red' ? 'ทีมสีแดง 🔴' : 'ทีมสีน้ำเงิน 🔵';
-                badge.style.color = myTeam === 'red' ? '#e74c3c' : '#3498db';
+                badge.innerText = teamNamesMap[myTeam];
+                badge.style.color = teamColorsMap[myTeam];
             }
         });
 
         socket.on('basesUpdate', (data) => {
-            redBase = data.redBase;
-            blueBase = data.blueBase;
+            redBase = data.redBase; blueBase = data.blueBase; greenBase = data.greenBase; yellowBase = data.yellowBase;
             updateBasesHUD();
         });
 
@@ -413,10 +460,17 @@
         function updateBasesHUD() {
             let redPct = Math.max(0, (redBase.hp / redBase.maxHp) * 100);
             let bluePct = Math.max(0, (blueBase.hp / blueBase.maxHp) * 100);
+            let greenPct = Math.max(0, (greenBase.hp / greenBase.maxHp) * 100);
+            let yellowPct = Math.max(0, (yellowBase.hp / yellowBase.maxHp) * 100);
+
             document.getElementById('redHpFill').style.width = redPct + '%';
-            document.getElementById('redHpText').innerText = `${redBase.hp} / ${redBase.maxHp}`;
+            document.getElementById('redHpText').innerText = redBase.hp;
             document.getElementById('blueHpFill').style.width = bluePct + '%';
-            document.getElementById('blueHpText').innerText = `${blueBase.hp} / ${blueBase.maxHp}`;
+            document.getElementById('blueHpText').innerText = blueBase.hp;
+            document.getElementById('greenHpFill').style.width = greenPct + '%';
+            document.getElementById('greenHpText').innerText = greenBase.hp;
+            document.getElementById('yellowHpFill').style.width = yellowPct + '%';
+            document.getElementById('yellowHpText').innerText = yellowBase.hp;
         }
 
         const keys = { w: false, a: false, s: false, d: false };
@@ -481,7 +535,8 @@
 
         socket.on('initGame', (data) => {
             myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize;
-            redBase = data.redBase; blueBase = data.blueBase; updateBasesHUD();
+            redBase = data.redBase; blueBase = data.blueBase; greenBase = data.greenBase; yellowBase = data.yellowBase;
+            updateBasesHUD();
             if (data.gameStarted) { gameStarted = true; document.getElementById('waitingBanner').style.display = 'none'; }
         });
         socket.on('tileCollected', (tile) => { if(!isHost) { inventory.push(tile); renderUI(); } });
@@ -514,7 +569,7 @@
             let baseSorted = [...list].filter(p => !p.isHost).sort((a,b) => (b.baseDamage || 0) - (a.baseDamage || 0));
             let html = '';
             baseSorted.slice(0, 5).forEach((p, i) => {
-                let color = p.team === 'red' ? '#e74c3c' : '#3498db';
+                let color = teamColorsMap[p.team] || '#fff';
                 html += `<li>${i+1}. <span style="color:${color};">${p.name}</span> (${p.baseDamage || 0} DMG)</li>`;
             });
             document.getElementById('bossLeaderboardList').innerHTML = html;
@@ -535,7 +590,7 @@
         function drawCastleAvatar(ctx, x, y, pl, isMoving) {
             ctx.save(); ctx.translate(x, y);
             let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
-            ctx.fillStyle = pl.team === 'red' ? 'rgba(231, 76, 60, 0.6)' : 'rgba(52, 152, 219, 0.6)';
+            ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
             ctx.beginPath(); ctx.ellipse(0, 20, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
 
             ctx.fillStyle = pl.outfitColor || '#9b59b6';
@@ -619,15 +674,17 @@
 
                 drawFortress(ctx, redBase, 'rgba(231, 76, 60, 0.4)', redBase.name);
                 drawFortress(ctx, blueBase, 'rgba(52, 152, 219, 0.4)', blueBase.name);
+                drawFortress(ctx, greenBase, 'rgba(46, 204, 113, 0.4)', greenBase.name);
+                drawFortress(ctx, yellowBase, 'rgba(241, 196, 15, 0.4)', yellowBase.name);
 
                 for (let i = skillVisualEffects.length - 1; i >= 0; i--) {
                     let fx = skillVisualEffects[i];
                     fx.radius += 8; fx.alpha -= 0.025;
                     if (fx.alpha <= 0 || fx.radius >= fx.maxRadius) { skillVisualEffects.splice(i, 1); continue; }
                     ctx.save(); ctx.globalAlpha = fx.alpha;
-                    ctx.strokeStyle = fx.team === 'red' ? '#e74c3c' : '#3498db';
+                    ctx.strokeStyle = teamColorsMap[fx.team] || '#fff';
                     ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.stroke();
-                    ctx.fillStyle = fx.team === 'red' ? 'rgba(231, 76, 60, 0.2)' : 'rgba(52, 152, 219, 0.2)';
+                    ctx.fillStyle = teamColorsMap[fx.team] ? teamColorsMap[fx.team] + '33' : 'rgba(255,255,255,0.2)';
                     ctx.fill(); ctx.restore();
                 }
 
@@ -650,7 +707,7 @@
                     let pl = renderPlayers[id];
                     if (!pl.loggedIn || pl.isHost) continue;
                     drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
-                    ctx.fillStyle = pl.team === 'red' ? '#e74c3c' : '#3498db';
+                    ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
                     ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
                     ctx.fillText(`${pl.name} [${pl.playerClass}]`, pl.x, pl.y - 65);
                 }
