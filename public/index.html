@@ -340,63 +340,49 @@
             toggleHostConfig(false);
         }
 
-        // ฟังก์ชันวาดตัวละครและอุปกรณ์แยกตามสายอาชีพ
         function drawCastleAvatar(ctx, x, y, pl, isMoving) {
             ctx.save(); ctx.translate(x, y);
             let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
             let cls = pl.playerClass || 'Warrior';
 
-            // เงาสะท้อนใต้เท้า
             ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
             ctx.beginPath(); ctx.ellipse(0, 20, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
 
-            // ลำตัว
             ctx.fillStyle = pl.outfitColor || '#9b59b6';
             ctx.beginPath(); ctx.roundRect(-14, -12 + walkAnim/2, 28, 28, 8); ctx.fill(); 
             ctx.lineWidth = 2.5; ctx.strokeStyle = '#1b1b2f'; ctx.stroke();
 
-            // ขา
             ctx.fillStyle = '#1b1b2f'; 
             ctx.fillRect(-9, 18, 6, 10 - walkAnim); 
             ctx.fillRect(3, 18, 6, 10 + walkAnim);
 
-            // หัว
             ctx.fillStyle = '#f5b041'; 
             ctx.beginPath(); ctx.arc(0, -20 + walkAnim/2, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 
-            // เครื่องประดับ/อาวุธเฉพาะสายอาชีพ
             ctx.lineWidth = 2;
             if (cls === 'Assassin') {
-                // มีดสั้นคู่
                 ctx.fillStyle = '#bdc3c7';
                 ctx.fillRect(-22, -5, 4, 12);
                 ctx.fillRect(18, -5, 4, 12);
             } else if (cls === 'Warrior') {
-                // ดาบใหญ่สะพายหลัง
                 ctx.fillStyle = '#ecf0f1';
                 ctx.fillRect(12, -25, 4, 25);
             } else if (cls === 'Tank') {
-                // โล่ป้องกันใหญ่ด้านซ้าย
                 ctx.fillStyle = '#34495e';
                 ctx.beginPath(); ctx.roundRect(-22, -15, 8, 24, 3); ctx.fill(); ctx.stroke();
             } else if (cls === 'Archer') {
-                // คันธนู
                 ctx.strokeStyle = '#d35400'; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.arc(16, -5, 14, -Math.PI/2, Math.PI/2); ctx.stroke();
             } else if (cls === 'Mage') {
-                // หมวกพ่อมดแหลม
                 ctx.fillStyle = '#8e44ad';
                 ctx.beginPath(); ctx.moveTo(0, -42); ctx.lineTo(-10, -28); ctx.lineTo(10, -28); ctx.closePath(); ctx.fill(); ctx.stroke();
             } else if (cls === 'Support') {
-                // ลูกแก้วเวทมนตร์ลอย
                 ctx.fillStyle = '#00ffff';
                 ctx.beginPath(); ctx.arc(0, -38, 5, 0, Math.PI * 2); ctx.fill();
             } else if (cls === 'Monk') {
-                // สายคาดศีรษะ
                 ctx.fillStyle = '#e74c3c';
                 ctx.fillRect(-12, -26, 24, 4);
             } else if (cls === 'Berserker') {
-                // เขาปีศาจบนหัว
                 ctx.fillStyle = '#c0392b';
                 ctx.beginPath(); ctx.moveTo(-10, -30); ctx.lineTo(-16, -42); ctx.lineTo(-4, -32); ctx.fill();
                 ctx.beginPath(); ctx.moveTo(10, -30); ctx.lineTo(16, -42); ctx.lineTo(4, -32); ctx.fill();
@@ -422,14 +408,14 @@
         updatePreview();
 
         const classInfo = {
-            'Assassin': '“Dash พุ่งทะยานเพิ่มความเร็วเคลื่อนที่ +50%”', 
-            'Warrior': '“เพิ่มพลังโจมตีฐานเด็ดขาด 200 ดาเมจ”',
-            'Tank': '“ซ่อมแซมและฟื้นฟู HP ฐานทีมตัวเอง +150”', 
-            'Archer': '“ยิงศรลดความเร็วศัตรูรอบตัว -30%”',
-            'Mage': '“เวทดูดเบี้ยตัวเลขและเครื่องหมายเข้าหาตัว”', 
-            'Support': '“เพิ่มโบนัสคะแนนสมการให้ตัวเอง +30%”',
-            'Monk': '“ชำระล้างสถานะสโลว์และดีบัฟทั้งหมด”', 
-            'Berserker': '“เสีย 20 แต้ม แลกกับคะแนนสมการคูณสอง (×2)”'
+            'Assassin': '“Dash พุ่งทะยานเพิ่มความเร็วเคลื่อนที่ +50% (คูลดาวน์ 3 วิ)”', 
+            'Warrior': '“เพิ่มพลังโจมตีฐานเด็ดขาด 200 ดาเมจ (คูลดาวน์ 6 วิ)”',
+            'Tank': '“ซ่อมแซมและฟื้นฟู HP ฐานทีมตัวเอง +150 (คูลดาวน์ 9 วิ)”', 
+            'Archer': '“ยิงศรลดความเร็วศัตรูรอบตัว -30% (คูลดาวน์ 5 วิ)”',
+            'Mage': '“เวทดูดเบี้ยตัวเลขและเครื่องหมายเข้าหาตัว (คูลดาวน์ 5 วิ)”', 
+            'Support': '“เพิ่มโบนัสคะแนนสมการให้ตัวเอง +30% (คูลดาวน์ 6 วิ)”',
+            'Monk': '“ชำระล้างสถานะสโลว์และดีบัฟทั้งหมด (คูลดาวน์ 4 วิ)”', 
+            'Berserker': '“เสีย 20 แต้ม แลกกับคะแนนสมการคูณสอง (คูลดาวน์ 6 วิ)”'
         };
         function onClassChange() {
             let cls = document.getElementById('playerClass').value;
