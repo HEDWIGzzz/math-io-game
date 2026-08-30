@@ -156,6 +156,7 @@ io.on('connection', (socket) => {
         x: MAP_SIZE / 2,
         y: MAP_SIZE / 2,
         score: 0,
+        bossDamage: 0,
         isMoving: false,
         inLobby: true,
         loggedIn: false
@@ -163,7 +164,6 @@ io.on('connection', (socket) => {
 
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss, settings: gameSettings });
 
-    // 📝 ระบบสมัครสมาชิก (บันทึกลง database.json ทันที)
     socket.on('registerPlayer', async (data) => {
         try {
             let name = data.name ? data.name.trim() : '';
@@ -198,6 +198,7 @@ io.on('connection', (socket) => {
                 playerId: newPlayerId,
                 password: hashedPassword,
                 score: 0,
+                bossDamage: 0,
                 playerClass: 'Warrior',
                 outfitColor: '#9b59b6',
                 hat: 'none'
@@ -208,6 +209,7 @@ io.on('connection', (socket) => {
             p.name = name;
             p.playerId = newPlayerId;
             p.score = 0;
+            p.bossDamage = 0;
             p.playerClass = 'Warrior';
             p.outfitColor = '#9b59b6';
             p.hat = 'none';
@@ -244,6 +246,7 @@ io.on('connection', (socket) => {
             p.name = name;
             p.playerId = pData.playerId;
             p.score = pData.score || 0;
+            p.bossDamage = pData.bossDamage || 0;
             p.playerClass = pData.playerClass || 'Warrior';
             p.outfitColor = pData.outfitColor || '#9b59b6';
             p.hat = pData.hat || 'none';
@@ -272,7 +275,6 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
-    // 🔐 Admin Auth & Registration
     socket.on('adminAuth', async (data) => {
         let name = data.name ? data.name.trim() : '';
         let pass = data.pass ? data.pass.trim() : '';
@@ -308,6 +310,7 @@ io.on('connection', (socket) => {
                 playerId: 'PLY_' + Math.random().toString(36).substr(2, 9),
                 password: hashedPassword,
                 score: 0,
+                bossDamage: 0,
                 playerClass: 'Warrior',
                 outfitColor: '#9b59b6',
                 hat: 'none'
@@ -337,8 +340,10 @@ io.on('connection', (socket) => {
         if (activePlayers[targetSocketId]) {
             let p = activePlayers[targetSocketId];
             p.score = 0;
+            p.bossDamage = 0;
             if (playersDb[p.name]) {
                 playersDb[p.name].score = 0;
+                playersDb[p.name].bossDamage = 0;
                 saveDatabase(playersDb);
             }
             io.emit('updateLeaderboard', activePlayers);
@@ -395,8 +400,12 @@ io.on('connection', (socket) => {
         let damage = 150;
         demonBoss.hp -= damage;
 
+        // บันทึกสะสมดาเมจบอส
+        p.bossDamage = (p.bossDamage || 0) + damage;
+
         if (playersDb[p.name]) {
             playersDb[p.name].score = p.score;
+            playersDb[p.name].bossDamage = p.bossDamage;
             saveDatabase(playersDb);
         }
 
