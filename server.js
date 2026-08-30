@@ -17,10 +17,14 @@ const DB_FILE = path.join(__dirname, 'database.json');
 function loadDatabase() {
     try {
         if (fs.existsSync(DB_FILE)) {
-            return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+            let rawData = fs.readFileSync(DB_FILE, 'utf8');
+            if (!rawData || rawData.trim() === '') {
+                return {};
+            }
+            return JSON.parse(rawData);
         }
     } catch (e) {
-        console.error('Database load error:', e);
+        console.error('Database load error (Resetting to empty):', e.message);
     }
     return {};
 }
@@ -559,13 +563,13 @@ setInterval(() => {
 
         let dx = demonBoss.targetX - demonBoss.x;
         let dy = demonBoss.targetY - demonBoss.y;
-        let dist = Math.hypot(dx, dy);
+        let dist = MAP_SIZE > 0 ? Math.hypot(dx, dy) : 0;
 
         if (dist < 15) {
             let center = MAP_SIZE / 2;
             demonBoss.targetX = center + (Math.random() - 0.5) * 800;
             demonBoss.targetY = center + (Math.random() - 0.5) * 800;
-        } else {
+        } else if (dist > 0) {
             demonBoss.x += (dx / dist) * currentSpeed;
             demonBoss.y += (dy / dist) * currentSpeed;
         }
