@@ -95,10 +95,10 @@
         .skill-btn-hud {
             position: absolute; right: 25px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
             background: linear-gradient(135deg, #e74c3c, #f39c12); border: 3px solid #fff; color: white;
-            font-family: 'Kanit', sans-serif; font-weight: bold; font-size: 14px; text-align: center;
+            font-family: 'Kanit', sans-serif; font-weight: bold; font-size: 13px; text-align: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(231, 76, 60, 0.7);
-            transition: 0.1s; z-index: 70;
+            transition: 0.1s; z-index: 70; line-height: 1.1;
         }
         .skill-btn-hud:active { transform: scale(0.92); }
 
@@ -194,7 +194,7 @@
                 </select>
             </div>
             <div class="class-desc" id="classDescription">
-                <b>ASSASSIN</b><br>“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Prank
+                <b>ASSASSIN</b><br>“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind (ปล่อยควันมืดป่วนจอ)
             </div>
             <div>
                 <label>สีหลัก (OUTFIT COLOR)</label>
@@ -260,8 +260,8 @@
             </div>
         </div>
 
-        <button class="skill-btn-hud" onclick="castPrankSkill()">
-            ⚡ ป่วนเพื่อน<br><span style="font-size: 10px; opacity: 0.9;">Prank!</span>
+        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">
+            ⚡ สกิลคลาส<br><span id="skillNameLabel" style="font-size: 9px; opacity: 0.9;">Shadow Blind</span>
         </button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
@@ -309,24 +309,31 @@
         let previewAngle = 0;
         let currentMysteryAns = null;
 
-        // สถานะโดนป่วน (Debuff States)
-        let isTrolled = false;
-        let trollTimer = 0;
+        // ตัวแปรเอฟเฟกต์สถานะโดนป่วน (Debuff States)
+        let activeEffect = null; // 'blind', 'stun', 'invert', 'spin'
+        let effectTimer = 0;
 
         const classInfo = {
-            'Assassin': { desc: '“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Prank' },
-            'Warrior': { desc: '“สมส่วนแบบนักรบ แข็งแกร่งและสมดุลในการต่อสู้ระยะประชิด”<br>SKILL: ⚔️ Power Slash' },
-            'Tank': { desc: '“รูปร่างใหญ่หนาและมวลมาก เกราะหนักรับดาเมจเพื่อปกป้องเพื่อน”<br>SKILL: 🛡️ Iron Shield' },
-            'Archer': { desc: '“สูงเพรียวและคล่องตัว โจมตีแม่นยำจากระยะปลอดภัย”<br>SKILL: 🏹 Eagle Eye' },
-            'Mage': { desc: '“ควบคุมพลังเวทมนตร์รุนแรงและเวทหมู่เพื่อคุมพื้นที่”<br>SKILL: 🔮 Arcane Blast' },
-            'Support': { desc: '“สง่างาม สนับสนุนเพื่อนร่วมทีมด้วยพลัง Heal และ Buff”<br>SKILL: ✨ Holy Aura' },
-            'Monk': { desc: '“ลีนและว่องไว ใช้ศิลปะการต่อสู้คอมโบหมัดต่อเนื่อง”<br>SKILL: 🥋 Lightning Fist' },
-            'Berserker': { desc: '“กล้ามเนื้อมหาศาล ยิ่งเจ็บยิ่งแรงและบ้าคลั่งในสมรภูมิ”<br>SKILL: 🔥 Blood Rage' }
+            'Assassin': { desc: '“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind (ปล่อยควันมืด + ปุ่มกลับด้าน)' },
+            'Warrior': { desc: '“สมส่วนแบบนักรบ แข็งแกร่งและสมดุลในการต่อสู้ระยะประชิด”<br>SKILL: ⚔️ Force Push (กระแทกเพื่อนกระเด็นถอยหลัง)' },
+            'Tank': { desc: '“รูปร่างใหญ่หนาและมวลมาก เกราะหนักรับดาเมจเพื่อปกป้องเพื่อน”<br>SKILL: 🛡️ Iron Stun (กระแทกพื้นสตันเพื่อนขยับไม่ได้)' },
+            'Archer': { desc: '“สูงเพรียวและคล่องตัว โจมตีแม่นยำจากระยะปลอดภัย”<br>SKILL: 🏹 Score Snip (แอบชิ่งฉกคะแนนจากเพื่อน)' },
+            'Mage': { desc: '“ควบคุมพลังเวทมนตร์รุนแรงและเวทหมู่เพื่อคุมพื้นที่”<br>SKILL: 🔮 Teleport Swap (วาร์ปสลับตำแหน่งกับเพื่อน)' },
+            'Support': { desc: '“สง่างาม สนับสนุนเพื่อนร่วมทีมด้วยพลัง Heal และ Buff”<br>SKILL: ✨ Color Invert (สาดแสงเวทจอเพี้ยน)' },
+            'Monk': { desc: '“ลีนและว่องไว ใช้ศิลปะการต่อสู้คอมโบหมัดต่อเนื่อง”<br>SKILL: 🥋 Lightning Spin (ต่อยชุดใหญ่จนเพื่อนหัวหมุน)' },
+            'Berserker': { desc: '“กล้ามเนื้อมหาศาล ยิ่งเจ็บยิ่งแรงและบ้าคลั่งในสมรภูมิ”<br>SKILL: 🔥 Rage Smash (คำรามคลั่งกระเด็น + สตัน)' }
         };
 
         function onClassChange() {
             const cls = document.getElementById('playerClass').value;
             document.getElementById('classDescription').innerHTML = `<b>${cls.toUpperCase()}</b><br>${classInfo[cls].desc}`;
+            
+            // อัปเดตชื่อปุ่มสกิลบน HUD
+            const shortNames = {
+                'Assassin': 'Shadow Blind', 'Warrior': 'Force Push', 'Tank': 'Iron Stun', 'Archer': 'Score Snip',
+                'Mage': 'Swap Teleport', 'Support': 'Color Invert', 'Monk': 'Lightning Spin', 'Berserker': 'Rage Smash'
+            };
+            document.getElementById('skillNameLabel').innerText = shortNames[cls];
             updatePreview();
         }
 
@@ -499,11 +506,11 @@
             showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c");
         });
 
-        // เมื่อโดนเพื่อนป่วนในเกม จะติดสถานะ Debuff
-        socket.on('trolled', (data) => {
+        // รับเอฟเฟกต์สกิลเมื่อโดนเพื่อนป่วน
+        socket.on('trolledEffect', (data) => {
             showMsg(data.msg, "#e74c3c");
-            isTrolled = true;
-            trollTimer = Date.now() + 3500; // ติดสถานะป่วน 3.5 วินาที
+            activeEffect = data.type;
+            effectTimer = Date.now() + 3500; // เอฟเฟกต์แสดงผล 3.5 วินาที
         });
 
         const keys = { w: false, a: false, s: false, d: false };
@@ -511,7 +518,7 @@
         window.addEventListener('keyup', e => { if(gameStarted) setKey(e.key, false); });
         function setKey(k, state) {
             k = k.toLowerCase();
-            let isRev = (isTrolled && Date.now() < trollTimer); // ถ้าติดสถานะป่วน ปุ่มเดินจะกลับด้าน!
+            let isRev = (activeEffect === 'blind' && Date.now() < effectTimer);
             if (k === 'w' || k === 'arrowup') keys[isRev ? 's' : 'w'] = state;
             if (k === 's' || k === 'arrowdown') keys[isRev ? 'w' : 's'] = state;
             if (k === 'a' || k === 'arrowleft') keys[isRev ? 'd' : 'a'] = state;
@@ -561,7 +568,7 @@
             thumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
 
             let threshold = 8;
-            let isRev = (isTrolled && Date.now() < trollTimer);
+            let isRev = (activeEffect === 'blind' && Date.now() < effectTimer);
             let vertUp = isRev ? dy > threshold : dy < -threshold;
             let vertDown = isRev ? dy < -threshold : dy > threshold;
             let horizLeft = isRev ? dx > threshold : dx < -threshold;
@@ -935,25 +942,40 @@
                 let camX = me.x - (width / 2);
                 let camY = me.y - (height / 2);
 
-                // หากติดสถานะโดนป่วน กล้องจะสั่น (Screen Shake)
-                if (isTrolled && Date.now() < trollTimer) {
-                    camX += (Math.random() - 0.5) * 16;
-                    camY += (Math.random() - 0.5) * 16;
+                // หากติดเอฟเฟกต์ Screen Shake / Spin
+                if (activeEffect && Date.now() < effectTimer) {
+                    camX += (Math.random() - 0.5) * 20;
+                    camY += (Math.random() - 0.5) * 20;
                 }
 
                 drawCastleBackground(camX, camY);
 
+                // หากติดเอฟเฟกต์ Support (Invert Color) หรือ Assassin (Blind) วาดเลเยอร์ทับจอ
+                if (activeEffect && Date.now() < effectTimer) {
+                    ctx.save();
+                    if (activeEffect === 'blind') {
+                        ctx.fillStyle = 'rgba(10, 5, 20, 0.85)';
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.fillStyle = '#e74c3c';
+                        ctx.font = 'bold 24px Kanit';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('🌑 โดนควันมืดปิดกั้นการมองเห็น!', width / 2, height / 2 - 40);
+                    } else if (activeEffect === 'invert') {
+                        ctx.fillStyle = 'rgba(52, 152, 219, 0.35)';
+                        ctx.fillRect(0, 0, width, height);
+                    } else if (activeEffect === 'stun') {
+                        ctx.fillStyle = 'rgba(241, 196, 15, 0.25)';
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.fillStyle = '#f1c40f';
+                        ctx.font = 'bold 24px Kanit';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('⭐ มึนงงขยับไม่ได้!', width / 2, height / 2 - 40);
+                    }
+                    ctx.restore();
+                }
+
                 ctx.save();
                 ctx.translate(-camX, -camY);
-
-                // ถ้าติดสถานะโดนป่วน ให้วาดเอฟเฟกต์มึนงงรอบตัวผู้เล่น
-                if (isTrolled && Date.now() < trollTimer) {
-                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)';
-                    ctx.lineWidth = 4;
-                    ctx.beginPath();
-                    ctx.arc(me.x, me.y, 35 + Math.sin(Date.now()/50)*10, 0, Math.PI*2);
-                    ctx.stroke();
-                }
 
                 ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 tiles.forEach(t => {
