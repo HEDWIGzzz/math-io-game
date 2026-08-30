@@ -91,7 +91,6 @@
 </head>
 <body>
 
-    <!-- หน้าจอใส่ชื่อและเลือกตัวละคร (เข้าเกมทันที) -->
     <div id="setupModal" class="screen-layer">
         <div class="modal-box">
             <h2>✨ MAGE CASTLE ARENA</h2>
@@ -194,7 +193,7 @@
 
         let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
         let myScore = 0, myTeam = 'red', gameStarted = false, previewAngle = 0, currentMysteryAns = null;
-        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true };
+        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true, slowedUntil: 0, poisonedUntil: 0 };
         let renderBossX = 2000, renderBossY = 1850;
         let floatingTexts = [], activeEffect = null, effectTimer = 0;
 
@@ -253,7 +252,15 @@
 
         socket.on('stateUpdate', (data) => {
             players = data.players;
-            if (data.boss) bossData = data.boss;
+            if (data.boss) {
+                let oldHp = bossData.hp;
+                bossData = data.boss;
+                updateBossHUD();
+                if (bossData.hp < oldHp) {
+                    let dmg = oldHp - bossData.hp;
+                    addFloatingText(`-${dmg}`, bossData.x + (Math.random() - 0.5) * 40, bossData.y - 60, '#e74c3c');
+                }
+            }
             if (players[myId]) {
                 myScore = players[myId].score;
                 myTeam = players[myId].team || 'red';
@@ -277,6 +284,13 @@
         socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
         socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 3500; });
 
+        function updateBossHUD() {
+            let pct = Math.max(0, (bossData.hp / bossData.maxHp) * 100);
+            document.getElementById('bossHpFill').style.width = pct + '%';
+            document.getElementById('bossHpText').innerText = `HP: ${bossData.hp} / ${bossData.maxHp}`;
+            document.getElementById('bossNameDisplay').innerText = `🐐 ${bossData.name} (${bossData.isAlive ? 'Active' : 'Defeated'})`;
+        }
+
         const keys = { w: false, a: false, s: false, d: false };
         window.addEventListener('keydown', e => { if(gameStarted) setKey(e.key, true); });
         window.addEventListener('keyup', e => { if(gameStarted) setKey(e.key, false); });
@@ -289,7 +303,7 @@
             if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
         }
 
-        socket.on('initGame', (data) => { myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; });
+        socket.on('initGame', (data) => { myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD(); });
         socket.on('tileCollected', (tile) => { inventory.push(tile); renderUI(); });
         socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
         socket.on('newTile', (tile) => { tiles.push(tile); });
@@ -307,8 +321,16 @@
         socket.on('mysteryResult', (res) => { showMsg(res.success ? "✨ ปลดผนึกสำเร็จ! +60 แต้ม" : "❌ ผิดพลาด!", res.success ? "#f1c40f" : "#e74c3c"); });
         
         socket.on('equationResult', (res) => { 
-            if (res.success) { showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); equation = []; renderUI(); } 
-            else { showMsg("❌ " + res.msg, "#e74c3c"); } 
+            if (res.success) { 
+                showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); 
+                equation = []; 
+                renderUI(); 
+                if (renderPlayers[myId]) {
+                    addFloatingText(`+${res.earnedScore} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 50, '#2ecc71');
+                }
+            } else { 
+                showMsg("❌ " + res.msg, "#e74c3c"); 
+            } 
         });
 
         socket.on('updateLeaderboard', (allPlayers) => {
@@ -356,11 +378,39 @@
             ctx.restore();
         }
 
+        // 🐐 รูปวาดแพะปีศาจสุดเท่ตัวจริงกลับมาแล้ว!
         function drawBoss(ctx) {
             ctx.save(); ctx.translate(renderBossX, renderBossY);
-            ctx.fillStyle = '#6c3483'; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-25, 10); ctx.lineTo(-15, 35); ctx.lineTo(15, 35); ctx.lineTo(25, 10); ctx.closePath(); ctx.fill();
+
+            // เอฟเฟกต์สถานะ
+            if (bossData.poisonedUntil && Date.now() < bossData.poisonedUntil) {
+                ctx.fillStyle = 'rgba(155, 89, 182, 0.5)';
+                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
+            } else if (bossData.slowedUntil && Date.now() < bossData.slowedUntil) {
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.5)';
+                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // เขาซ้าย
+            ctx.fillStyle = '#111111'; ctx.strokeStyle = '#000000'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(-15, -20); ctx.bezierCurveTo(-50, -50, -70, -10, -45, 10); ctx.bezierCurveTo(-55, -10, -45, -35, -15, -15); ctx.fill(); ctx.stroke();
+            // เขาขวา
+            ctx.beginPath(); ctx.moveTo(15, -20); ctx.bezierCurveTo(50, -50, 70, -10, 45, 10); ctx.bezierCurveTo(55, -10, 45, -35, 15, -15); ctx.fill(); ctx.stroke();
+
+            // ตัวบอส
+            ctx.fillStyle = bossData.isAlive ? '#6c3483' : '#7f8c8d';
+            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-25, 10); ctx.lineTo(-15, 35); ctx.lineTo(15, 35); ctx.lineTo(25, 10); ctx.closePath(); ctx.fill();
             ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
-            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px Kanit'; ctx.textAlign = 'center'; ctx.fillText(`🐐 ${bossData.name}`, 0, -65);
+
+            // ตา
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-12, -10, 8, 0, Math.PI * 2); ctx.arc(12, -10, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(-12, -10, 3, 0, Math.PI * 2); ctx.arc(12, -10, 3, 0, Math.PI * 2); ctx.fill();
+
+            // จมูก
+            ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(0, 15, 10, 16, 0, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px Kanit'; ctx.textAlign = 'center';
+            ctx.fillText(`🐐 ${bossData.name}`, 0, -65);
             ctx.restore();
         }
 
@@ -434,6 +484,17 @@
                     ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
                     ctx.fillText(`${pl.name} [${pl.playerClass}]`, pl.x, pl.y - 65);
                 }
+
+                for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                    let ft = floatingTexts[i];
+                    ft.y += ft.vy; ft.alpha -= 0.02;
+                    if (ft.alpha <= 0) { floatingTexts.splice(i, 1); continue; }
+                    ctx.save(); ctx.globalAlpha = ft.alpha; ctx.fillStyle = ft.color;
+                    ctx.font = 'bold 24px Kanit'; ctx.textAlign = 'center';
+                    ctx.fillText(ft.text, ft.x, ft.y);
+                    ctx.restore();
+                }
+
                 ctx.restore();
             }
             requestAnimationFrame(gameLoop);
