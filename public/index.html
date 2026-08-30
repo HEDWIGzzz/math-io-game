@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - Red vs Blue Boss Raid</title>
+    <title>Math.io - Red vs Blue Base Raid</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -53,13 +53,15 @@
         .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 10px 15px; border-radius: 10px; font-size: 12px; min-width: 230px; pointer-events: auto; }
         .team-score-box { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; }
         
-        .boss-hud-container {
+        .bases-hud-container {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-            background: rgba(21, 19, 40, 0.9); border: 2px solid #e74c3c; padding: 8px 20px;
-            border-radius: 12px; text-align: center; pointer-events: auto; width: 320px; z-index: 75;
+            background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 8px 15px;
+            border-radius: 12px; display: flex; gap: 20px; pointer-events: auto; z-index: 75; width: 420px; justify-content: space-around;
         }
-        .boss-hp-bar { width: 100%; height: 14px; background: #2c3e50; border-radius: 7px; overflow: hidden; margin-top: 4px; border: 1px solid #fff; }
-        .boss-hp-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #e74c3c, #c0392b); transition: width 0.2s; }
+        .base-hud { width: 45%; text-align: center; }
+        .base-hp-bar { width: 100%; height: 12px; background: #2c3e50; border-radius: 6px; overflow: hidden; margin-top: 3px; border: 1px solid #fff; }
+        .red-hp-fill { width: 100%; height: 100%; background: #e74c3c; transition: width 0.2s; }
+        .blue-hp-fill { width: 100%; height: 100%; background: #3498db; transition: width 0.2s; }
 
         .skill-btn-hud {
             position: absolute; right: 25px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
@@ -68,10 +70,10 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(52, 152, 219, 0.7); z-index: 70; line-height: 1.1;
         }
-        .boss-attack-btn {
+        .attack-base-btn {
             position: absolute; right: 125px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
             background: linear-gradient(135deg, #e74c3c, #f39c12); border: 3px solid #fff; color: white;
-            font-family: 'Kanit'; font-weight: bold; font-size: 11px; text-align: center;
+            font-family: 'Kanit'; font-weight: bold; font-size: 10px; text-align: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(231, 76, 60, 0.7); z-index: 70; line-height: 1.1;
         }
@@ -142,12 +144,8 @@
         <div class="modal-box" style="border: 3px solid #f39c12; max-width: 380px;">
             <h2 style="color: #f39c12;">⚙️ แผงควบคุมตั้งค่าเกม (Host)</h2>
             <div>
-                <label>พลังชีวิตบอสสูงสุด (Boss Max HP)</label>
-                <input type="number" id="cfgBossHp" value="5000" step="500">
-            </div>
-            <div>
-                <label>ความเร็วบอส (Boss Speed)</label>
-                <input type="number" id="cfgBossSpeed" value="1.8" step="0.2">
+                <label>พลังชีวิตฐานสูงสุด (Base Max HP)</label>
+                <input type="number" id="cfgBaseHp" value="3000" step="500">
             </div>
             <div>
                 <label>ตัวคูณคะแนนสมการ (Score Multiplier)</label>
@@ -185,10 +183,17 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui-layer">
-        <div class="boss-hud-container">
-            <div style="font-size: 13px; color: #e74c3c; font-weight: bold;" id="bossNameDisplay">🐐 Demon Goat Lord</div>
-            <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill"></div></div>
-            <div style="font-size: 11px; color: #d7bde2; margin-top: 2px;" id="bossHpText">HP: 5000 / 5000</div>
+        <div class="bases-hud-container">
+            <div class="base-hud">
+                <div style="font-size: 11px; color: #e74c3c; font-weight: bold;">🔴 ฐานแดง</div>
+                <div class="base-hp-bar"><div class="red-hp-fill" id="redHpFill"></div></div>
+                <div style="font-size: 10px; color: #d7bde2;" id="redHpText">3000 / 3000</div>
+            </div>
+            <div class="base-hud">
+                <div style="font-size: 11px; color: #3498db; font-weight: bold;">🔵 ฐานน้ำเงิน</div>
+                <div class="base-hp-bar"><div class="blue-hp-fill" id="blueHpFill"></div></div>
+                <div style="font-size: 10px; color: #d7bde2;" id="blueHpText">3000 / 3000</div>
+            </div>
         </div>
 
         <div class="header">
@@ -200,17 +205,17 @@
             
             <div class="leaderboard">
                 <div class="team-score-box">
-                    <span style="color: #e74c3c;">🔴 ทีมสีแดง: <span id="redTeamDmg">0</span> DMG</span>
-                    <span style="color: #3498db;">🔵 ทีมสีน้ำเงิน: <span id="blueTeamDmg">0</span> DMG</span>
+                    <span style="color: #e74c3c;">🔴 ทีมแดง DMG</span>
+                    <span style="color: #3498db;">🔵 ทีมน้ำเงิน DMG</span>
                 </div>
                 <hr style="border:0; border-top:1px solid #555; margin: 4px 0;">
-                <h3 style="color: #f39c12; margin-bottom: 2px; text-align: center;">🏆 ดาเมจบอสสูงสุด</h3>
+                <h3 style="color: #f39c12; margin-bottom: 2px; text-align: center;">🏆 ดาเมจถล่มฐานสูงสุด</h3>
                 <ol id="bossLeaderboardList" style="padding-left: 15px;"></ol>
             </div>
         </div>
 
-        <button class="boss-attack-btn" id="bossAttackBtn" onclick="attackBoss()">🐐 โจมตีบอส<br><span style="font-size: 9px;">ใช้ 50 แต้ม</span></button>
-        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลป่วนทีมตรงข้าม</button>
+        <button class="attack-base-btn" id="attackBaseBtn" onclick="attackBase()">🏰 โจมตีฐานข้าศึก<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
+        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลป่วนทีม</button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
 
@@ -242,17 +247,17 @@
 
         let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
         let myScore = 0, myTeam = 'red', gameStarted = false, isHost = false, previewAngle = 0, currentMysteryAns = null;
-        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true, slowedUntil: 0, poisonedUntil: 0 };
-        let renderBossX = 2000, renderBossY = 1850;
+        let redBase = { x: 800, y: 2000, hp: 3000, maxHp: 3000, name: 'Red Fortress', isAlive: true };
+        let blueBase = { x: 3200, y: 2000, hp: 3000, maxHp: 3000, name: 'Blue Fortress', isAlive: true };
         let floatingTexts = [], activeEffect = null, effectTimer = 0;
         let skillVisualEffects = [];
-        let hostCamX = MAP_SIZE / 2, hostCamY = MAP_SIZE / 2; // กล้องสำหรับ Host ไว้เดินดูแผนที่
+        let hostCamX = MAP_SIZE / 2, hostCamY = MAP_SIZE / 2;
 
         function addFloatingText(text, x, y, color = '#f1c40f') {
             floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
         }
 
-        function attackBoss() { socket.emit('attackBoss'); }
+        function attackBase() { socket.emit('attackBase'); }
         function castPrankSkill() { socket.emit('castSkill'); }
         function forceStartGame() { socket.emit('forceStartGame'); }
         
@@ -261,10 +266,9 @@
         }
 
         function saveHostSettings() {
-            let maxHp = document.getElementById('cfgBossHp').value;
-            let speed = document.getElementById('cfgBossSpeed').value;
+            let maxHp = document.getElementById('cfgBaseHp').value;
             let mul = document.getElementById('cfgScoreMul').value;
-            socket.emit('updateGameSettings', { bossMaxHp: maxHp, bossSpeed: speed, scoreMultiplier: mul });
+            socket.emit('updateGameSettings', { baseMaxHp: maxHp, scoreMultiplier: mul });
             toggleHostConfig(false);
         }
 
@@ -321,12 +325,12 @@
                 if (isHost) {
                     document.getElementById('hostConfigBtn').style.display = 'inline-block';
                     document.getElementById('bottomPanel').style.display = 'none';
-                    document.getElementById('bossAttackBtn').style.display = 'none';
+                    document.getElementById('attackBaseBtn').style.display = 'none';
                     document.getElementById('skillBtnHud').style.display = 'none';
                     document.getElementById('playerInfoSection').innerHTML = `<div style="color: #f1c40f; font-weight: bold;">👑 โหมด Host (ผู้สังเกตการณ์)</div>`;
                     showMsg("👑 ยินดีต้อนรับ Host! คุณสามารถกดเริ่มเกม ดูผู้เล่น และตั้งค่าเกมได้", "#f1c40f");
                 } else {
-                    showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f");
+                    showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue Base Raid!", "#f1c40f");
                 }
 
                 if (gameStarted) {
@@ -341,16 +345,17 @@
             showMsg(data.msg, "#2ecc71");
         });
 
+        socket.on('gameOverEvent', (data) => {
+            showMsg(data.msg, "#f1c40f");
+            setTimeout(() => { window.location.reload(); }, 6000);
+        });
+
         socket.on('stateUpdate', (data) => {
             players = data.players;
-            if (data.boss) {
-                let oldHp = bossData.hp;
-                bossData = data.boss;
-                updateBossHUD();
-                if (bossData.hp < oldHp) {
-                    let dmg = oldHp - bossData.hp;
-                    addFloatingText(`-${dmg}`, bossData.x + (Math.random() - 0.5) * 40, bossData.y - 60, '#e74c3c');
-                }
+            if (data.redBase && data.blueBase) {
+                redBase = data.redBase;
+                blueBase = data.blueBase;
+                updateBasesHUD();
             }
             if (!isHost && players[myId]) {
                 myScore = players[myId].score;
@@ -360,6 +365,12 @@
                 badge.innerText = myTeam === 'red' ? 'ทีมสีแดง 🔴' : 'ทีมสีน้ำเงิน 🔵';
                 badge.style.color = myTeam === 'red' ? '#e74c3c' : '#3498db';
             }
+        });
+
+        socket.on('basesUpdate', (data) => {
+            redBase = data.redBase;
+            blueBase = data.blueBase;
+            updateBasesHUD();
         });
 
         socket.on('roomStatus', (data) => {
@@ -385,11 +396,13 @@
             });
         });
 
-        function updateBossHUD() {
-            let pct = Math.max(0, (bossData.hp / bossData.maxHp) * 100);
-            document.getElementById('bossHpFill').style.width = pct + '%';
-            document.getElementById('bossHpText').innerText = `HP: ${bossData.hp} / ${bossData.maxHp}`;
-            document.getElementById('bossNameDisplay').innerText = `🐐 ${bossData.name} (${bossData.isAlive ? 'Active' : 'Defeated'})`;
+        function updateBasesHUD() {
+            let redPct = Math.max(0, (redBase.hp / redBase.maxHp) * 100);
+            let bluePct = Math.max(0, (blueBase.hp / blueBase.maxHp) * 100);
+            document.getElementById('redHpFill').style.width = redPct + '%';
+            document.getElementById('redHpText').innerText = `${redBase.hp} / ${redBase.maxHp}`;
+            document.getElementById('blueHpFill').style.width = bluePct + '%';
+            document.getElementById('blueHpText').innerText = `${blueBase.hp} / ${blueBase.maxHp}`;
         }
 
         const keys = { w: false, a: false, s: false, d: false };
@@ -405,7 +418,7 @@
             if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
         }
 
-        // Virtual Joystick บนมือถือ (สำหรับผู้เล่นทั่วไป)
+        // Virtual Joystick บนมือถือ
         const joystickBase = document.getElementById('joystickBase');
         const joystickThumb = document.getElementById('joystickThumb');
         let joystickTouchId = null;
@@ -414,7 +427,6 @@
         window.addEventListener('touchstart', (e) => {
             if (!gameStarted || isHost) return;
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-            
             let touch = e.changedTouches[0];
             if (touch.clientX < window.innerWidth / 2 && joystickTouchId === null) {
                 joystickTouchId = touch.identifier;
@@ -435,18 +447,9 @@
                     let dy = touch.clientY - joystickCenter.y;
                     let dist = Math.hypot(dx, dy);
                     let maxDist = 40;
-
-                    if (dist > maxDist) {
-                        dx = (dx / dist) * maxDist;
-                        dy = (dy / dist) * maxDist;
-                    }
-
+                    if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
                     joystickThumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
-
-                    keys.w = dy < -10;
-                    keys.s = dy > 10;
-                    keys.a = dx < -10;
-                    keys.d = dx > 10;
+                    keys.w = dy < -10; keys.s = dy > 10; keys.a = dx < -10; keys.d = dx > 10;
                 }
             }
         }, { passive: false });
@@ -464,12 +467,9 @@
         });
 
         socket.on('initGame', (data) => {
-            myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss;
-            renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD();
-            if (data.gameStarted) {
-                gameStarted = true;
-                document.getElementById('waitingBanner').style.display = 'none';
-            }
+            myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize;
+            redBase = data.redBase; blueBase = data.blueBase; updateBasesHUD();
+            if (data.gameStarted) { gameStarted = true; document.getElementById('waitingBanner').style.display = 'none'; }
         });
         socket.on('tileCollected', (tile) => { if(!isHost) { inventory.push(tile); renderUI(); } });
         socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
@@ -491,33 +491,18 @@
         socket.on('equationResult', (res) => { 
             if (res.success) { 
                 showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); 
-                equation = []; 
-                renderUI(); 
-                if (renderPlayers[myId]) {
-                    addFloatingText(`+${res.earnedScore} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 50, '#2ecc71');
-                }
-            } else { 
-                showMsg("❌ " + res.msg, "#e74c3c"); 
-            } 
+                equation = []; renderUI(); 
+                if (renderPlayers[myId]) { addFloatingText(`+${res.earnedScore} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 50, '#2ecc71'); }
+            } else { showMsg("❌ " + res.msg, "#e74c3c"); } 
         });
 
         socket.on('updateLeaderboard', (allPlayers) => {
             let list = Object.values(allPlayers);
-            let redTotal = 0, blueTotal = 0;
-            list.forEach(p => {
-                if (p.loggedIn && !p.isHost) {
-                    if (p.team === 'red') redTotal += (p.bossDamage || 0);
-                    else blueTotal += (p.bossDamage || 0);
-                }
-            });
-            document.getElementById('redTeamDmg').innerText = redTotal;
-            document.getElementById('blueTeamDmg').innerText = blueTotal;
-
-            let bossSorted = [...list].filter(p => !p.isHost).sort((a,b) => (b.bossDamage || 0) - (a.bossDamage || 0));
+            let baseSorted = [...list].filter(p => !p.isHost).sort((a,b) => (b.baseDamage || 0) - (a.baseDamage || 0));
             let html = '';
-            bossSorted.slice(0, 5).forEach((p, i) => {
+            baseSorted.slice(0, 5).forEach((p, i) => {
                 let color = p.team === 'red' ? '#e74c3c' : '#3498db';
-                html += `<li>${i+1}. <span style="color:${color};">${p.name}</span> (${p.bossDamage || 0} DMG)</li>`;
+                html += `<li>${i+1}. <span style="color:${color};">${p.name}</span> (${p.baseDamage || 0} DMG)</li>`;
             });
             document.getElementById('bossLeaderboardList').innerHTML = html;
         });
@@ -547,43 +532,20 @@
             ctx.restore();
         }
 
-        function drawBoss(ctx) {
-            ctx.save(); ctx.translate(renderBossX, renderBossY);
-            if (bossData.poisonedUntil && Date.now() < bossData.poisonedUntil) {
-                ctx.fillStyle = 'rgba(155, 89, 182, 0.5)'; ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
-            } else if (bossData.slowedUntil && Date.now() < bossData.slowedUntil) {
-                ctx.fillStyle = 'rgba(52, 152, 219, 0.5)'; ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
-            }
+        function drawFortress(ctx, base, color, label) {
+            ctx.save(); ctx.translate(base.x, base.y);
+            ctx.fillStyle = color; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.roundRect(-70, -70, 140, 140, 16); ctx.fill(); ctx.stroke();
 
-            let walkAnim = bossData.isAlive ? Math.sin(Date.now() / 100) * 6 : 0;
-            ctx.fillStyle = '#4a235a'; ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50';
-            ctx.fillRect(-16, 25, 6, 18 + walkAnim); ctx.strokeRect(-16, 25, 6, 18 + walkAnim);
-            ctx.fillRect(10, 25, 6, 18 - walkAnim); ctx.strokeRect(10, 25, 6, 18 - walkAnim);
-            ctx.fillRect(-10, 25, 6, 18 - walkAnim); ctx.strokeRect(-10, 25, 6, 18 - walkAnim);
-            ctx.fillRect(4, 25, 6, 18 + walkAnim); ctx.strokeRect(4, 25, 6, 18 + walkAnim);
+            // Towers
+            ctx.fillRect(-85, -85, 35, 35); ctx.strokeRect(-85, -85, 35, 35);
+            ctx.fillRect(50, -85, 35, 35); ctx.strokeRect(50, -85, 35, 35);
+            ctx.fillRect(-85, 50, 35, 35); ctx.strokeRect(-85, 50, 35, 35);
+            ctx.fillRect(50, 50, 35, 35); ctx.strokeRect(50, 50, 35, 35);
 
-            let tailWag = Math.sin(Date.now() / 150) * 15;
-            ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 4;
-            ctx.beginPath(); ctx.moveTo(0, 30); ctx.quadraticCurveTo(-30 + tailWag, 55, -20 + tailWag*1.5, 70); ctx.stroke();
-            ctx.fillStyle = '#6c3483';
-            ctx.beginPath(); ctx.moveTo(-20 + tailWag*1.5, 70); ctx.lineTo(-26 + tailWag*1.5, 60); ctx.lineTo(-12 + tailWag*1.5, 63); ctx.closePath(); ctx.fill();
-
-            ctx.fillStyle = bossData.isAlive ? '#512e5f' : '#7f8c8d';
-            ctx.beginPath(); ctx.ellipse(0, 15, 26, 22, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
-
-            ctx.fillStyle = '#111111'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(-15, -20); ctx.bezierCurveTo(-50, -50, -70, -10, -45, 10); ctx.bezierCurveTo(-55, -10, -45, -35, -15, -15); ctx.fill(); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(15, -20); ctx.bezierCurveTo(50, -50, 70, -10, 45, 10); ctx.bezierCurveTo(55, -10, 45, -35, 15, -15); ctx.fill(); ctx.stroke();
-
-            ctx.fillStyle = bossData.isAlive ? '#6c3483' : '#7f8c8d';
-            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-25, 0); ctx.lineTo(25, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-
-            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-10, -12, 7, 0, Math.PI * 2); ctx.arc(10, -12, 7, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(-10, -12, 2.5, 0, Math.PI * 2); ctx.arc(10, -12, 2.5, 0, Math.PI * 2); ctx.fill();
-
-            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px Kanit'; ctx.textAlign = 'center';
-            ctx.fillText(`🐐 ${bossData.name}`, 0, -75);
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px Kanit'; ctx.textAlign = 'center';
+            ctx.fillText(`🏰 ${label}`, 0, -95);
+            ctx.fillText(`HP: ${base.hp}/${base.maxHp}`, 0, 110);
             ctx.restore();
         }
 
@@ -591,9 +553,6 @@
             ctx.fillStyle = '#151328'; ctx.fillRect(0, 0, width, height);
             ctx.save(); ctx.translate(-camX, -camY);
             ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 25; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
-            let cx = MAP_SIZE / 2, cy = MAP_SIZE / 2;
-            ctx.fillStyle = '#221e3f'; ctx.strokeStyle = '#9b59b6'; ctx.lineWidth = 6;
-            ctx.fillRect(cx - 350, cy - 350, 700, 700); ctx.strokeRect(cx - 350, cy - 350, 700, 700);
             ctx.restore();
         }
 
@@ -602,30 +561,21 @@
                 if (!isHost && players[myId]) {
                     let p = players[myId];
                     let dx = 0, dy = 0, speed = 5;
-
                     if (activeEffect && Date.now() < effectTimer) {
                         if (activeEffect === 'slow') speed = 3;
                         if (activeEffect === 'heavySlow' || activeEffect === 'freeze' || activeEffect === 'burn') speed = 1.5;
                     }
-
                     if (keys.w) dy -= speed; if (keys.s) dy += speed;
                     if (keys.a) dx -= speed; if (keys.d) dx += speed;
-
                     if (dx !== 0 || dy !== 0) socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
                     else socket.emit('move', { x: p.x, y: p.y, isMoving: false });
                 } else if (isHost) {
-                    // Host ใช้กล้องอิสระควบคุมด้วย WASD/Arrow keys เดินชมแผนที่
                     let camSpeed = 12;
-                    if (keys.w) hostCamY -= camSpeed;
-                    if (keys.s) hostCamY += camSpeed;
-                    if (keys.a) hostCamX -= camSpeed;
-                    if (keys.d) hostCamX += camSpeed;
+                    if (keys.w) hostCamY -= camSpeed; if (keys.s) hostCamY += camSpeed;
+                    if (keys.a) hostCamX -= camSpeed; if (keys.d) hostCamX += camSpeed;
                     hostCamX = Math.max(100, Math.min(MAP_SIZE - 100, hostCamX));
                     hostCamY = Math.max(100, Math.min(MAP_SIZE - 100, hostCamY));
                 }
-
-                renderBossX += (bossData.x - renderBossX) * 0.15;
-                renderBossY += (bossData.y - renderBossY) * 0.15;
 
                 for (let id in players) {
                     let serverPl = players[id];
@@ -634,8 +584,7 @@
                         renderPlayers[id].targetX = serverPl.x; renderPlayers[id].targetY = serverPl.y;
                         renderPlayers[id].name = serverPl.name; renderPlayers[id].playerClass = serverPl.playerClass;
                         renderPlayers[id].outfitColor = serverPl.outfitColor; renderPlayers[id].team = serverPl.team;
-                        renderPlayers[id].isMoving = serverPl.isMoving;
-                        renderPlayers[id].isHost = serverPl.isHost;
+                        renderPlayers[id].isMoving = serverPl.isMoving; renderPlayers[id].isHost = serverPl.isHost;
                     }
                     if (renderPlayers[id].targetX !== undefined) {
                         renderPlayers[id].x += (renderPlayers[id].targetX - renderPlayers[id].x) * 0.3;
@@ -646,41 +595,29 @@
 
                 let camX, camY;
                 if (isHost) {
-                    camX = hostCamX - (width / 2);
-                    camY = hostCamY - (height / 2);
+                    camX = hostCamX - (width / 2); camY = hostCamY - (height / 2);
                 } else {
                     let me = renderPlayers[myId] || players[myId];
-                    camX = me.x - (width / 2);
-                    camY = me.y - (height / 2);
+                    camX = me.x - (width / 2); camY = me.y - (height / 2);
                     if (activeEffect && Date.now() < effectTimer) { camX += (Math.random() - 0.5) * 20; camY += (Math.random() - 0.5) * 20; }
                 }
 
                 drawBackground(camX, camY);
                 ctx.save(); ctx.translate(-camX, -camY);
-                drawBoss(ctx);
+
+                // วาดฐานทัพทั้งสองฝ่าย
+                drawFortress(ctx, redBase, 'rgba(231, 76, 60, 0.4)', redBase.name);
+                drawFortress(ctx, blueBase, 'rgba(52, 152, 219, 0.4)', blueBase.name);
 
                 for (let i = skillVisualEffects.length - 1; i >= 0; i--) {
                     let fx = skillVisualEffects[i];
-                    fx.radius += 8;
-                    fx.alpha -= 0.025;
-                    if (fx.alpha <= 0 || fx.radius >= fx.maxRadius) {
-                        skillVisualEffects.splice(i, 1);
-                        continue;
-                    }
-                    ctx.save();
-                    ctx.globalAlpha = fx.alpha;
-                    if (fx.playerClass === 'Mage') ctx.strokeStyle = '#00f2fe';
-                    else if (fx.playerClass === 'Assassin') ctx.strokeStyle = '#8e44ad';
-                    else if (fx.playerClass === 'Berserker') ctx.strokeStyle = '#e67e22';
-                    else ctx.strokeStyle = fx.team === 'red' ? '#e74c3c' : '#3498db';
-
-                    ctx.lineWidth = 5;
-                    ctx.beginPath();
-                    ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2);
-                    ctx.stroke();
+                    fx.radius += 8; fx.alpha -= 0.025;
+                    if (fx.alpha <= 0 || fx.radius >= fx.maxRadius) { skillVisualEffects.splice(i, 1); continue; }
+                    ctx.save(); ctx.globalAlpha = fx.alpha;
+                    ctx.strokeStyle = fx.team === 'red' ? '#e74c3c' : '#3498db';
+                    ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.stroke();
                     ctx.fillStyle = fx.team === 'red' ? 'rgba(231, 76, 60, 0.2)' : 'rgba(52, 152, 219, 0.2)';
-                    ctx.fill();
-                    ctx.restore();
+                    ctx.fill(); ctx.restore();
                 }
 
                 tiles.forEach(t => {
@@ -700,7 +637,7 @@
 
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
-                    if (!pl.loggedIn || pl.isHost) continue; // Host ไม่มีตัวละครบนแมพ
+                    if (!pl.loggedIn || pl.isHost) continue;
                     drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
                     ctx.fillStyle = pl.team === 'red' ? '#e74c3c' : '#3498db';
                     ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
