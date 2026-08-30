@@ -119,10 +119,10 @@
             <div>
                 <label>เลือกทีม (SELECT TEAM)</label>
                 <select id="playerTeam">
-                    <option value="red">🔴 ทีมแดง (Red Team)</option>
-                    <option value="blue">🔵 ทีมน้ำเงิน (Blue Team)</option>
-                    <option value="green">🟢 ทีมเขียว (Green Team)</option>
-                    <option value="yellow">🟡 ทีมเหลือง (Yellow Team)</option>
+                    <option value="red" id="optRed">🔴 ทีมแดง (Red Team) [0/10]</option>
+                    <option value="blue" id="optBlue">🔵 ทีมน้ำเงิน (Blue Team) [0/10]</option>
+                    <option value="green" id="optGreen">🟢 ทีมเขียว (Green Team) [0/10]</option>
+                    <option value="yellow" id="optYellow">🟡 ทีมเหลือง (Yellow Team) [0/10]</option>
                 </select>
             </div>
             <div>
@@ -265,6 +265,22 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // Polyfill สำหรับเบราว์เซอร์เก่าที่ไม่มี roundRect
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
+
         const socket = io();
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -279,7 +295,7 @@
         window.addEventListener('resize', resize);
         resize();
 
-        let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
+        let myId = null, players = {}, renderPlayers = [], tiles = [], mysteryBoxes = [], inventory = [], equation = [];
         let myScore = 0, myTeam = 'red', gameStarted = false, isHost = false, previewAngle = 0, currentMysteryAns = null;
         let redBase = { x: 800, y: 800, hp: 3000, maxHp: 3000, name: 'Red Fortress', team: 'red', isAlive: true };
         let blueBase = { x: MAP_SIZE - 800, y: 800, hp: 3000, maxHp: 3000, name: 'Blue Fortress', team: 'blue', isAlive: true };
@@ -397,6 +413,13 @@
             } else {
                 alert(res.msg || "❌ ไม่สามารถเข้าสู่เกมได้");
             }
+        });
+
+        socket.on('teamCountsUpdate', (counts) => {
+            document.getElementById('optRed').innerText = `🔴 ทีมแดง (Red Team) [${counts.red}/10]`;
+            document.getElementById('optBlue').innerText = `🔵 ทีมน้ำเงิน (Blue Team) [${counts.blue}/10]`;
+            document.getElementById('optGreen').innerText = `🟢 ทีมเขียว (Green Team) [${counts.green}/10]`;
+            document.getElementById('optYellow').innerText = `🟡 ทีมเหลือง (Yellow Team) [${counts.yellow}/10]`;
         });
 
         socket.on('gameStartedEvent', (data) => {
@@ -536,6 +559,12 @@
         socket.on('initGame', (data) => {
             myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize;
             redBase = data.redBase; blueBase = data.blueBase; greenBase = data.greenBase; yellowBase = data.yellowBase;
+            if (data.teamCounts) {
+                document.getElementById('optRed').innerText = `🔴 ทีมแดง (Red Team) [${data.teamCounts.red}/10]`;
+                document.getElementById('optBlue').innerText = `🔵 ทีมน้ำเงิน (Blue Team) [${data.teamCounts.blue}/10]`;
+                document.getElementById('optGreen').innerText = `🟢 ทีมเขียว (Green Team) [${data.teamCounts.green}/10]`;
+                document.getElementById('optYellow').innerText = `🟡 ทีมเหลือง (Yellow Team) [${data.teamCounts.yellow}/10]`;
+            }
             updateBasesHUD();
             if (data.gameStarted) { gameStarted = true; document.getElementById('waitingBanner').style.display = 'none'; }
         });
