@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const server = http.createServer(app);
@@ -67,94 +68,139 @@ io.on('connection', (socket) => {
 
     activePlayers[socket.id] = {
         socketId: socket.id,
+        playerId: 'PLY_' + Math.random().toString(36).substr(2, 9),
         name: '',
-        avatar: 'hero',
-        outfitColor: '#3498db',
+        playerClass: 'Warrior',
+        outfitColor: '#9b59b6',
         hat: 'none',
+        characterData: {},
         x: MAP_SIZE / 2,
         y: MAP_SIZE / 2,
         score: 0,
         isMoving: false,
+        inLobby: true,
         loggedIn: false
     };
 
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE });
 
-    // ขั้นที่ 1: ตรวจสอบล็อกอิน / สมัครสมาชิก
-    socket.on('authPlayer', (data) => {
-        let name = data.name ? data.name.trim().substring(0, 15) : '';
+    // ระบบสมัครสมาชิก (Register)
+    socket.on('registerPlayer', async (data) => {
+        let name = data.name ? data.name.trim() : '';
         let password = data.password ? data.password.trim() : '';
-        let isRegister = data.isRegister;
+        let confirmPassword = data.confirmPassword ? data.confirmPassword.trim() : '';
 
-        if (!name || !password) {
-            socket.emit('authResult', { success: false, msg: 'กรุณากรอกชื่อและรหัสผ่านให้ครบถ้วน' });
+        if (!name || !password || !confirmPassword) {
+            socket.emit('authResult', { success: false, msg: 'กรุณากรอกข้อมูลให้ครบ' });
+            return;
+        }
+        if (name.length < 3 || name.length > 15) {
+            socket.emit('authResult', { success: false, msg: 'ชื่อผู้เล่นต้องมีความยาว 3-15 ตัวอักษร' });
+            return;
+        }
+        if (password.length < 6) {
+            socket.emit('authResult', { success: false, msg: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+            return;
+        }
+        if (password !== confirmPassword) {
+            socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ตรงกัน' });
+            return;
+        }
+        if (playersDb[name]) {
+            socket.emit('authResult', { success: false, msg: 'ชื่อนี้ถูกใช้งานแล้ว' });
             return;
         }
 
-        if (isRegister) {
-            if (playersDb[name]) {
-                socket.emit('authResult', { success: false, msg: 'ชื่อนี้มีผู้ใช้งานแล้ว กรุณาเลือกชื่ออื่นหรือเข้าสู่ระบบ' });
-                return;
-            }
-            playersDb[name] = { 
-                password: password, 
-                score: 0, 
-                avatar: 'hero', 
-                outfitColor: '#3498db', 
-                hat: 'none' 
-            };
-            saveDatabase(playersDb);
-        } else {
-            if (!playersDb[name]) {
-                socket.emit('authResult', { success: false, msg: 'ไม่พบชื่อผู้ใช้นี้ กรุณาสมัครสมาชิกก่อน' });
-                return;
-            }
-            if (playersDb[name].password !== password) {
-                socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ถูกต้อง!' });
-                return;
-            }
-        }
+        // Hash Password ปลอดภัย
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newPlayerId = 'PLY_' + Math.random().toString(36).substr(2, 9);
+
+        playersDb[name] = {
+            playerId: newPlayerId,
+            password: hashedPassword,
+            score: 0,
+            playerClass: 'Warrior',
+            outfitColor: '#9b59b6',
+            hat: 'none',
+            characterData: {}
+        };
+        saveDatabase(playersDb);
 
         activePlayers[socket.id].name = name;
-        activePlayers[socket.id].score = playersDb[name].score || 0;
-        activePlayers[socket.id].avatar = playersDb[name].avatar || 'hero';
-        activePlayers[socket.id].outfitColor = playersDb[name].outfitColor || '#3498db';
-        activePlayers[socket.id].hat = playersDb[name].hat || 'none';
+        activePlayers[socket.id].playerId = newPlayerId;
 
-        // ส่งข้อมูลตัวละครเดิมกลับไปให้หน้าแต่งตัว
+        socket.emit('authResult', { success: true, action: 'register', msg: 'ACCOUNT CREATED!' });
+    });
+
+    // ระบบเข้าสู่ระบบ (Login)
+    socket.on('loginPlayer', async (data) => {
+        let name = data.name ? data.name.trim() : '';
+        let password = data.password ? data.password.trim() : '';
+
+        if (!name || !password) {
+            socket.emit('authResult', { success: false, msg: 'กรุณากรอกข้อมูลให้ครบ' });
+            return;
+        }
+        if (!playersDb[name]) {
+            socket.emit('authResult', { success: false, msg: 'ไม่พบชื่อผู้ใช้นี้' });
+            return;
+        }
+
+        const isMatch = await bcrypt.compare(password, playersDb[name].password);
+        if (!isMatch) {
+            socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ถูกต้อง' });
+            return;
+        }
+
+        let pData = playersDb[name];
+        activePlayers[socket.id].name = name;
+        activePlayers[socket.id].playerId = pData.playerId;
+        activePlayers[socket.id].score = pData.score || 0;
+        activePlayers[socket.id].playerClass = pData.playerClass || 'Warrior';
+        activePlayers[socket.id].outfitColor = pData.outfitColor || '#9b59b6';
+        activePlayers[socket.id].hat = pData.hat || 'none';
+        activePlayers[socket.id].characterData = pData.characterData || {};
+
         socket.emit('authResult', { 
             success: true, 
-            score: activePlayers[socket.id].score,
-            avatar: activePlayers[socket.id].avatar,
-            outfitColor: activePlayers[socket.id].outfitColor,
-            hat: activePlayers[socket.id].hat
+            action: 'login',
+            playerData: pData 
         });
     });
 
-    // ขั้นที่ 2: บันทึกการตกแต่งตัวละครและเข้าเกม
-    socket.on('setupPlayer', (data) => {
+    // บันทึกตัวละคร (Save Character)
+    socket.on('saveCharacter', (data) => {
         let p = activePlayers[socket.id];
         if (!p || !p.name) return;
 
-        p.avatar = data.avatar || 'hero';
-        p.outfitColor = data.outfitColor || '#3498db';
+        p.playerClass = data.playerClass || 'Warrior';
+        p.outfitColor = data.outfitColor || '#9b59b6';
         p.hat = data.hat || 'none';
-        p.loggedIn = true;
+        p.characterData = data.characterData || {};
 
-        // บันทึกลง Database
         if (playersDb[p.name]) {
-            playersDb[p.name].avatar = p.avatar;
+            playersDb[p.name].playerClass = p.playerClass;
             playersDb[p.name].outfitColor = p.outfitColor;
             playersDb[p.name].hat = p.hat;
+            playersDb[p.name].characterData = p.characterData;
             saveDatabase(playersDb);
         }
 
+        socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
+    });
+
+    // เข้าสู่ Main Lobby / เข้าเกม PvP
+    socket.on('enterGameLobby', () => {
+        let p = activePlayers[socket.id];
+        if (!p || !p.name) return;
+        p.loggedIn = true;
+        p.inLobby = false;
         io.emit('updateLeaderboard', activePlayers);
     });
 
     socket.on('move', (data) => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn) return;
+        if (!p || !p.loggedIn || p.inLobby) return;
 
         p.x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
@@ -197,7 +243,7 @@ io.on('connection', (socket) => {
 
     socket.on('submitEquation', (eqStr) => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn) return;
+        if (!p || !p.loggedIn || p.inLobby) return;
         try {
             let parts = eqStr.split('=');
             if (parts.length === 2 && parts[0] && parts[1]) {
@@ -224,7 +270,7 @@ io.on('connection', (socket) => {
 
     socket.on('submitMysteryAnswer', (data) => {
         let p = activePlayers[socket.id];
-        if (p && p.loggedIn) {
+        if (p && p.loggedIn && !p.inLobby) {
             if (parseInt(data.userAns) === parseInt(data.correctAns)) {
                 p.score += 60;
                 playersDb[p.name].score = p.score;
