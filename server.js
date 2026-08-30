@@ -71,8 +71,8 @@ function calculateAMathScore(eqStr) {
     return Math.max(10, finalScore);
 }
 
-for (let i = 0; i < 150; i++) spawnTile();
-for (let i = 0; i < 35; i++) spawnMysteryBox();
+for (let i = 0; i < 350; i++) spawnTile();
+for (let i = 0; i < 70; i++) spawnMysteryBox();
 
 function spawnTile() {
     let randType = Math.random();
