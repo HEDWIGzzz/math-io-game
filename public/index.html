@@ -291,7 +291,7 @@
 
     <div id="ui-layer">
         <div class="boss-hud-container">
-            <div style="font-size: 13px; color: #e74c3c; font-weight: bold;" id="bossNameDisplay">👹 Demon Lord X</div>
+            <div style="font-size: 13px; color: #e74c3c; font-weight: bold;" id="bossNameDisplay">🐐 Demon Goat Lord</div>
             <div class="boss-hp-bar">
                 <div class="boss-hp-fill" id="bossHpFill"></div>
             </div>
@@ -308,7 +308,7 @@
         </div>
 
         <button class="boss-attack-btn" onclick="attackBoss()">
-            👹 ระเบิดพลังบอส<br><span style="font-size: 9px; opacity: 0.9;">ใช้ 50 คะแนน</span>
+            🐐 โจมตีแพะปีศาจ<br><span style="font-size: 9px; opacity: 0.9;">ใช้ 50 คะแนน</span>
         </button>
         <button class="skill-btn-hud" onclick="castPrankSkill()">
             ⚡ สกิลป่วน<br><span id="skillNameLabel" style="font-size: 9px; opacity: 0.9;">Skill</span>
@@ -357,7 +357,8 @@
         let characterSaved = false;
         let previewAngle = 0;
         let currentMysteryAns = null;
-        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Lord X', isAlive: true };
+        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true };
+        let renderBossX = 2000, renderBossY = 1850;
         let playerUpgrades = { speedLevel: 1, damageLevel: 1, luckLevel: 1 };
 
         let activeEffect = null;
@@ -384,7 +385,19 @@
 
         function attackBoss() { socket.emit('attackBoss'); }
 
-        socket.on('bossUpdate', (b) => { bossData = b; updateBossHUD(); });
+        socket.on('stateUpdate', (data) => {
+            players = data.players;
+            if (data.boss) {
+                bossData = data.boss;
+                updateBossHUD();
+            }
+            if(players[myId]) {
+                myScore = players[myId].score;
+                document.getElementById('scoreDisplay').innerText = myScore;
+                document.getElementById('lobbyScore').innerText = myScore;
+            }
+        });
+
         socket.on('bossDefeated', (data) => { showMsg(data.msg, "#f1c40f"); });
         socket.on('bossRespawn', (data) => { showMsg(data.msg, "#e74c3c"); });
 
@@ -392,7 +405,7 @@
             let pct = Math.max(0, (bossData.hp / bossData.maxHp) * 100);
             document.getElementById('bossHpFill').style.width = pct + '%';
             document.getElementById('bossHpText').innerText = `HP: ${bossData.hp} / ${bossData.maxHp}`;
-            document.getElementById('bossNameDisplay').innerText = `👹 ${bossData.name} (${bossData.isAlive ? 'Active' : 'Defeated'})`;
+            document.getElementById('bossNameDisplay').innerText = `🐐 ${bossData.name} (${bossData.isAlive ? 'Active' : 'Defeated'})`;
         }
 
         const classInfo = {
@@ -473,7 +486,7 @@
 
         function enterMainLobby() { if (!characterSaved) return; document.getElementById('customizationModal').style.display = 'none'; document.getElementById('lobbyOverlay').style.display = 'flex'; document.getElementById('lobbyName').innerText = document.getElementById('playerNameInput').value.trim(); document.getElementById('lobbyClass').innerText = document.getElementById('playerClass').value; }
         function openCharacterEdit() { document.getElementById('lobbyOverlay').style.display = 'none'; document.getElementById('customizationModal').style.display = 'flex'; updatePreview(); }
-        function startPvPGame() { document.getElementById('lobbyOverlay').style.display = 'none'; document.getElementById('ui-layer').style.display = 'flex'; socket.emit('enterGameLobby'); gameStarted = true; showMsg("⚔️ เริ่มศึกพิชิตบอสด้วยคะแนนสะสม!", "#f1c40f"); }
+        function startPvPGame() { document.getElementById('lobbyOverlay').style.display = 'none'; document.getElementById('ui-layer').style.display = 'flex'; socket.emit('enterGameLobby'); gameStarted = true; showMsg("⚔️ เริ่มศึกพิชิตแพะปีศาจ!", "#f1c40f"); }
         function returnToLobby() { gameStarted = false; document.getElementById('ui-layer').style.display = 'none'; document.getElementById('lobbyOverlay').style.display = 'flex'; }
 
         function castPrankSkill() { socket.emit('castSkill'); }
@@ -520,8 +533,7 @@
         }
         window.addEventListener('pointerup', endJoystick); window.addEventListener('pointercancel', endJoystick);
 
-        socket.on('initGame', (data) => { myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; updateBossHUD(); });
-        socket.on('stateUpdate', (serverPlayers) => { players = serverPlayers; if(players[myId]) { myScore = players[myId].score; document.getElementById('scoreDisplay').innerText = myScore; document.getElementById('lobbyScore').innerText = myScore; } });
+        socket.on('initGame', (data) => { myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD(); });
         socket.on('tileCollected', (tile) => { inventory.push(tile); renderUI(); });
         socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
         socket.on('newTile', (tile) => { tiles.push(tile); });
@@ -566,23 +578,66 @@
             ctx.restore();
         }
 
+        // 🐐 ฟังก์ชันวาดบอสแพะปีศาจ สไตล์เรฟเฟอเรนซ์
         function drawBoss(ctx) {
             ctx.save();
-            ctx.translate(bossData.x, bossData.y);
-            ctx.fillStyle = bossData.isAlive ? '#c0392b' : '#7f8c8d';
-            ctx.beginPath(); ctx.arc(0, 0, 55, 0, Math.PI * 2); ctx.fill();
-            ctx.lineWidth = 4; ctx.strokeStyle = '#f1c40f'; ctx.stroke();
+            ctx.translate(renderBossX, renderBossY);
 
-            ctx.fillStyle = '#e74c3c';
+            // เขาโค้งปีศาจสีดำขนาดใหญ่
+            ctx.fillStyle = '#111111';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+
+            // เขาซ้าย
             ctx.beginPath();
-            ctx.moveTo(-35, -40); ctx.lineTo(-55, -75); ctx.lineTo(-15, -50);
-            ctx.moveTo(35, -40); ctx.lineTo(55, -75); ctx.lineTo(15, -50);
+            ctx.moveTo(-15, -20);
+            ctx.bezierCurveTo(-50, -50, -70, -10, -45, 10);
+            ctx.bezierCurveTo(-55, -10, -45, -35, -15, -15);
             ctx.fill(); ctx.stroke();
 
+            // เขาขวา
+            ctx.beginPath();
+            ctx.moveTo(15, -20);
+            ctx.bezierCurveTo(50, -50, 70, -10, 45, 10);
+            ctx.bezierCurveTo(55, -10, 45, -35, 15, -15);
+            ctx.fill(); ctx.stroke();
+
+            // หัวและลำตัวแพะปีศาจ (สีม่วงเข้ม/เทาอมม่วง)
+            ctx.fillStyle = bossData.isAlive ? '#6c3483' : '#7f8c8d';
+            ctx.beginPath();
+            ctx.moveTo(0, -30);
+            ctx.lineTo(-25, 10);
+            ctx.lineTo(-15, 35);
+            ctx.lineTo(15, 35);
+            ctx.lineTo(25, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
+
+            // ดวงตากลมโตเรืองแสงสีขาว
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-12, -10, 8, 0, Math.PI * 2);
+            ctx.arc(12, -10, 8, 0, Math.PI * 2);
+            ctx.fill();
+            // รูม่านตาดำเล็กๆ
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(-12, -10, 3, 0, Math.PI * 2);
+            ctx.arc(12, -10, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ปากอ้ากว้างสีดำมืด (ช่องว่างกรีดร้อง)
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(0, 15, 10, 16, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ชื่อบอส
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 18px Kanit';
             ctx.textAlign = 'center';
-            ctx.fillText(`👹 ${bossData.name}`, 0, -85);
+            ctx.fillText(`🐐 ${bossData.name}`, 0, -65);
             ctx.restore();
         }
 
@@ -609,7 +664,10 @@
                 let sorted = Object.values(players).sort((a,b) => b.score - a.score);
                 let topId = sorted.length > 0 ? sorted[0].socketId : null;
 
-                // อัปเดตพิกัดตัวละครพร้อมทำ Interpolation (Lerp) อย่างสมูท
+                // ทำ Interpolation ตำแหน่งบอสให้เดินนุ่มนวล
+                renderBossX += (bossData.x - renderBossX) * 0.15;
+                renderBossY += (bossData.y - renderBossY) * 0.15;
+
                 for (let id in players) {
                     let serverPl = players[id];
                     if (!renderPlayers[id]) {
