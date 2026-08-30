@@ -24,6 +24,18 @@ let blueBase = { x: MAP_SIZE - 800, y: 800, hp: 3000, maxHp: 3000, name: 'Blue F
 let greenBase = { x: 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Green Fortress', team: 'green', isAlive: true };
 let yellowBase = { x: MAP_SIZE - 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Yellow Fortress', team: 'yellow', isAlive: true };
 
+// กำหนดระยะเวลาคูลดาวน์เฉพาะของแต่ละสายอาชีพ (หน่วยเป็นมิลลิวินาที)
+const CLASS_COOLDOWNS = {
+    'Assassin': 3000,  // พุ่งไว คูลดาวน์ 3 วิ
+    'Warrior': 6000,   // โจมตีฐานแรง 6 วิ
+    'Tank': 9000,      // ฮีลฐาน 9 วิ
+    'Archer': 5000,    // ยิงศรสโลว์ 5 วิ
+    'Mage': 5000,      // ดูดเบี้ย 5 วิ
+    'Support': 6000,   // บูสต์คะแนน 6 วิ
+    'Monk': 4000,      // ชำระล้าง 4 วิ
+    'Berserker': 6000  // คูณสอง 6 วิ
+};
+
 const AMATH_SCORES = {
     "0": 1, "1": 1, "2": 1, "3": 1,
     "4": 2, "5": 2, "6": 2, "7": 2, "8": 2, "9": 2,
@@ -239,7 +251,7 @@ io.on('connection', (socket) => {
         }
 
         p.score -= scoreCost;
-        let damage = (p.playerClass === 'Warrior') ? 200 : 150; // Warrior โจมตีฐานแรงขึ้น
+        let damage = (p.playerClass === 'Warrior') ? 200 : 150;
         targetBase.hp -= damage;
         p.baseDamage = (p.baseDamage || 0) + damage;
 
@@ -257,9 +269,13 @@ io.on('connection', (socket) => {
     socket.on('castSkill', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.isHost) return;
+        
         let now = Date.now();
-        if (p.lastSkillTime && now - p.lastSkillTime < 5000) {
-            socket.emit('skillResult', { success: false, msg: '⏳ สกิลกำลัง Cool Down (รอ 5 วินาที)' });
+        let cooldownTime = CLASS_COOLDOWNS[p.playerClass] || 5000;
+        
+        if (p.lastSkillTime && now - p.lastSkillTime < cooldownTime) {
+            let remaining = Math.ceil((cooldownTime - (now - p.lastSkillTime)) / 1000);
+            socket.emit('skillResult', { success: false, msg: `⏳ สกิลสาย ${p.playerClass} ติด Cool Down (รออีก ${remaining} วิ)` });
             return;
         }
         p.lastSkillTime = now;
