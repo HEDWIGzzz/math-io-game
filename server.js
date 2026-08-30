@@ -31,8 +31,9 @@ function loadDatabase() {
 function saveDatabase(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+        console.log('💾 Database saved successfully!');
     } catch (e) {
-        console.error('Database save error:', e);
+        console.error('❌ Database save error:', e);
     }
 }
 
@@ -162,6 +163,7 @@ io.on('connection', (socket) => {
 
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss, settings: gameSettings });
 
+    // 📝 ระบบสมัครสมาชิก (บันทึกลง database.json ทันที)
     socket.on('registerPlayer', async (data) => {
         try {
             let name = data.name ? data.name.trim() : '';
@@ -202,11 +204,17 @@ io.on('connection', (socket) => {
             };
             saveDatabase(playersDb);
 
-            activePlayers[socket.id].name = name;
-            activePlayers[socket.id].playerId = newPlayerId;
+            let p = activePlayers[socket.id];
+            p.name = name;
+            p.playerId = newPlayerId;
+            p.score = 0;
+            p.playerClass = 'Warrior';
+            p.outfitColor = '#9b59b6';
+            p.hat = 'none';
 
             socket.emit('authResult', { success: true, action: 'register', msg: 'ACCOUNT CREATED!' });
         } catch (e) {
+            console.error('Register error:', e);
             socket.emit('authResult', { success: false, msg: 'เกิดข้อผิดพลาดในระบบ' });
         }
     });
@@ -232,12 +240,13 @@ io.on('connection', (socket) => {
             }
 
             let pData = playersDb[name];
-            activePlayers[socket.id].name = name;
-            activePlayers[socket.id].playerId = pData.playerId;
-            activePlayers[socket.id].score = pData.score || 0;
-            activePlayers[socket.id].playerClass = pData.playerClass || 'Warrior';
-            activePlayers[socket.id].outfitColor = pData.outfitColor || '#9b59b6';
-            activePlayers[socket.id].hat = pData.hat || 'none';
+            let p = activePlayers[socket.id];
+            p.name = name;
+            p.playerId = pData.playerId;
+            p.score = pData.score || 0;
+            p.playerClass = pData.playerClass || 'Warrior';
+            p.outfitColor = pData.outfitColor || '#9b59b6';
+            p.hat = pData.hat || 'none';
 
             socket.emit('authResult', { success: true, action: 'login', playerData: pData });
         } catch (e) {
@@ -312,7 +321,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ⚙️ Admin Actions on Players (Kick / Reset Score)
     socket.on('adminKickPlayer', (targetSocketId) => {
         if (!socket.isVerifiedAdmin) return;
         if (activePlayers[targetSocketId]) {
@@ -628,7 +636,6 @@ setInterval(() => {
     }
 }, 50);
 
-// ส่งข้อมูลอัปเดตสถานะเกมทั้งหมด (รวมถึงตำแหน่งผู้เล่นให้ Admin ส่องจอได้)
 setInterval(() => {
     io.emit('stateUpdate', { players: activePlayers, boss: demonBoss });
 }, 1000 / 60);
