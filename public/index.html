@@ -219,7 +219,7 @@
                 </select>
             </div>
             <div class="class-desc" id="classDescription">
-                <b>ASSASSIN</b><br>“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind
+                <b>ASSASSIN</b><br>“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind / Poison Boss
             </div>
             <div>
                 <label>สีหลัก (OUTFIT COLOR)</label>
@@ -311,7 +311,7 @@
             🐐 โจมตีแพะปีศาจ<br><span style="font-size: 9px; opacity: 0.9;">ใช้ 50 คะแนน</span>
         </button>
         <button class="skill-btn-hud" onclick="castPrankSkill()">
-            ⚡ สกิลป่วน<br><span id="skillNameLabel" style="font-size: 9px; opacity: 0.9;">Skill</span>
+            ⚡ สกิลป่วน/ดีบัฟบอส<br><span id="skillNameLabel" style="font-size: 9px; opacity: 0.9;">Skill</span>
         </button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
@@ -357,9 +357,14 @@
         let characterSaved = false;
         let previewAngle = 0;
         let currentMysteryAns = null;
-        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true };
+        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true, slowedUntil: 0, poisonedUntil: 0 };
         let renderBossX = 2000, renderBossY = 1850;
         let playerUpgrades = { speedLevel: 1, damageLevel: 1, luckLevel: 1 };
+
+        let floatingTexts = [];
+        function addFloatingText(text, x, y, color = '#f1c40f') {
+            floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
+        }
 
         let activeEffect = null;
         let effectTimer = 0;
@@ -388,8 +393,14 @@
         socket.on('stateUpdate', (data) => {
             players = data.players;
             if (data.boss) {
+                let oldHp = bossData.hp;
                 bossData = data.boss;
                 updateBossHUD();
+                
+                if (bossData.hp < oldHp) {
+                    let dmg = oldHp - bossData.hp;
+                    addFloatingText(`-${dmg}`, bossData.x + (Math.random() - 0.5) * 40, bossData.y - 60, '#e74c3c');
+                }
             }
             if(players[myId]) {
                 myScore = players[myId].score;
@@ -398,8 +409,27 @@
             }
         });
 
-        socket.on('bossDefeated', (data) => { showMsg(data.msg, "#f1c40f"); });
-        socket.on('bossRespawn', (data) => { showMsg(data.msg, "#e74c3c"); });
+        socket.on('bossDebuff', (data) => {
+            showMsg(data.msg, "#3498db");
+            addFloatingText(data.type.toUpperCase() + '!', bossData.x, bossData.y - 90, '#3498db');
+        });
+
+        socket.on('bossHitPlayer', (data) => {
+            showMsg(data.msg, "#e74c3c");
+            if(renderPlayers[myId]) {
+                addFloatingText('-20 PTS', renderPlayers[myId].x, renderPlayers[myId].y - 40, '#e74c3c');
+            }
+        });
+
+        socket.on('bossDefeated', (data) => {
+            showMsg(data.msg, "#f1c40f");
+            addFloatingText('DEFEATED!', bossData.x, bossData.y - 90, '#f1c40f');
+        });
+
+        socket.on('bossRespawn', (data) => {
+            showMsg(data.msg, "#e74c3c");
+            addFloatingText('RESPAWN!', bossData.x, bossData.y - 90, '#e74c3c');
+        });
 
         function updateBossHUD() {
             let pct = Math.max(0, (bossData.hp / bossData.maxHp) * 100);
@@ -409,14 +439,14 @@
         }
 
         const classInfo = {
-            'Assassin': { desc: '“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind' },
-            'Warrior': { desc: '“สมส่วนแบบนักรบ แข็งแกร่งและสมดุลในการต่อสู้ระยะประชิด”<br>SKILL: ⚔️ Force Push' },
-            'Tank': { desc: '“รูปร่างใหญ่หนาและมวลมาก เกราะหนักรับดาเมจเพื่อปกป้องเพื่อน”<br>SKILL: 🛡️ Iron Stun' },
-            'Archer': { desc: '“สูงเพรียวและคล่องตัว โจมตีแม่นยำจากระยะปลอดภัย”<br>SKILL: 🏹 Score Snip' },
-            'Mage': { desc: '“ควบคุมพลังเวทมนตร์รุนแรงและเวทหมู่เพื่อคุมพื้นที่”<br>SKILL: 🔮 Teleport Swap' },
-            'Support': { desc: '“สง่างาม สนับสนุนเพื่อนร่วมทีมด้วยพลัง Heal และ Buff”<br>SKILL: ✨ Color Invert' },
-            'Monk': { desc: '“ลีนและว่องไว ใช้ศิลปะการต่อสู้คอมโบหมัดต่อเนื่อง”<br>SKILL: 🥋 Lightning Spin' },
-            'Berserker': { desc: '“กล้ามเนื้อมหาศาล ยิ่งเจ็บยิ่งแรงและบ้าคลั่งในสมรภูมิ”<br>SKILL: 🔥 Rage Smash' }
+            'Assassin': { desc: '“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind / Poison Boss' },
+            'Warrior': { desc: '“สมส่วนแบบนักรบ แข็งแกร่งและสมดุลในการต่อสู้ระยะประชิด”<br>SKILL: ⚔️ Force Push / Stun Boss' },
+            'Tank': { desc: '“รูปร่างใหญ่หนาและมวลมาก เกราะหนักรับดาเมจเพื่อปกป้องเพื่อน”<br>SKILL: 🛡️ Iron Stun / Slow Boss' },
+            'Archer': { desc: '“สูงเพรียวและคล่องตัว โจมตีแม่นยำจากระยะปลอดภัย”<br>SKILL: 🏹 Score Snip / Poison Boss' },
+            'Mage': { desc: '“ควบคุมพลังเวทมนตร์รุนแรงและเวทหมู่เพื่อคุมพื้นที่”<br>SKILL: 🔮 Teleport Swap / Freeze Boss' },
+            'Support': { desc: '“สง่างาม สนับสนุนเพื่อนร่วมทีมด้วยพลัง Heal และ Buff”<br>SKILL: ✨ Color Invert / Freeze Boss' },
+            'Monk': { desc: '“ลีนและว่องไว ใช้ศิลปะการต่อสู้คอมโบหมัดต่อเนื่อง”<br>SKILL: 🥋 Lightning Spin / Stun Boss' },
+            'Berserker': { desc: '“กล้ามเนื้อมหาศาล ยิ่งเจ็บยิ่งแรงและบ้าคลั่งในสมรภูมิ”<br>SKILL: 🔥 Rage Smash / Stun Boss' }
         };
 
         function onClassChange() {
@@ -578,31 +608,48 @@
             ctx.restore();
         }
 
-        // 🐐 ฟังก์ชันวาดบอสแพะปีศาจ สไตล์เรฟเฟอเรนซ์
         function drawBoss(ctx) {
             ctx.save();
             ctx.translate(renderBossX, renderBossY);
 
-            // เขาโค้งปีศาจสีดำขนาดใหญ่
+            if (bossData.poisonedUntil && Date.now() < bossData.poisonedUntil) {
+                ctx.fillStyle = 'rgba(155, 89, 182, 0.5)';
+                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#27ae60';
+                for (let i = 0; i < 4; i++) {
+                    let angle = (Date.now() / 200) + (i * Math.PI / 2);
+                    let px = Math.cos(angle) * 55;
+                    let py = Math.sin(angle) * 55;
+                    ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
+                }
+            } else if (bossData.slowedUntil && Date.now() < bossData.slowedUntil) {
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.5)';
+                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#00f2fe';
+                for (let i = 0; i < 4; i++) {
+                    let angle = (Date.now() / 300) + (i * Math.PI / 2);
+                    let px = Math.cos(angle) * 60;
+                    let py = Math.sin(angle) * 60;
+                    ctx.fillRect(px - 4, py - 4, 8, 8);
+                }
+            }
+
             ctx.fillStyle = '#111111';
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
 
-            // เขาซ้าย
             ctx.beginPath();
             ctx.moveTo(-15, -20);
             ctx.bezierCurveTo(-50, -50, -70, -10, -45, 10);
             ctx.bezierCurveTo(-55, -10, -45, -35, -15, -15);
             ctx.fill(); ctx.stroke();
 
-            // เขาขวา
             ctx.beginPath();
             ctx.moveTo(15, -20);
             ctx.bezierCurveTo(50, -50, 70, -10, 45, 10);
             ctx.bezierCurveTo(55, -10, 45, -35, 15, -15);
             ctx.fill(); ctx.stroke();
 
-            // หัวและลำตัวแพะปีศาจ (สีม่วงเข้ม/เทาอมม่วง)
             ctx.fillStyle = bossData.isAlive ? '#6c3483' : '#7f8c8d';
             ctx.beginPath();
             ctx.moveTo(0, -30);
@@ -614,26 +661,22 @@
             ctx.fill();
             ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
 
-            // ดวงตากลมโตเรืองแสงสีขาว
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
             ctx.arc(-12, -10, 8, 0, Math.PI * 2);
             ctx.arc(12, -10, 8, 0, Math.PI * 2);
             ctx.fill();
-            // รูม่านตาดำเล็กๆ
             ctx.fillStyle = '#000000';
             ctx.beginPath();
             ctx.arc(-12, -10, 3, 0, Math.PI * 2);
             ctx.arc(12, -10, 3, 0, Math.PI * 2);
             ctx.fill();
 
-            // ปากอ้ากว้างสีดำมืด (ช่องว่างกรีดร้อง)
             ctx.fillStyle = '#000000';
             ctx.beginPath();
             ctx.ellipse(0, 15, 10, 16, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // ชื่อบอส
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 18px Kanit';
             ctx.textAlign = 'center';
@@ -664,7 +707,6 @@
                 let sorted = Object.values(players).sort((a,b) => b.score - a.score);
                 let topId = sorted.length > 0 ? sorted[0].socketId : null;
 
-                // ทำ Interpolation ตำแหน่งบอสให้เดินนุ่มนวล
                 renderBossX += (bossData.x - renderBossX) * 0.15;
                 renderBossY += (bossData.y - renderBossY) * 0.15;
 
@@ -723,6 +765,23 @@
                     ctx.font = isTop1 ? 'bold 16px Kanit' : 'bold 14px Kanit';
                     ctx.textAlign = 'center';
                     ctx.fillText(`${pl.name} [${pl.playerClass}]`, pl.x, pl.y - 65);
+                }
+
+                for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                    let ft = floatingTexts[i];
+                    ft.y += ft.vy;
+                    ft.alpha -= 0.02;
+                    if (ft.alpha <= 0) {
+                        floatingTexts.splice(i, 1);
+                        continue;
+                    }
+                    ctx.save();
+                    ctx.globalAlpha = ft.alpha;
+                    ctx.fillStyle = ft.color;
+                    ctx.font = 'bold 24px Kanit';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(ft.text, ft.x, ft.y);
+                    ctx.restore();
                 }
 
                 ctx.restore();
