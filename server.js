@@ -362,7 +362,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// ส่งสถานะที่ 30 FPS เพื่อความลื่นไหลและเสถียรของเครือข่าย
 setInterval(() => {
     io.emit('stateUpdate', { players: activePlayers, redBase, blueBase, greenBase, yellowBase });
 }, 1000 / 30);
