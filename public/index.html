@@ -84,7 +84,7 @@
         .host-config-btn {
             background: linear-gradient(135deg, #f39c12, #d35400); color: white; border: none;
             padding: 6px 12px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; font-size: 12px;
-            cursor: pointer; pointer-events: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; margin-left: 8px;
+            cursor: pointer; pointer-events: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; margin-right: 8px;
         }
 
         .bottom-panel { background: rgba(21, 19, 40, 0.95); padding: 10px; border-top: 3px solid #9b59b6; pointer-events: auto; display: flex; flex-direction: column; gap: 6px; align-items: center; width: 100%; }
@@ -216,9 +216,11 @@
         </div>
 
         <div class="header">
-            <div style="display: flex; align-items: center; gap: 8px;" id="playerInfoSection">
-                <div style="color: #f1c40f; font-size: 13px;">คะแนน: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
                 <button id="hostConfigBtn" class="host-config-btn" onclick="toggleHostConfig(true)">⚙️ ตั้งค่า</button>
+                <div style="color: #f1c40f; font-size: 13px;" id="playerInfoSection">
+                    คะแนน: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span>
+                </div>
             </div>
             <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-family: 'Kanit'; font-weight: bold; font-size: 12px; cursor: pointer; pointer-events: auto;">🏠 ออก</button>
             
@@ -468,9 +470,11 @@
                     document.getElementById('bottomPanel').style.display = 'none';
                     document.getElementById('attackBaseBtn').style.display = 'none';
                     document.getElementById('skillBtnHud').style.display = 'none';
-                    document.getElementById('playerInfoSection').innerHTML = `<div style="color: #f1c40f; font-weight: bold; font-size: 13px;">👑 Host Mode</div>`;
+                    document.getElementById('playerInfoSection.innerHTML = `<span style="color: #f1c40f; font-weight: bold; font-size: 13px;">👑 Host Mode</span>`; --> Let's fix this cleanly:
+                    document.getElementById('playerInfoSection').innerHTML = `<span style="color: #f1c40f; font-weight: bold; font-size: 13px;">👑 Host Mode</span>`;
                     showMsg("👑 ยินดีต้อนรับ Host! จัดการตั้งค่าและเริ่มเกมได้เลย", "#f1c40f");
                 } else {
+                    document.getElementById('hostConfigBtn').style.display = 'none';
                     showMsg("⚔️ เข้าสู่สนามรบ 4 ทีม 4 ปราสาท!", "#f1c40f");
                 }
 
