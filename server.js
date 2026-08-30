@@ -19,7 +19,6 @@ let gameSettings = {
     scoreMultiplier: 15
 };
 
-// ฐานทัพสองฝั่ง (Red Fortress & Blue Fortress)
 let redBase = { x: 800, y: MAP_SIZE / 2, hp: 3000, maxHp: 3000, name: 'Red Fortress', isAlive: true };
 let blueBase = { x: MAP_SIZE - 800, y: MAP_SIZE / 2, hp: 3000, maxHp: 3000, name: 'Blue Fortress', isAlive: true };
 
@@ -129,7 +128,7 @@ io.on('connection', (socket) => {
         let assignedTeam = isHostUser ? 'host' : (redCount <= blueCount ? 'red' : 'blue');
 
         let p = activePlayers[socket.id];
-        p.name = name;
+        p.name = isHostUser ? 'Host (โด้)' : name;
         p.playerClass = data.playerClass || 'Warrior';
         p.outfitColor = data.outfitColor || '#9b59b6';
         p.team = assignedTeam;
@@ -168,7 +167,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // โจมตีฐานทัพฝ่ายตรงข้าม
     socket.on('attackBase', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.isHost) return;
@@ -181,7 +179,7 @@ io.on('connection', (socket) => {
 
         let dist = Math.hypot(p.x - targetBase.x, p.y - targetBase.y);
         if (dist > 400) {
-            socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากฐานฝ่ายตรงข้ามเกินไป (ต้องเข้าใกล้ฐาน)' });
+            socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากฐานฝ่ายตรงข้ามเกินไป' });
             return;
         }
 
@@ -200,7 +198,7 @@ io.on('connection', (socket) => {
             targetBase.hp = 0;
             targetBase.isAlive = false;
             let winnerTeamName = p.team === 'red' ? 'ทีมสีแดง (Red Team)' : 'ทีมสีน้ำเงิน (Blue Team)';
-            io.emit('gameOverEvent', { msg: `🎉 ${winnerTeamName} ถล่มฐานทัพข้าศึกราบคาบ! คว้าชัยชนะไปครอง!` });
+            io.emit('gameOverEvent', { msg: `🎉 ${winnerTeamName} ถล่มฐานทัพข้าศึกราบคาบ!` });
         }
 
         io.emit('basesUpdate', { redBase, blueBase });
