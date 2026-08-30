@@ -17,7 +17,7 @@
         .modal-box {
             background: #221e3f; padding: 25px; border-radius: 15px; text-align: center;
             display: flex; flex-direction: column; gap: 12px; border: 3px solid #9b59b6; box-shadow: 0 0 40px rgba(155, 89, 182, 0.4);
-            width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto;
+            width: 90%; max-width: 400px; max-height: 95vh; overflow-y: auto;
         }
         .modal-box h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
         .modal-box input, .modal-box select {
@@ -34,6 +34,11 @@
         .btn-register { background: linear-gradient(135deg, #8e44ad, #d35400); color: white; }
         .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; margin-top: 5px; }
         .error-text { color: #e74c3c; font-size: 13px; min-height: 18px; font-weight: bold; }
+
+        #previewCanvas {
+            background: #151328; border: 2px dashed #9b59b6; border-radius: 12px;
+            margin: 0 auto; display: block; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+        }
 
         #mysteryModal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -99,7 +104,7 @@
 </head>
 <body>
 
-    <!-- ขั้นที่ 1: หน้าต่าง Login & Register -->
+    <!-- สเต็ปที่ 1: หน้าต่าง Login & Register -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
             <h2>🏰 เข้าสู่ปราสาทมหาเวทย์</h2>
@@ -119,13 +124,17 @@
         </div>
     </div>
 
-    <!-- ขั้นที่ 2: หน้าต่างตกแต่งตัวละคร (ซ่อนไว้ก่อนจนกว่าจะล็อกอินผ่าน) -->
+    <!-- สเต็ปที่ 2: หน้าต่างเลือกตกแต่งตัวละคร พร้อมช่อง Preview ตัวละครจริง -->
     <div id="customizationModal" class="modal-overlay" style="display: none;">
         <div class="modal-box">
             <h2>✨ ตกแต่งจอมเวทย์ของคุณ</h2>
+            
+            <!-- Canvas สำหรับพรีวิวตัวละครแบบเรียลไทม์ -->
+            <canvas id="previewCanvas" width="140" height="140"></canvas>
+
             <div>
                 <label>สายเวทมนตร์</label>
-                <select id="playerAvatar">
+                <select id="playerAvatar" onchange="updatePreview()">
                     <option value="hero">⚔️ อัศวินผู้พิทักษ์</option>
                     <option value="wizard">🧙‍♂️ จอมเวทย์โบราณ</option>
                     <option value="robot">🔮 โกลมเวทมนตร์</option>
@@ -133,11 +142,11 @@
             </div>
             <div>
                 <label>สีเสื้อคลุมเวท</label>
-                <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;">
+                <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
             </div>
             <div>
                 <label>หมวกเริ่มต้น</label>
-                <select id="playerHat">
+                <select id="playerHat" onchange="updatePreview()">
                     <option value="none">ไม่มีหมวก</option>
                     <option value="wizard_hat">🎩 หมวกพ่อมดมนตรา</option>
                     <option value="cap">🪖 หมวกเกราะอัศวิน</option>
@@ -169,7 +178,7 @@
         <div class="header">
             <div style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5);">คะแนน: <span id="scoreDisplay">0</span></div>
             <div class="leaderboard">
-                <h3 style="color: #f1c40f; margin-bottom: 3px; text-align: center;">🏆 ทำเนียบจอมเวทย์ </h3>
+                <h3 style="color: #f1c40f; margin-bottom: 3px; text-align: center;">🏆 ทำเนียบจอมเวทย์ (80 คน)</h3>
                 <ol id="leaderboardList" style="padding-left: 15px;"></ol>
             </div>
         </div>
@@ -301,12 +310,36 @@
             if (res.success) {
                 myScore = res.score;
                 document.getElementById('scoreDisplay').innerText = myScore;
+                
+                // ตั้งค่าฟอร์มแต่งตัวให้ตรงกับค่าที่เคยบันทึกไว้ (ถ้ามี)
+                if (res.avatar) document.getElementById('playerAvatar').value = res.avatar;
+                if (res.outfitColor) document.getElementById('playerColor').value = res.outfitColor;
+                if (res.hat) document.getElementById('playerHat').value = res.hat;
+
                 document.getElementById('authModal').style.display = 'none';
-                document.getElementById('customizationModal').style.display = 'flex'; // เปิดหน้าต่างแต่งตัว
+                document.getElementById('customizationModal').style.display = 'flex';
+                updatePreview(); // วาดพรีวิวตัวละคร
             } else {
                 document.getElementById('authError').innerText = res.msg;
             }
         });
+
+        // ฟังก์ชันวาดตัวอย่างตัวละคร (Live Preview)
+        function updatePreview() {
+            const pCanvas = document.getElementById('previewCanvas');
+            const pCtx = pCanvas.getContext('2d');
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+
+            let previewPl = {
+                outfitColor: document.getElementById('playerColor').value,
+                hat: document.getElementById('playerHat').value
+            };
+
+            pCtx.save();
+            pCtx.translate(pCanvas.width / 2, pCanvas.height / 2 + 10);
+            drawCastleAvatar(pCtx, 0, 0, previewPl, true, false);
+            pCtx.restore();
+        }
 
         function joinGame() {
             const avatar = document.getElementById('playerAvatar').value;
