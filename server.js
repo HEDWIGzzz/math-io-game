@@ -228,7 +228,7 @@ io.on('connection', (socket) => {
 
         let dist = Math.hypot(p.x - targetBase.x, p.y - targetBase.y);
         if (dist > 450) {
-            socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากฐานเป้าหมายเกินไป' });
+            socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากฐานเป้าหมายเกินไป (ต้องเข้าใกล้กว่า 450)' });
             return;
         }
 
