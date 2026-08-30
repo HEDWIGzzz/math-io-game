@@ -38,7 +38,6 @@
     <div class="admin-box">
         <h2 id="panelTitle">⚙️ ADMIN LOGIN</h2>
         
-        <!-- ส่วนเข้าสู่ระบบ Admin -->
         <div id="loginSection">
             <div id="loginError" class="error-text"></div>
             <div class="form-group">
@@ -53,7 +52,6 @@
             <button class="switch-btn" onclick="showRegister()">ยังไม่มีบัญชี? สมัครสมาชิก Admin</button>
         </div>
 
-        <!-- ส่วนสมัครสมาชิก Admin -->
         <div id="registerSection">
             <div id="regError" class="error-text"></div>
             <div class="form-group">
@@ -68,7 +66,6 @@
             <button class="switch-btn" onclick="showLogin()">มีบัญชีอยู่แล้ว? กลับไปเข้าสู่ระบบ</button>
         </div>
 
-        <!-- ส่วนหน้าจอตั้งค่าเกม -->
         <div id="controlSection">
             <div id="adminMsg" class="success-text"></div>
             <div class="form-group">
@@ -141,7 +138,7 @@
 
         function saveSettings() {
             let hp = document.getElementById('settingBossHp').value;
-            let speed = document.getElementById('settingBossSpeed'].value;
+            let speed = document.getElementById('settingBossSpeed').value;
             let mult = document.getElementById('settingScoreMult').value;
             let penalty = document.getElementById('settingBossPenalty').value;
             socket.emit('updateAdminSettingsFromWeb', { bossMaxHp: hp, bossSpeed: speed, scoreMultiplier: mult, bossPenalty: penalty });
