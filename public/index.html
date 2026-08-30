@@ -10,7 +10,7 @@
         body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; touch-action: none; }
         canvas { display: block; background: #151328; width: 100%; height: 100%; touch-action: none; }
         
-        #nameModal {
+        .modal-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(10, 8, 20, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100;
         }
@@ -28,11 +28,11 @@
         .btn-group { display: flex; gap: 10px; margin-top: 5px; }
         .modal-box button {
             flex: 1; padding: 12px; font-size: 16px; font-family: 'Kanit', sans-serif; font-weight: bold;
-            border: none; border-radius: 8px; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         .btn-login { background: linear-gradient(135deg, #2980b9, #27ae60); color: white; }
         .btn-register { background: linear-gradient(135deg, #8e44ad, #d35400); color: white; }
+        .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; margin-top: 5px; }
         .error-text { color: #e74c3c; font-size: 13px; min-height: 18px; font-weight: bold; }
 
         #mysteryModal {
@@ -99,9 +99,10 @@
 </head>
 <body>
 
-    <div id="nameModal">
+    <!-- ขั้นที่ 1: หน้าต่าง Login & Register -->
+    <div id="authModal" class="modal-overlay">
         <div class="modal-box">
-            <h2>🏰 ปราสาทมหาเวทย์ (80 คน)</h2>
+            <h2>🏰 เข้าสู่ปราสาทมหาเวทย์</h2>
             <div id="authError" class="error-text"></div>
             <div>
                 <label>ฉายาจอมเวทย์ (Username)</label>
@@ -111,6 +112,17 @@
                 <label>รหัสผ่าน (Password)</label>
                 <input type="password" id="playerPasswordInput" placeholder="รหัสผ่าน..." maxlength="20" autocomplete="off">
             </div>
+            <div class="btn-group">
+                <button class="btn-login" onclick="submitAuth(false)">เข้าสู่ระบบ</button>
+                <button class="btn-register" onclick="submitAuth(true)">สมัครสมาชิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ขั้นที่ 2: หน้าต่างตกแต่งตัวละคร (ซ่อนไว้ก่อนจนกว่าจะล็อกอินผ่าน) -->
+    <div id="customizationModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>✨ ตกแต่งจอมเวทย์ของคุณ</h2>
             <div>
                 <label>สายเวทมนตร์</label>
                 <select id="playerAvatar">
@@ -131,10 +143,7 @@
                     <option value="cap">🪖 หมวกเกราะอัศวิน</option>
                 </select>
             </div>
-            <div class="btn-group">
-                <button class="btn-login" onclick="submitAuth(false)">เข้าสู่ระบบ</button>
-                <button class="btn-register" onclick="submitAuth(true)">สมัครสมาชิก</button>
-            </div>
+            <button class="btn-enter" onclick="joinGame()">เข้าสู่ปราสาทเวทมนตร์ 🚀</button>
         </div>
     </div>
 
@@ -278,9 +287,6 @@
         function submitAuth(isRegister) {
             const name = document.getElementById('playerNameInput').value.trim();
             const password = document.getElementById('playerPasswordInput').value.trim();
-            const avatar = document.getElementById('playerAvatar').value;
-            const outfitColor = document.getElementById('playerColor').value;
-            const hat = document.getElementById('playerHat').value;
             const errorEl = document.getElementById('authError');
 
             if (!name || !password) {
@@ -288,20 +294,30 @@
                 return;
             }
 
-            socket.emit('authPlayer', { name, password, isRegister, avatar, outfitColor, hat });
+            socket.emit('authPlayer', { name, password, isRegister });
         }
 
         socket.on('authResult', (res) => {
             if (res.success) {
                 myScore = res.score;
                 document.getElementById('scoreDisplay').innerText = myScore;
-                document.getElementById('nameModal').style.display = 'none';
-                gameStarted = true;
-                showMsg("✨ เข้าสู่ปราสาทเวทมนตร์สำเร็จ!", "#f1c40f");
+                document.getElementById('authModal').style.display = 'none';
+                document.getElementById('customizationModal').style.display = 'flex'; // เปิดหน้าต่างแต่งตัว
             } else {
                 document.getElementById('authError').innerText = res.msg;
             }
         });
+
+        function joinGame() {
+            const avatar = document.getElementById('playerAvatar').value;
+            const outfitColor = document.getElementById('playerColor').value;
+            const hat = document.getElementById('playerHat').value;
+
+            socket.emit('setupPlayer', { avatar, outfitColor, hat });
+            document.getElementById('customizationModal').style.display = 'none';
+            gameStarted = true;
+            showMsg("✨ เข้าสู่ปราสาทเวทมนตร์สำเร็จ!", "#f1c40f");
+        }
 
         socket.on('initGame', (data) => {
             myId = data.id;
