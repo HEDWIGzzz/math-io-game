@@ -239,7 +239,7 @@ io.on('connection', (socket) => {
         }
 
         p.score -= scoreCost;
-        let damage = 150;
+        let damage = (p.playerClass === 'Warrior') ? 200 : 150; // Warrior โจมตีฐานแรงขึ้น
         targetBase.hp -= damage;
         p.baseDamage = (p.baseDamage || 0) + damage;
 
@@ -259,25 +259,71 @@ io.on('connection', (socket) => {
         if (!p || !p.loggedIn || p.isHost) return;
         let now = Date.now();
         if (p.lastSkillTime && now - p.lastSkillTime < 5000) {
-            socket.emit('skillResult', { success: false, msg: '⏳ สกิลกำลัง Cool Down (รอ 5 วิ)' });
+            socket.emit('skillResult', { success: false, msg: '⏳ สกิลกำลัง Cool Down (รอ 5 วินาที)' });
             return;
         }
         p.lastSkillTime = now;
-        let affectedCount = 0;
-        for (let id in activePlayers) {
-            if (id !== socket.id) {
-                let target = activePlayers[id];
-                if (target.team !== p.team && target.loggedIn && !target.isHost) {
-                    let dist = Math.hypot(p.x - target.x, p.y - target.y);
-                    if (dist < 350) {
-                        affectedCount++;
-                        io.to(id).emit('trolledEffect', { type: 'blind', msg: `⚡ โดนสกิลป่วนจาก ${p.name}!` });
+
+        let msg = '';
+        if (p.playerClass === 'Assassin') {
+            socket.emit('applyBuff', { type: 'speedBoost', duration: 3000 });
+            msg = '⚡ Assassin ใช้ Dash เพิ่มความเร็วพุ่งทะยาน!';
+        } else if (p.playerClass === 'Warrior') {
+            socket.emit('applyBuff', { type: 'berserkDmg', duration: 5000 });
+            msg = '⚔️ Warrior เปิดโหมดพลังรบโจมตีแรงขึ้น!';
+        } else if (p.playerClass === 'Tank') {
+            let basesMap = { red: redBase, blue: blueBase, green: greenBase, yellow: yellowBase };
+            let myB = basesMap[p.team];
+            if (myB && myB.isAlive) {
+                myB.hp = Math.min(myB.maxHp, myB.hp + 150);
+                io.emit('basesUpdate', { redBase, blueBase, greenBase, yellowBase });
+                msg = `🛡️ Tank ซ่อมแซมฐาน ${myB.name} ฟื้นฟู +150 HP!`;
+            } else {
+                msg = '🛡️ ฐานของคุณถูกทำลายไปแล้ว ไม่สามารถซ่อมได้';
+            }
+        } else if (p.playerClass === 'Archer') {
+            let affected = 0;
+            for (let id in activePlayers) {
+                if (id !== socket.id) {
+                    let target = activePlayers[id];
+                    if (target.team !== p.team && target.loggedIn && !target.isHost) {
+                        if (Math.hypot(p.x - target.x, p.y - target.y) < 350) {
+                            affected++;
+                            io.to(id).emit('trolledEffect', { type: 'slow', duration: 3000, msg: `🏹 โดนศรลดความเร็วจาก ${p.name}!` });
+                        }
                     }
                 }
             }
+            msg = affected > 0 ? `🏹 ยิงศรสโลว์โดนศัตรู ${affected} คน!` : '🏹 ยิงศรสโลว์สำเร็จ';
+        } else if (p.playerClass === 'Mage') {
+            let pulledCount = 0;
+            tiles.forEach(t => {
+                if (Math.hypot(p.x - t.x, p.y - t.y) < 300) {
+                    t.x = p.x + (Math.random() - 0.5) * 40;
+                    t.y = p.y + (Math.random() - 0.5) * 40;
+                    pulledCount++;
+                }
+            });
+            msg = `🔮 Mage ร่ายเวทดูดเบี้ยเข้ามาหาตัวสำเร็จ (${pulledCount} ชิ้น)!`;
+        } else if (p.playerClass === 'Support') {
+            socket.emit('applyBuff', { type: 'scoreBoost', duration: 5000 });
+            msg = '✨ Support เปิดออร่าเพิ่มโบนัสคะแนนสมการให้ตัวเอง!';
+        } else if (p.playerClass === 'Monk') {
+            socket.emit('applyBuff', { type: 'cleanse', duration: 3000 });
+            msg = '🥋 Monk ใช้สมาธิชำระล้างดีบัฟและต้านทานสถานะ!';
+        } else if (p.playerClass === 'Berserker') {
+            if (p.score >= 20) {
+                p.score -= 20;
+                socket.emit('applyBuff', { type: 'doubleScore', duration: 5000 });
+                msg = '🔥 Berserker เร่งเครื่องยอมเสีย 20 แต้ม แลกกับคะแนนคูณสอง!';
+            } else {
+                msg = '❌ คะแนนไม่พอใช้สกิล (ต้องการอย่างน้อย 20 แต้ม)';
+            }
         }
+
         io.emit('playerCastSkill', { socketId: socket.id, x: p.x, y: p.y, playerClass: p.playerClass, team: p.team });
-        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนทีมอื่นสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
+        socket.emit('skillResult', { success: true, msg: msg });
+        io.emit('updateLeaderboard', activePlayers);
     });
 
     socket.on('move', (data) => {
@@ -330,9 +376,7 @@ io.on('connection', (socket) => {
                 let cleanR = parts[1].replace(/×/g, '*').replace(/÷/g, '/');
                 if (eval(cleanL) === eval(cleanR)) {
                     let earned = calculateAMathScore(eqStr);
-                    p.score += earned;
-                    socket.emit('equationResult', { success: true, score: p.score, earnedScore: earned });
-                    io.emit('updateLeaderboard', activePlayers);
+                    socket.emit('checkDoubleScore', { earned });
                 } else {
                     socket.emit('equationResult', { success: false, msg: "สมการไม่ถูกต้อง" });
                 }
@@ -340,6 +384,14 @@ io.on('connection', (socket) => {
         } catch (e) {
             socket.emit('equationResult', { success: false, msg: "โครงสร้างทางคณิตศาสตร์ผิดพลาด" });
         }
+    });
+
+    socket.on('submitEquationFinal', (data) => {
+        let p = activePlayers[socket.id];
+        if (!p || !p.loggedIn || p.isHost) return;
+        p.score += data.earned;
+        socket.emit('equationResult', { success: true, score: p.score, earnedScore: data.earned });
+        io.emit('updateLeaderboard', activePlayers);
     });
 
     socket.on('submitMysteryAnswer', (data) => {
