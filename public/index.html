@@ -70,11 +70,6 @@
         }
         .lobby-btn:hover { transform: scale(1.05); background: linear-gradient(135deg, #9b59b6, #2980b9); }
 
-        #adminModal {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 150;
-        }
-
         #mysteryModal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 150;
@@ -236,33 +231,7 @@
         </div>
     </div>
 
-    <div id="adminModal" class="screen-layer" style="display: none;">
-        <div class="modal-box">
-            <h2>⚙️ ADMIN SETTINGS</h2>
-            <p style="font-size: 13px; color: #d7bde2;">กำหนดค่าพารามิเตอร์ของเกม (เฉพาะบัญชี admin หรือ Do)</p>
-            <div>
-                <label>พลังชีวิตสูงสุดของบอส (Boss Max HP)</label>
-                <input type="number" id="settingBossHp" value="5000">
-            </div>
-            <div>
-                <label>ความเร็วการเดินของบอส (Boss Speed)</label>
-                <input type="number" step="0.1" id="settingBossSpeed" value="1.8">
-            </div>
-            <div>
-                <label>ตัวคูณคะแนนสมการ (Score Multiplier)</label>
-                <input type="number" id="settingScoreMult" value="15">
-            </div>
-            <div>
-                <label>ดาเมจบทลงโทษบอสโจมตี (Boss Penalty)</label>
-                <input type="number" id="settingBossPenalty" value="20">
-            </div>
-            <div class="btn-group">
-                <button class="action-btn btn-submit" onclick="saveAdminSettings()">💾 บันทึกค่าตั้งค่า</button>
-                <button class="action-btn" style="background:#e74c3c; color:white;" onclick="closeAdminModal()">✖ ปิด</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- หน้าต่าง Lobby (นำปุ่มตั้งค่าระบบออกแล้ว) -->
     <div id="lobbyOverlay">
         <div class="lobby-header">
             <div>ชื่อ: <span id="lobbyName" style="color: #f1c40f; font-weight: bold;">-</span></div>
@@ -271,7 +240,6 @@
         </div>
         <div class="lobby-menu">
             <button class="lobby-btn" onclick="startPvPGame()">⚔️ เล่นเกม (Boss Raid)</button>
-            <button class="lobby-btn" onclick="openAdminModal()" style="background: linear-gradient(135deg, #e67e22, #d35400);">⚙️ ตั้งค่าระบบ (Admin)</button>
             <button class="lobby-btn" onclick="openCharacterEdit()">👤 ตัวละคร</button>
         </div>
         <div style="text-align: center; color: #a569bd; font-size: 13px;">Mage Castle Arena & Boss Raid</div>
@@ -375,31 +343,6 @@
 
         let activeEffect = null;
         let effectTimer = 0;
-
-        function openAdminModal() { document.getElementById('adminModal').style.display = 'flex'; }
-        function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
-        
-        function saveAdminSettings() {
-            let newHp = document.getElementById('settingBossHp').value;
-            let newSpeed = document.getElementById('settingBossSpeed').value;
-            let newMult = document.getElementById('settingScoreMult').value;
-            let newPen = document.getElementById('settingBossPenalty').value;
-
-            socket.emit('updateAdminSettings', {
-                bossMaxHp: newHp,
-                bossSpeed: newSpeed,
-                scoreMultiplier: newMult,
-                bossPenalty: newPen
-            });
-            closeAdminModal();
-        }
-
-        socket.on('settingsUpdated', (data) => {
-            gameSettings = data.settings;
-            bossData = data.boss;
-            updateBossHUD();
-            showMsg("⚙️ อัปเดตการตั้งค่าระบบเรียบร้อย!", "#2ecc71");
-        });
 
         function attackBoss() { socket.emit('attackBoss'); }
 
@@ -579,10 +522,6 @@
         socket.on('initGame', (data) => {
             myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; gameSettings = data.settings;
             renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD();
-            document.getElementById('settingBossHp').value = gameSettings.bossMaxHp;
-            document.getElementById('settingBossSpeed').value = gameSettings.bossSpeed;
-            document.getElementById('settingScoreMult').value = gameSettings.scoreMultiplier;
-            document.getElementById('settingBossPenalty').value = gameSettings.bossPenalty;
         });
 
         socket.on('tileCollected', (tile) => { inventory.push(tile); renderUI(); });
@@ -628,7 +567,6 @@
         }
         function returnTiles() { inventory = inventory.concat(equation); equation = []; renderUI(); }
         
-        // 🗑️ ฟังก์ชันทิ้งเบี้ยตัวล่าสุดจากกระเป๋าลงพื้น
         function dropTile() {
             if (inventory.length === 0) {
                 showMsg("❌ ไม่มีเบี้ยในกระเป๋าให้ทิ้ง!", "#e74c3c");
