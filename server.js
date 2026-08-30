@@ -201,29 +201,82 @@ io.on('connection', (socket) => {
         socket.emit('skillResult', { success: true, msg: `🔥 ทำดาเมจใส่บอส ${damage} แต้ม!` });
     });
 
-    // ⚡ ให้ทุกคนที่เข้ามารอสามารถกดสกิลป่วนกันได้ทันที
     socket.on('castSkill', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn) return;
 
         let now = Date.now();
-        if (p.lastSkillTime && now - p.lastSkillTime < 4500) { socket.emit('skillResult', { success: false, msg: '⏳ สกิล Cool Down' }); return; }
+        if (p.lastSkillTime && now - p.lastSkillTime < 5000) { 
+            socket.emit('skillResult', { success: false, msg: '⏳ สกิลกำลัง Cool Down (รอ 5 วิ)' }); 
+            return; 
+        }
         p.lastSkillTime = now;
 
         let affectedCount = 0;
+        let skillType = 'blind';
+        let skillMsg = 'โดนสกิลป่วน!';
+
+        switch (p.playerClass) {
+            case 'Assassin':
+                skillType = 'blind';
+                skillMsg = `🗡️ (${p.name} - Assassin) ปามืดควันพรางตาใส่คุณ!`;
+                break;
+            case 'Mage':
+                skillType = 'freeze';
+                skillMsg = `❄️ (${p.name} - Mage) ร่ายเวทแช่แข็งใส่คุณ!`;
+                break;
+            case 'Archer':
+                skillType = 'slow';
+                skillMsg = `🏹 (${p.name} - Archer) ยิงศรตัดกำลังใส่คุณ!`;
+                break;
+            case 'Warrior':
+                skillType = 'stun';
+                skillMsg = `⚔️ (${p.name} - Warrior) ฟาดคลื่นกระแทกใส่คุณ!`;
+                break;
+            case 'Tank':
+                skillType = 'heavySlow';
+                skillMsg = `🛡️ (${p.name} - Tank) ปล่อยแรงโน้มถ่วงถ่วงขาคุณ!`;
+                break;
+            case 'Support':
+                skillType = 'drain';
+                skillMsg = `✨ (${p.name} - Support) ร่ายเวทป่วนสติคุณ!`;
+                break;
+            case 'Monk':
+                skillType = 'confuse';
+                skillMsg = `🥋 (${p.name} - Monk) ใช้ฝ่ามืออรหันต์สลับทิศทางคุณ!`;
+                break;
+            case 'Berserker':
+                skillType = 'burn';
+                skillMsg = `🔥 (${p.name} - Berserker) แผดเผาไอคลั่งใส่คุณ!`;
+                break;
+            default:
+                skillType = 'blind';
+                skillMsg = `🌑 โดนสกิลป่วนจากทีมตรงข้าม (${p.name})!`;
+        }
+
         for (let id in activePlayers) {
             if (id !== socket.id) {
                 let target = activePlayers[id];
                 if (target.team !== p.team && target.loggedIn) {
                     let dist = Math.hypot(p.x - target.x, p.y - target.y);
-                    if (dist < 300) {
+                    if (dist < 350) {
                         affectedCount++;
-                        io.to(id).emit('trolledEffect', { type: 'blind', msg: `🌑 โดนสกิลป่วนจากทีมตรงข้าม (${p.name})!` });
+                        io.to(id).emit('trolledEffect', { type: skillType, msg: skillMsg });
                     }
                 }
             }
         }
-        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ป่วนทีมตรงข้ามสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
+
+        // ส่งสัญญาณเอฟเฟกต์ภาพสกิลรอบตัวผู้ใช้ให้ทุกคนเห็น
+        io.emit('playerCastSkill', { 
+            socketId: socket.id, 
+            x: p.x, 
+            y: p.y, 
+            playerClass: p.playerClass, 
+            team: p.team 
+        });
+
+        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิล ${p.playerClass} ป่วนทีมตรงข้ามสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
     });
 
     socket.on('move', (data) => {
@@ -233,19 +286,6 @@ io.on('connection', (socket) => {
         p.x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
         p.isMoving = data.isMoving;
-
-        // ปิดการเก็บเบี้ยชั่วคราว (ยังเก็บเบี้ยไม่ได้ตามคำขอ)
-        /*
-        for (let i = tiles.length - 1; i >= 0; i--) {
-            if (Math.hypot(p.x - tiles[i].x, p.y - tiles[i].y) < 40) {
-                let collected = tiles.splice(i, 1)[0];
-                io.emit('tileRemoved', collected.id);
-                socket.emit('tileCollected', collected);
-                spawnTile();
-                io.emit('newTile', tiles[tiles.length - 1]);
-            }
-        }
-        */
 
         for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
             if (Math.hypot(p.x - mysteryBoxes[i].x, p.y - mysteryBoxes[i].y) < 40) {
