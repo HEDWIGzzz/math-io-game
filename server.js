@@ -55,7 +55,7 @@ const AMATH_SCORES = {
     "+": 2, "-": 2, "+/-": 1, "×": 2, "÷": 2, "×/÷": 1, "=": 1, "BLANK": 0
 };
 
-// 📐 ฟังก์ชันคำนวณคะแนนตามตาราง AMATH_SCORES (รองรับตัวเลข 2 หลักและเครื่องหมาย)
+// 📐 ฟังก์ชันคำนวณคะแนนตามตาราง AMATH_SCORES
 function calculateAMathScore(eqStr) {
     let baseScore = 0;
     let i = 0;
@@ -106,13 +106,12 @@ let demonBoss = {
 for (let i = 0; i < 150; i++) spawnTile();
 for (let i = 0; i < 35; i++) spawnMysteryBox();
 
-// 🎲 ฟังก์ชันสุ่มและกระจายเบี้ย (รองรับ 0-20 และเครื่องหมาย A-Math ครบถ้วน)
+// 🎲 ฟังก์ชันสุ่มและกระจายเบี้ย (ใช้เครื่องหมาย '×' และ '÷' จริง)
 function spawnTile() {
     let randType = Math.random();
     let char, type;
 
     if (randType < 0.65) {
-        // สุ่มตัวเลข: 80% เป็นเลข 0-9, 20% เป็นเลขพิเศษ 10-20
         let numRand = Math.random();
         if (numRand < 0.8) {
             char = Math.floor(Math.random() * 10).toString(); // 0-9
@@ -121,12 +120,10 @@ function spawnTile() {
         }
         type = 'num';
     } else if (randType < 0.9) {
-        // สุ่มเครื่องหมายคำนวณ (+, -, *, /)
-        const ops = ['+', '-', '*', '/'];
+        const ops = ['+', '-', '×', '÷'];
         char = ops[Math.floor(Math.random() * ops.length)];
         type = 'op';
     } else {
-        // เครื่องหมายเท่ากับ (=)
         char = '=';
         type = 'eq';
     }
@@ -420,22 +417,43 @@ io.on('connection', (socket) => {
                 let ops = ['+', '-', '*'];
                 let op = ops[Math.floor(Math.random() * ops.length)];
                 let ans = eval(`${n1} ${op} ${n2}`);
+                let displayOp = op === '*' ? '×' : op;
                 
-                socket.emit('openMysteryBox', { q: `${n1} ${op} ${n2} = ?`, ans: ans });
+                socket.emit('openMysteryBox', { q: `${n1} ${displayOp} ${n2} = ?`, ans: ans });
                 spawnMysteryBox();
                 io.emit('newMysteryBox', mysteryBoxes[mysteryBoxes.length - 1]);
             }
         }
     });
 
+    socket.on('dropTile', (tileData) => {
+        let p = activePlayers[socket.id];
+        if (!p || !p.loggedIn || p.inLobby) return;
+
+        let droppedTile = {
+            id: Math.random().toString(36).substr(2, 9),
+            x: p.x + (Math.random() - 0.5) * 30,
+            y: p.y + (Math.random() - 0.5) * 30,
+            char: tileData.char,
+            type: tileData.type
+        };
+
+        tiles.push(droppedTile);
+        io.emit('newTile', droppedTile);
+    });
+
+    // 📐 ตรวจสอบและประมวลผลสมการ พร้อมแปลง '×' และ '÷' เป็นสัญลักษณ์คำนวณทางโปรแกรม
     socket.on('submitEquation', (eqStr) => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.inLobby) return;
         try {
             let parts = eqStr.split('=');
             if (parts.length === 2 && parts[0] && parts[1]) {
-                let left = eval(parts[0].replace(/\b0+(\d)/g, '$1'));
-                let right = eval(parts[1].replace(/\b0+(\d)/g, '$1'));
+                let cleanLeft = parts[0].replace(/×/g, '*').replace(/÷/g, '/').replace(/\b0+(\d)/g, '$1');
+                let cleanRight = parts[1].replace(/×/g, '*').replace(/÷/g, '/').replace(/\b0+(\d)/g, '$1');
+
+                let left = eval(cleanLeft);
+                let right = eval(cleanRight);
 
                 if (left === right) {
                     let earnedScore = calculateAMathScore(eqStr);
@@ -531,7 +549,7 @@ setInterval(() => {
                         p.x = Math.max(50, Math.min(MAP_SIZE - 50, p.x + Math.cos(angle) * 100));
                         p.y = Math.max(50, Math.min(MAP_SIZE - 50, p.y + Math.sin(angle) * 100));
 
-                        io.to(id).emit('bossHitPlayer', { msg: `💥 โดนแพะปีศาจฟาดกระเด็น! เสีย ${penalty} คะแนน!` });
+                        io.to(id).emit('bossHitPlayer', { msg: `💥 โดนแพะปีศ*จฟาดกระเด็น! เสีย ${penalty} คะแนน!` });
                     }
                 }
             }
