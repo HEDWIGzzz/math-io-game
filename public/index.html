@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - Magical Castle Arena</title>
+    <title>Math.io - Magical Castle Arena (8 Core Classes)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -85,26 +85,24 @@
         .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
-        #joystickContainer {
-            position: absolute; bottom: 170px; left: 30px; width: 120px; height: 120px;
-            pointer-events: auto; z-index: 60; display: flex; justify-content: center; align-items: center;
-            touch-action: none;
+        #virtualJoystick {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 60; display: none;
         }
         #joystickBase {
-            position: relative; width: 100px; height: 100px; border-radius: 50%;
+            position: absolute; width: 100px; height: 100px; border-radius: 50%;
             background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7);
-            display: flex; justify-content: center; align-items: center;
+            transform: translate(-50%, -50%); display: none;
         }
         #joystickThumb {
             position: absolute; width: 50px; height: 50px; border-radius: 50%;
             background: rgba(155, 89, 182, 0.85); box-shadow: 0 0 10px rgba(155, 89, 182, 0.8);
-            transform: translate(0px, 0px); pointer-events: none;
+            top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-    <!-- สเต็ปที่ 1: หน้าต่าง Login & Register -->
     <div id="authModal" class="modal-overlay">
         <div class="modal-box">
             <h2>🏰 เข้าสู่ปราสาทมหาเวทย์</h2>
@@ -124,46 +122,35 @@
         </div>
     </div>
 
-    <!-- สเต็ปที่ 2: หน้าต่างเลือกอาชีพ & ตกแต่งตัวละคร พร้อม Live Preview -->
     <div id="customizationModal" class="modal-overlay" style="display: none;">
         <div class="modal-box">
-            <h2>✨ เลือกคลาส & ตกแต่งตัวละคร</h2>
+            <h2>✨ เลือกคลาส & ซิลูเอทตัวละคร</h2>
             
             <canvas id="previewCanvas" width="140" height="140"></canvas>
 
             <div>
-                <label>เลือกสายอาชีพ & คลาส</label>
+                <label>เลือก 8 สายอาชีพหลัก</label>
                 <select id="playerClass" onchange="updatePreview()">
-                    <optgroup label="⚔️ สายพื้นฐาน">
-                        <option value="Assassin">🗡️ Assassin (ดาเมจระเบิด / ลอบโจมตี)</option>
-                        <option value="Warrior">⚔️ Warrior (สมดุลประชิด / อึด)</option>
-                        <option value="Tank">🛡️ Tank (HP/เกราะสูงรับดาเมจ)</option>
-                        <option value="Archer">🏹 Archer (ยิงไกลระยะปลอดภัย)</option>
-                        <option value="Mage">🔮 Mage (เวทหมู่ / คุมพื้นที่)</option>
-                        <option value="Support">✨ Support (Heal / Buff / Debuff)</option>
-                        <option value="Monk">🥋 Monk (คล่องตัวคอมโบต่อเนื่อง)</option>
-                        <option value="Berserker">🔥 Berserker (ยิ่งเจ็บยิ่งแรงแลกเลือด)</option>
-                    </optgroup>
-                    <optgroup label="⚡ สายขั้นสูง (Advanced Classes)">
-                        <option value="Blood Knight">🩸 Blood Knight (ดูดเลือด + ประชิด)</option>
-                        <option value="Storm Mage">⚡ Storm Mage (สายฟ้า + CC)</option>
-                        <option value="Shadow Assassin">🌑 Shadow Assassin (ล่องหน + Critical)</option>
-                        <option value="Frost Archer">❄️ Frost Archer (ยิงช้า / แช่แข็ง)</option>
-                        <option value="Necromancer">☠️ Necromancer (เรียก Undead ช่วย)</option>
-                        <option value="Dragon Knight">🐉 Dragon Knight (แปลงร่างพลังมังกร)</option>
-                    </optgroup>
+                    <option value="Assassin">🗡️ Assassin (ผอมเพรียว / ลอบสังหาร)</option>
+                    <option value="Warrior">⚔️ Warrior (สมส่วน / นักรบสมดุล)</option>
+                    <option value="Tank">🛡️ Tank (ตัวใหญ่หนา / เกราะหนัก)</option>
+                    <option value="Archer">🏹 Archer (สูงเพรียว / นักธนู)</option>
+                    <option value="Mage">🔮 Mage (ชุดคลุมยาว / จอมเวทย์)</option>
+                    <option value="Support">✨ Support (ออร่าซัพพอร์ต / สง่างาม)</option>
+                    <option value="Monk">🥋 Monk (ลีน / นักสู้มือเปล่า)</option>
+                    <option value="Berserker">🔥 Berserker (กล้ามเนื้อมหาศาล / บ้าคลั่ง)</option>
                 </select>
             </div>
             <div>
-                <label>สีเสื้อคลุมเวท</label>
+                <label>สีหลักชุดเกราะ/ชุดคลุม</label>
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
             </div>
             <div>
-                <label>หมวกเพิ่มเติม</label>
+                <label>หมวก/เครื่องประดับเพิ่มเติม</label>
                 <select id="playerHat" onchange="updatePreview()">
-                    <option value="none">ไม่มีหมวกเพิ่มเติม</option>
-                    <option value="wizard_hat">🎩 หมวกพ่อมดมนตรา</option>
-                    <option value="cap">🪖 หมวกเกราะอัศวิน</option>
+                    <option value="none">ตามดีไซน์คลาส</option>
+                    <option value="wizard_hat">🎩 หมวกพ่อมดพิเศษ</option>
+                    <option value="cap">🪖 หมวกเหล็กพิเศษ</option>
                 </select>
             </div>
             <button class="btn-enter" onclick="joinGame()">เข้าสู่ปราสาทเวทมนตร์ 🚀</button>
@@ -182,7 +169,7 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="joystickContainer">
+    <div id="virtualJoystick">
         <div id="joystickBase">
             <div id="joystickThumb"></div>
         </div>
@@ -250,46 +237,37 @@
             if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
-        const joystickContainer = document.getElementById('joystickContainer');
-        const joystickBase = document.getElementById('joystickBase');
-        const joystickThumb = document.getElementById('joystickThumb');
+        let activeTouchId = null;
+        let joystickStartX = 0;
+        let joystickStartY = 0;
 
-        let joyTouchId = null;
-        let baseRect = null;
-
-        joystickContainer.addEventListener('pointerdown', (e) => {
+        window.addEventListener('pointerdown', (e) => {
             if (!gameStarted) return;
-            joyTouchId = e.pointerId;
-            baseRect = joystickBase.getBoundingClientRect();
-            updateJoystick(e.clientX, e.clientY);
-            joystickContainer.setPointerCapture(e.pointerId);
-        });
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || 
+                e.target.closest('.modal-box') || e.target.closest('.bottom-panel') || e.target.closest('.header') || e.target.closest('.tile')) {
+                return;
+            }
 
-        joystickContainer.addEventListener('pointermove', (e) => {
-            if (joyTouchId === null || e.pointerId !== joyTouchId) return;
-            updateJoystick(e.clientX, e.clientY);
-        });
+            activeTouchId = e.pointerId;
+            joystickStartX = e.clientX;
+            joystickStartY = e.clientY;
 
-        function endJoystick(e) {
-            if (joyTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== joyTouchId)) return;
-            joyTouchId = null;
-            keys.w = false;
-            keys.s = false;
-            keys.a = false;
-            keys.d = false;
-            joystickThumb.style.transform = `translate(0px, 0px)`;
-        }
+            const joystickContainer = document.getElementById('virtualJoystick');
+            const base = document.getElementById('joystickBase');
+            const thumb = document.getElementById('joystickThumb');
 
-        joystickContainer.addEventListener('pointerup', endJoystick);
-        joystickContainer.addEventListener('pointercancel', endJoystick);
+            joystickContainer.style.display = 'block';
+            base.style.left = joystickStartX + 'px';
+            base.style.top = joystickStartY + 'px';
+            base.style.display = 'block';
+            thumb.style.transform = 'translate(-50%, -50%) translate(0px, 0px)';
+        }, { passive: true });
 
-        function updateJoystick(clientX, clientY) {
-            if (!baseRect) baseRect = joystickBase.getBoundingClientRect();
-            let centerX = baseRect.left + baseRect.width / 2;
-            let centerY = baseRect.top + baseRect.height / 2;
+        window.addEventListener('pointermove', (e) => {
+            if (activeTouchId === null || e.pointerId !== activeTouchId) return;
 
-            let dx = clientX - centerX;
-            let dy = clientY - centerY;
+            let dx = e.clientX - joystickStartX;
+            let dy = e.clientY - joystickStartY;
             let dist = Math.hypot(dx, dy);
             let maxR = 35;
 
@@ -298,14 +276,32 @@
                 dy = (dy / dist) * maxR;
             }
 
-            joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
+            const thumb = document.getElementById('joystickThumb');
+            thumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
 
             let threshold = 8;
             keys.w = dy < -threshold;
             keys.s = dy > threshold;
             keys.a = dx < -threshold;
             keys.d = dx > threshold;
+        }, { passive: true });
+
+        function endJoystick(e) {
+            if (activeTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== activeTouchId)) return;
+            activeTouchId = null;
+            keys.w = false;
+            keys.a = false;
+            keys.s = false;
+            keys.d = false;
+
+            const joystickContainer = document.getElementById('virtualJoystick');
+            const base = document.getElementById('joystickBase');
+            base.style.display = 'none';
+            joystickContainer.style.display = 'none';
         }
+
+        window.addEventListener('pointerup', endJoystick);
+        window.addEventListener('pointercancel', endJoystick);
 
         function submitAuth(isRegister) {
             const name = document.getElementById('playerNameInput').value.trim();
@@ -475,130 +471,96 @@
             setTimeout(() => msg.classList.remove('show'), 2500);
         }
 
-        // ฟังก์ชันวาดตัวละครตามสายอาชีพ (Customized per Class)
+        // ระบบเรนเดอร์ซิลูเอทและสัดส่วนตัวละคร 8 คลาสหลัก
         function drawCastleAvatar(ctx, x, y, pl, isMoving, isTop1) {
             ctx.save();
             ctx.translate(x, y);
 
-            let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 5 : 0;
+            let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
             let pClass = pl.playerClass || 'Warrior';
             let baseColor = pl.outfitColor || '#9b59b6';
 
-            // --- 1. ออกแบบรูปร่างลำตัวตามสายอาชีพ ---
+            let bodyWidth = 28;
+            let bodyHeight = 28;
+            let shoulderExtra = 0;
+            let bodyRadius = 8;
+
             if (pClass === 'Tank') {
-                // รูปร่างหนาบึกบึน (Tank)
+                bodyWidth = 42; bodyHeight = 34; shoulderExtra = 8; bodyRadius = 6;
+            } else if (pClass === 'Berserker') {
+                bodyWidth = 38; bodyHeight = 32; shoulderExtra = 6; bodyRadius = 6;
+            } else if (pClass === 'Assassin' || pClass === 'Mage') {
+                bodyWidth = 22; bodyHeight = 30; shoulderExtra = -4; bodyRadius = 10;
+            } else if (pClass === 'Archer' || pClass === 'Monk') {
+                bodyWidth = 26; bodyHeight = 28; shoulderExtra = 2; bodyRadius = 8;
+            }
+
+            if (pClass === 'Mage') {
                 ctx.fillStyle = baseColor;
                 ctx.beginPath();
-                ctx.roundRect(-20, -12 + walkAnim/2, 40, 32, 6);
-                ctx.fill();
-                ctx.lineWidth = 3; ctx.strokeStyle = '#7f8c8d'; ctx.stroke();
-            } else if (pClass === 'Mage' || pClass === 'Storm Mage') {
-                // ทรงชุดคลุมยาว (Mage Robe)
-                ctx.fillStyle = baseColor;
-                ctx.beginPath();
-                ctx.moveTo(-14, -12 + walkAnim/2);
-                ctx.lineTo(14, -12 + walkAnim/2);
-                ctx.lineTo(22, 18 + walkAnim/2);
-                ctx.lineTo(-22, 18 + walkAnim/2);
+                ctx.moveTo(-12, -12 + walkAnim/2);
+                ctx.lineTo(12, -12 + walkAnim/2);
+                ctx.lineTo(24, 20 + walkAnim/2);
+                ctx.lineTo(-24, 20 + walkAnim/2);
                 ctx.closePath();
                 ctx.fill();
                 ctx.lineWidth = 2; ctx.strokeStyle = '#f1c40f'; ctx.stroke();
-            } else if (pClass === 'Support') {
-                // ออร่าซัพพอร์ตสีเขียวรอบตัว
-                ctx.fillStyle = 'rgba(46, 204, 113, 0.25)';
-                ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI*2); ctx.fill();
-                
-                ctx.fillStyle = baseColor;
-                ctx.beginPath(); ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 8);
-                ctx.fill(); ctx.stroke();
-            } else if (pClass === 'Berserker' || pClass === 'Blood Knight') {
-                // ชุดเกราะมีหนามดุดัน
-                ctx.fillStyle = baseColor;
-                ctx.beginPath();
-                ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 6);
-                ctx.fill();
-                ctx.stroke();
-                // ไหล่หนาม
-                ctx.fillStyle = pClass === 'Blood Knight' ? '#c0392b' : '#e74c3c';
-                ctx.beginPath();
-                ctx.moveTo(-14, -10); ctx.lineTo(-22, -18); ctx.lineTo(-10, -8);
-                ctx.moveTo(14, -10); ctx.lineTo(22, -18); ctx.lineTo(10, -8);
-                ctx.fill();
             } else {
-                // ชุดมาตรฐาน (Warrior, Assassin, Archer, Monk, etc.)
                 ctx.fillStyle = baseColor;
                 ctx.beginPath();
-                ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 8);
+                ctx.roundRect(-bodyWidth/2, -12 + walkAnim/2, bodyWidth, bodyHeight, bodyRadius);
                 ctx.fill();
-                ctx.lineWidth = 2; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
+                ctx.lineWidth = 2.5; ctx.strokeStyle = '#1b1b2f'; ctx.stroke();
+
+                if (shoulderExtra > 0) {
+                    ctx.fillStyle = pClass === 'Tank' ? '#7f8c8d' : '#e74c3c';
+                    ctx.beginPath();
+                    ctx.moveTo(-bodyWidth/2, -10); ctx.lineTo(-bodyWidth/2 - shoulderExtra, -18); ctx.lineTo(-bodyWidth/4, -8);
+                    ctx.moveTo(bodyWidth/2, -10); ctx.lineTo(bodyWidth/2 + shoulderExtra, -18); ctx.lineTo(bodyWidth/4, -8);
+                    ctx.fill();
+                }
             }
 
-            // ขาและเท้า
-            ctx.fillStyle = '#2c3e50';
-            ctx.fillRect(-9, 16, 6, 10 - walkAnim);
-            ctx.fillRect(3, 16, 6, 10 + walkAnim);
+            ctx.fillStyle = '#1b1b2f';
+            ctx.fillRect(-9, 18, 6, 10 - walkAnim);
+            ctx.fillRect(3, 18, 6, 10 + walkAnim);
 
-            // ส่วนหัว (Head)
             ctx.fillStyle = '#f5b041';
             ctx.beginPath();
-            ctx.arc(0, -18 + walkAnim/2, 13, 0, Math.PI * 2);
+            ctx.arc(0, -20 + walkAnim/2, pClass === 'Tank' ? 14 : 12, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
-            // ดวงตา (Eyes)
             ctx.fillStyle = '#3498db';
-            if (pClass.includes('Assassin')) {
-                ctx.fillStyle = '#e74c3c'; // ตาแดงดุดันสำหรับสายนักฆ่า
-            } else if (pClass === 'Necromancer') {
-                ctx.fillStyle = '#2ecc71'; // ตาเขียวมรกตสำหรับเนโครแมนเซอร์
+            if (pClass === 'Assassin') {
+                ctx.fillStyle = '#e74c3c';
             }
-            ctx.fillRect(-5, -21 + walkAnim/2, 3, 3);
-            ctx.fillRect(2, -21 + walkAnim/2, 3, 3);
+            ctx.fillRect(-5, -23 + walkAnim/2, 3, 3);
+            ctx.fillRect(2, -23 + walkAnim/2, 3, 3);
 
-            // --- 2. ออกแบบหมวกและเครื่องประดับศีรษะตามสายอาชีพ ---
-            if (pClass === 'Assassin' || pClass === 'Shadow Assassin') {
-                // ฮู้ดนักฆ่า
-                ctx.fillStyle = '#1e1e1e';
+            if (pClass === 'Assassin') {
+                ctx.fillStyle = '#2c3e50';
                 ctx.beginPath();
-                ctx.moveTo(-16, -22); ctx.lineTo(16, -22); ctx.lineTo(0, -40);
+                ctx.moveTo(-16, -24); ctx.lineTo(16, -24); ctx.lineTo(0, -42);
                 ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else if (pClass === 'Mage' || pClass === 'Storm Mage') {
-                // หมวกพ่อมด
+            } else if (pClass === 'Mage') {
                 ctx.fillStyle = '#8e44ad';
                 ctx.beginPath();
-                ctx.moveTo(-18, -26); ctx.lineTo(18, -26); ctx.lineTo(0, -48);
+                ctx.moveTo(-18, -28); ctx.lineTo(18, -28); ctx.lineTo(0, -50);
                 ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else if (pClass === 'Dragon Knight') {
-                // เขามังกร
-                ctx.fillStyle = '#d35400';
-                ctx.beginPath();
-                ctx.moveTo(-10, -28); ctx.lineTo(-18, -38); ctx.lineTo(-6, -30);
-                ctx.moveTo(10, -28); ctx.lineTo(18, -38); ctx.lineTo(6, -30);
-                ctx.fill(); ctx.stroke();
-            } else if (pClass === 'Blood Knight') {
-                // เขาลั่งอัศวินโลหิต
-                ctx.fillStyle = '#922b21';
-                ctx.beginPath();
-                ctx.moveTo(-12, -28); ctx.lineTo(-16, -38); ctx.lineTo(-6, -30);
-                ctx.moveTo(12, -28); ctx.lineTo(16, -38); ctx.lineTo(6, -30);
-                ctx.fill(); ctx.stroke();
             } else if (pClass === 'Tank') {
-                // หมวกเหล็กอัศวินเกราะหนัก
                 ctx.fillStyle = '#7f8c8d';
                 ctx.beginPath();
-                ctx.arc(0, -23, 13, Math.PI, 0, false);
+                ctx.arc(0, -25, 15, Math.PI, 0, false);
                 ctx.fill(); ctx.stroke();
-            } else if (pClass === 'Archer' || pClass === 'Frost Archer') {
-                // หมวกเรนเจอร์พร้อมขนนก
-                ctx.fillStyle = pClass === 'Frost Archer' ? '#2980b9' : '#27ae60';
+            } else if (pClass === 'Archer') {
+                ctx.fillStyle = '#27ae60';
                 ctx.beginPath();
-                ctx.arc(0, -24, 12, Math.PI, 0, false);
+                ctx.arc(0, -26, 13, Math.PI, 0, false);
                 ctx.fill(); ctx.stroke();
-                // ขนนก
                 ctx.fillStyle = '#f1c40f';
-                ctx.beginPath(); ctx.moveTo(8, -26); ctx.lineTo(18, -36); ctx.lineTo(10, -24); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(8, -28); ctx.lineTo(20, -38); ctx.lineTo(10, -26); ctx.fill();
             } else {
-                // หมวกเสริมตามที่เลือก
                 if (pl.hat === 'wizard_hat') {
                     ctx.fillStyle = '#8e44ad';
                     ctx.beginPath();
@@ -612,13 +574,12 @@
                 }
             }
 
-            // --- 3. มงกุฎอันดับ 1 (Top 1 Crown) ---
             if (isTop1) {
                 let crownFloat = Math.sin(Date.now() / 150) * 4;
                 let sparkleAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.5;
 
                 ctx.save();
-                ctx.translate(0, -50 + crownFloat);
+                ctx.translate(0, -55 + crownFloat);
                 
                 ctx.fillStyle = '#f1c40f';
                 ctx.strokeStyle = '#b7950b';
@@ -773,7 +734,7 @@
                     ctx.fillStyle = isTop1 ? '#f1c40f' : '#ffffff';
                     ctx.font = isTop1 ? 'bold 16px Kanit' : 'bold 14px Kanit';
                     ctx.textAlign = 'center';
-                    ctx.fillText(`${pl.name} [${pl.playerClass || 'Warrior'}]`, pl.x, pl.y - 60);
+                    ctx.fillText(`${pl.name} [${pl.playerClass || 'Warrior'}]`, pl.x, pl.y - 65);
                 }
 
                 ctx.restore();
