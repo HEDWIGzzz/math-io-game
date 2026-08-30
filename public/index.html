@@ -207,6 +207,7 @@
         let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true, slowedUntil: 0, poisonedUntil: 0 };
         let renderBossX = 2000, renderBossY = 1850;
         let floatingTexts = [], activeEffect = null, effectTimer = 0;
+        let skillVisualEffects = [];
 
         function addFloatingText(text, x, y, color = '#f1c40f') {
             floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
@@ -232,10 +233,14 @@
         updatePreview();
 
         const classInfo = {
-            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมตรงข้าม”', 'Warrior': '“นักรบสมดุลในสมรภูมิ”',
-            'Tank': '“เกราะหนาป้องกันตัว”', 'Archer': '“ยิงโจมตีระยะไกล”',
-            'Mage': '“เวทมนตร์ป่วนพื้นที่”', 'Support': '“สนับสนุนเพื่อนร่วมทีม”',
-            'Monk': '“หมัดคอมโบต่อเนื่อง”', 'Berserker': '“บ้าคลั่งในสงคราม”'
+            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมตรงข้าม (Blind)”', 
+            'Warrior': '“นักรบสมดุลในสมรภูมิ (Stun)”',
+            'Tank': '“เกราะหนาป้องกันตัว (Heavy Slow)”', 
+            'Archer': '“ยิงโจมตีระยะไกล (Slow)”',
+            'Mage': '“เวทมนตร์แช่แข็ง (Freeze)”', 
+            'Support': '“สนับสนุนเพื่อนร่วมทีม (Drain)”',
+            'Monk': '“หมัดคอมโบสลับทิศทาง (Confuse)”', 
+            'Berserker': '“บ้าคลั่งในสงคราม (Burn)”'
         };
         function onClassChange() {
             let cls = document.getElementById('playerClass').value;
@@ -308,7 +313,14 @@
         });
 
         socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
-        socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 3500; });
+        socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 4000; });
+        
+        socket.on('playerCastSkill', (data) => {
+            skillVisualEffects.push({
+                x: data.x, y: data.y, radius: 10, maxRadius: 200, alpha: 1.0,
+                playerClass: data.playerClass, team: data.team
+            });
+        });
 
         function updateBossHUD() {
             let pct = Math.max(0, (bossData.hp / bossData.maxHp) * 100);
@@ -322,7 +334,8 @@
         window.addEventListener('keyup', e => { if(gameStarted) setKey(e.key, false); });
         function setKey(k, state) {
             k = k.toLowerCase();
-            let isRev = (activeEffect === 'blind' && Date.now() < effectTimer);
+            let isConfused = (activeEffect === 'confuse' && Date.now() < effectTimer);
+            let isRev = ((activeEffect === 'blind' || isConfused) && Date.now() < effectTimer);
             if (k === 'w' || k === 'arrowup') keys[isRev ? 's' : 'w'] = state;
             if (k === 's' || k === 'arrowdown') keys[isRev ? 'w' : 's'] = state;
             if (k === 'a' || k === 'arrowleft') keys[isRev ? 'd' : 'a'] = state;
@@ -469,6 +482,12 @@
             if (gameStarted && myId && players[myId]) {
                 let p = players[myId];
                 let dx = 0, dy = 0, speed = 5;
+
+                if (activeEffect && Date.now() < effectTimer) {
+                    if (activeEffect === 'slow') speed = 3;
+                    if (activeEffect === 'heavySlow' || activeEffect === 'freeze' || activeEffect === 'burn') speed = 1.5;
+                }
+
                 if (keys.w) dy -= speed; if (keys.s) dy += speed;
                 if (keys.a) dx -= speed; if (keys.d) dx += speed;
 
@@ -501,6 +520,31 @@
                 drawBackground(camX, camY);
                 ctx.save(); ctx.translate(-camX, -camY);
                 drawBoss(ctx);
+
+                // เรนเดอร์เอฟเฟกต์ภาพสกิลวงแหวนเวท
+                for (let i = skillVisualEffects.length - 1; i >= 0; i--) {
+                    let fx = skillVisualEffects[i];
+                    fx.radius += 8;
+                    fx.alpha -= 0.025;
+                    if (fx.alpha <= 0 || fx.radius >= fx.maxRadius) {
+                        skillVisualEffects.splice(i, 1);
+                        continue;
+                    }
+                    ctx.save();
+                    ctx.globalAlpha = fx.alpha;
+                    if (fx.playerClass === 'Mage') ctx.strokeStyle = '#00f2fe';
+                    else if (fx.playerClass === 'Assassin') ctx.strokeStyle = '#8e44ad';
+                    else if (fx.playerClass === 'Berserker') ctx.strokeStyle = '#e67e22';
+                    else ctx.strokeStyle = fx.team === 'red' ? '#e74c3c' : '#3498db';
+
+                    ctx.lineWidth = 5;
+                    ctx.beginPath();
+                    ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.fillStyle = fx.team === 'red' ? 'rgba(231, 76, 60, 0.2)' : 'rgba(52, 152, 219, 0.2)';
+                    ctx.fill();
+                    ctx.restore();
+                }
 
                 tiles.forEach(t => {
                     ctx.fillStyle = t.type === 'num' ? '#f1c40f' : (t.type === 'op' ? '#e74c3c' : '#3498db');
