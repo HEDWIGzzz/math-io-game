@@ -13,7 +13,6 @@ const tiles = [];
 const MAP_SIZE = 3000;
 let gameStarted = false;
 
-// 4 ปราสาท 4 มุมแผนที่
 let bases = {
     red: { x: 600, y: 600, hp: 3000, maxHp: 3000, name: 'Red Castle', alive: true },
     blue: { x: MAP_SIZE - 600, y: 600, hp: 3000, maxHp: 3000, name: 'Blue Castle', alive: true },
@@ -21,7 +20,6 @@ let bases = {
     yellow: { x: MAP_SIZE - 600, y: MAP_SIZE - 600, hp: 3000, maxHp: 3000, name: 'Yellow Castle', alive: true }
 };
 
-// สร้างเบี้ยคณิตศาสตร์บนแผนที่
 function spawnTile() {
     const chars = ['0','1','2','3','4','5','6','7','8','9','+','-','×','÷','='];
     const char = chars[Math.floor(Math.random() * chars.length)];
@@ -41,9 +39,7 @@ function getTeamCounts() {
     let counts = { red: 0, blue: 0, green: 0, yellow: 0 };
     for (let id in players) {
         let p = players[id];
-        if (p.joined && !p.isHost && counts[p.team] !== undefined) {
-            counts[p.team]++;
-        }
+        if (p.joined && !p.isHost && counts[p.team] !== undefined) counts[p.team]++;
     }
     return counts;
 }
@@ -92,7 +88,6 @@ io.on('connection', (socket) => {
         players[socket.id].color = data.color || '#9b59b6';
         players[socket.id].joined = true;
 
-        // จุดเกิดตามทีม
         if (team === 'red') { players[socket.id].x = 800; players[socket.id].y = 800; }
         else if (team === 'blue') { players[socket.id].x = MAP_SIZE - 800; players[socket.id].y = 800; }
         else if (team === 'green') { players[socket.id].x = 800; players[socket.id].y = MAP_SIZE - 800; }
@@ -103,13 +98,6 @@ io.on('connection', (socket) => {
         io.emit('leaderboard', players);
     });
 
-    socket.on('startGame', () => {
-        if (players[socket.id] && players[socket.id].isHost) {
-            gameStarted = true;
-            io.emit('gameStarted', '🚀 สงคราม 4 ปราสาทเริ่มขึ้นแล้ว!');
-        }
-    });
-
     socket.on('move', (pos) => {
         let p = players[socket.id];
         if (!p || !p.joined || p.isHost) return;
@@ -117,12 +105,11 @@ io.on('connection', (socket) => {
         p.x = Math.max(50, Math.min(MAP_SIZE - 50, pos.x));
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, pos.y));
 
-        // ตรวจสอบการเก็บเบี้ย
         for (let i = tiles.length - 1; i >= 0; i--) {
             let t = tiles[i];
             if (Math.hypot(p.x - t.x, p.y - t.y) < 40) {
-                let collected = tiles.splice(i, 1)[0];
-                socket.emit('tileCollected', collected);
+                tiles.splice(i, 1);
+                socket.emit('tileCollected', t);
                 tiles.push(spawnTile());
                 io.emit('updateTiles', tiles);
                 break;
@@ -158,7 +145,7 @@ io.on('connection', (socket) => {
 
         let dist = Math.hypot(p.x - target.x, p.y - target.y);
         if (dist > 400) {
-            socket.emit('msg', '❌ อยู่ใกล้ปราสาทเป้าหมายไม่พอ (เข้าใกล้กว่า 400)');
+            socket.emit('msg', '❌ อยู่ใกล้ปราสาทเป้าหมายไม่พอ');
             return;
         }
 
@@ -178,7 +165,6 @@ io.on('connection', (socket) => {
         }
 
         io.emit('basesUpdate', bases);
-        io.emit('leaderboard', players);
         socket.emit('msg', `🔥 โจมตี ${target.name} เสียหาย 150!`);
     });
 
@@ -189,9 +175,10 @@ io.on('connection', (socket) => {
     });
 });
 
+// ปรับลดความถี่เหลือ 30 FPS เพื่อลดโหลดเครือข่ายและอาการกระตุก
 setInterval(() => {
     io.emit('state', { players, bases });
-}, 1000 / 60);
+}, 1000 / 30);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
