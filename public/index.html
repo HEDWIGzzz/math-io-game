@@ -7,8 +7,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; }
-        canvas { display: block; background: #151328; width: 100%; height: 100%; }
+        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; overflow: hidden; width: 100vw; height: 100vh; touch-action: none; }
+        canvas { display: block; background: #151328; width: 100%; height: 100%; touch-action: none; }
         
         #nameModal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -207,14 +207,13 @@
             if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
-        // Virtual Joystick Controller (Anywhere on screen, hidden when not pressed)
+        // Virtual Joystick Controller with touch-action support
         let activeTouchId = null;
         let joystickStartX = 0;
         let joystickStartY = 0;
 
         window.addEventListener('pointerdown', (e) => {
             if (!gameStarted) return;
-            // Ignore if clicking UI elements, buttons, inputs, modals, etc.
             if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || 
                 e.target.closest('.modal-box') || e.target.closest('.bottom-panel') || e.target.closest('.header')) {
                 return;
@@ -230,7 +229,7 @@
             base.style.top = joystickStartY + 'px';
             base.style.display = 'block';
             thumb.style.transform = 'translate(-50%, -50%) translate(0px, 0px)';
-        });
+        }, { passive: true });
 
         window.addEventListener('pointermove', (e) => {
             if (activeTouchId === null || e.pointerId !== activeTouchId) return;
@@ -253,7 +252,7 @@
             keys.s = dy > threshold;
             keys.a = dx < -threshold;
             keys.d = dx > threshold;
-        });
+        }, { passive: true });
 
         function endJoystick(e) {
             if (activeTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== activeTouchId)) return;
