@@ -373,7 +373,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ฟังก์ชันรองรับการทิ้งเบี้ยลงพื้น
     socket.on('dropTile', (tileData) => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.isHost) return;
