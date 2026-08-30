@@ -67,7 +67,7 @@ io.on('connection', (socket) => {
 
     activePlayers[socket.id] = {
         socketId: socket.id,
-        name: 'จอมเวทย์ฝึกหัด',
+        name: '',
         avatar: 'hero',
         outfitColor: '#3498db',
         hat: 'none',
@@ -80,7 +80,7 @@ io.on('connection', (socket) => {
 
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE });
 
-    // ระบบจัดการเข้าสู่ระบบและสมัครสมาชิก
+    // ขั้นที่ 1: ตรวจสอบล็อกอิน / สมัครสมาชิก
     socket.on('authPlayer', (data) => {
         let name = data.name ? data.name.trim().substring(0, 15) : '';
         let password = data.password ? data.password.trim() : '';
@@ -96,11 +96,9 @@ io.on('connection', (socket) => {
                 socket.emit('authResult', { success: false, msg: 'ชื่อนี้มีผู้ใช้งานแล้ว กรุณาเลือกชื่ออื่นหรือเข้าสู่ระบบ' });
                 return;
             }
-            // สมัครสมาชิกใหม่
             playersDb[name] = { password: password, score: 0 };
             saveDatabase(playersDb);
         } else {
-            // เข้าสู่ระบบ
             if (!playersDb[name]) {
                 socket.emit('authResult', { success: false, msg: 'ไม่พบชื่อผู้ใช้นี้ กรุณาสมัครสมาชิกก่อน' });
                 return;
@@ -113,12 +111,20 @@ io.on('connection', (socket) => {
 
         activePlayers[socket.id].name = name;
         activePlayers[socket.id].score = playersDb[name].score || 0;
-        activePlayers[socket.id].avatar = data.avatar || 'hero';
-        activePlayers[socket.id].outfitColor = data.outfitColor || '#3498db';
-        activePlayers[socket.id].hat = data.hat || 'none';
-        activePlayers[socket.id].loggedIn = true;
 
         socket.emit('authResult', { success: true, score: activePlayers[socket.id].score });
+    });
+
+    // ขั้นที่ 2: บันทึกการตกแต่งตัวละครและเข้าเกม
+    socket.on('setupPlayer', (data) => {
+        let p = activePlayers[socket.id];
+        if (!p || !p.name) return;
+
+        p.avatar = data.avatar || 'hero';
+        p.outfitColor = data.outfitColor || '#3498db';
+        p.hat = data.hat || 'none';
+        p.loggedIn = true;
+
         io.emit('updateLeaderboard', activePlayers);
     });
 
