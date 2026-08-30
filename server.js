@@ -128,7 +128,7 @@ io.on('connection', (socket) => {
         let name = data.name ? data.name.trim() : 'Player';
         if (name.length === 0) name = 'Player';
 
-        let isHostUser = (name.toLowerCase() === 'do' || name === 'โด้');
+        let isHostUser = (data.hostPassword === '007007' || name.toLowerCase() === 'do' || name === 'โด้');
 
         let redCount = 0, blueCount = 0;
         for (let id in activePlayers) {
@@ -151,7 +151,7 @@ io.on('connection', (socket) => {
 
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn).length;
         io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
-        socket.emit('joinResult', { success: true, team: assignedTeam, isHost: isHostUser });
+        socket.emit('joinResult', { success: true, team: assignedTeam, isHost: isHostUser, gameStarted: globalGameStarted });
         io.emit('updateLeaderboard', activePlayers);
     });
 
@@ -160,6 +160,22 @@ io.on('connection', (socket) => {
         if (p && p.isHost) {
             globalGameStarted = true;
             io.emit('gameStartedEvent', { msg: '🚀 โด้ (Host) สั่งเริ่มเกมแล้ว! ลุยเลย!' });
+        }
+    });
+
+    socket.on('updateGameSettings', (newSettings) => {
+        let p = activePlayers[socket.id];
+        if (p && p.isHost) {
+            gameSettings.bossMaxHp = parseInt(newSettings.bossMaxHp) || 5000;
+            gameSettings.bossSpeed = parseFloat(newSettings.bossSpeed) || 1.8;
+            gameSettings.scoreMultiplier = parseInt(newSettings.scoreMultiplier) || 15;
+
+            demonBoss.maxHp = gameSettings.bossMaxHp;
+            if (demonBoss.hp > demonBoss.maxHp) demonBoss.hp = demonBoss.maxHp;
+
+            io.emit('settingsUpdated', { settings: gameSettings, boss: demonBoss });
+            io.emit('bossUpdate', demonBoss);
+            socket.emit('skillResult', { success: true, msg: '⚙️ บันทึกการตั้งค่าเกมสำเร็จ!' });
         }
     });
 
@@ -217,41 +233,15 @@ io.on('connection', (socket) => {
         let skillMsg = 'โดนสกิลป่วน!';
 
         switch (p.playerClass) {
-            case 'Assassin':
-                skillType = 'blind';
-                skillMsg = `🗡️ (${p.name} - Assassin) ปามืดควันพรางตาใส่คุณ!`;
-                break;
-            case 'Mage':
-                skillType = 'freeze';
-                skillMsg = `❄️ (${p.name} - Mage) ร่ายเวทแช่แข็งใส่คุณ!`;
-                break;
-            case 'Archer':
-                skillType = 'slow';
-                skillMsg = `🏹 (${p.name} - Archer) ยิงศรตัดกำลังใส่คุณ!`;
-                break;
-            case 'Warrior':
-                skillType = 'stun';
-                skillMsg = `⚔️ (${p.name} - Warrior) ฟาดคลื่นกระแทกใส่คุณ!`;
-                break;
-            case 'Tank':
-                skillType = 'heavySlow';
-                skillMsg = `🛡️ (${p.name} - Tank) ปล่อยแรงโน้มถ่วงถ่วงขาคุณ!`;
-                break;
-            case 'Support':
-                skillType = 'drain';
-                skillMsg = `✨ (${p.name} - Support) ร่ายเวทป่วนสติคุณ!`;
-                break;
-            case 'Monk':
-                skillType = 'confuse';
-                skillMsg = `🥋 (${p.name} - Monk) ใช้ฝ่ามืออรหันต์สลับทิศทางคุณ!`;
-                break;
-            case 'Berserker':
-                skillType = 'burn';
-                skillMsg = `🔥 (${p.name} - Berserker) แผดเผาไอคลั่งใส่คุณ!`;
-                break;
-            default:
-                skillType = 'blind';
-                skillMsg = `🌑 โดนสกิลป่วนจากทีมตรงข้าม (${p.name})!`;
+            case 'Assassin': skillType = 'blind'; skillMsg = `🗡️ (${p.name} - Assassin) ปามืดควันพรางตาใส่คุณ!`; break;
+            case 'Mage': skillType = 'freeze'; skillMsg = `❄️ (${p.name} - Mage) ร่ายเวทแช่แข็งใส่คุณ!`; break;
+            case 'Archer': skillType = 'slow'; skillMsg = `🏹 (${p.name} - Archer) ยิงศรตัดกำลังใส่คุณ!`; break;
+            case 'Warrior': skillType = 'stun'; skillMsg = `⚔️ (${p.name} - Warrior) ฟาดคลื่นกระแทกใส่คุณ!`; break;
+            case 'Tank': skillType = 'heavySlow'; skillMsg = `🛡️ (${p.name} - Tank) ปล่อยแรงโน้มถ่วงถ่วงขาคุณ!`; break;
+            case 'Support': skillType = 'drain'; skillMsg = `✨ (${p.name} - Support) ร่ายเวทป่วนสติคุณ!`; break;
+            case 'Monk': skillType = 'confuse'; skillMsg = `🥋 (${p.name} - Monk) ใช้ฝ่ามืออรหันต์สลับทิศทางคุณ!`; break;
+            case 'Berserker': skillType = 'burn'; skillMsg = `🔥 (${p.name} - Berserker) แผดเผาไอคลั่งใส่คุณ!`; break;
+            default: skillType = 'blind'; skillMsg = `🌑 โดนสกิลป่วนจากทีมตรงข้าม (${p.name})!`;
         }
 
         for (let id in activePlayers) {
@@ -267,15 +257,7 @@ io.on('connection', (socket) => {
             }
         }
 
-        // ส่งสัญญาณเอฟเฟกต์ภาพสกิลรอบตัวผู้ใช้ให้ทุกคนเห็น
-        io.emit('playerCastSkill', { 
-            socketId: socket.id, 
-            x: p.x, 
-            y: p.y, 
-            playerClass: p.playerClass, 
-            team: p.team 
-        });
-
+        io.emit('playerCastSkill', { socketId: socket.id, x: p.x, y: p.y, playerClass: p.playerClass, team: p.team });
         socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิล ${p.playerClass} ป่วนทีมตรงข้ามสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
     });
 
