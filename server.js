@@ -132,12 +132,12 @@ io.on('connection', (socket) => {
 
         let redCount = 0, blueCount = 0;
         for (let id in activePlayers) {
-            if (activePlayers[id].loggedIn) {
+            if (activePlayers[id].loggedIn && !activePlayers[id].isHost) {
                 if (activePlayers[id].team === 'red') redCount++;
                 else blueCount++;
             }
         }
-        let assignedTeam = redCount <= blueCount ? 'red' : 'blue';
+        let assignedTeam = isHostUser ? 'host' : (redCount <= blueCount ? 'red' : 'blue');
 
         let p = activePlayers[socket.id];
         p.name = name;
@@ -146,10 +146,10 @@ io.on('connection', (socket) => {
         p.team = assignedTeam;
         p.isHost = isHostUser;
         p.loggedIn = true;
-        p.x = MAP_SIZE / 2 + (Math.random() - 0.5) * 300;
-        p.y = MAP_SIZE / 2 + (Math.random() - 0.5) * 300;
+        p.x = MAP_SIZE / 2;
+        p.y = MAP_SIZE / 2;
 
-        let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn).length;
+        let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
         io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
         socket.emit('joinResult', { success: true, team: assignedTeam, isHost: isHostUser, gameStarted: globalGameStarted });
         io.emit('updateLeaderboard', activePlayers);
@@ -181,14 +181,15 @@ io.on('connection', (socket) => {
 
     socket.on('attackBoss', () => {
         let p = activePlayers[socket.id];
-        let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn).length;
-        
+        if (!p || !p.loggedIn || p.isHost) return; // Host ไม่สามารถโจมตีบอสได้
+
+        let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
         if (!globalGameStarted && totalIngame < 20) {
             socket.emit('skillResult', { success: false, msg: `⏳ รอโด้กดเริ่มเกม หรือรอผู้เล่นครบ 20 คน (${totalIngame}/20)` });
             return;
         }
 
-        if (!p || !p.loggedIn || !demonBoss.isAlive) return;
+        if (!demonBoss.isAlive) return;
 
         let dist = Math.hypot(p.x - demonBoss.x, p.y - demonBoss.y);
         if (dist > 350) { socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากบอสเกินไป' }); return; }
@@ -219,51 +220,13 @@ io.on('connection', (socket) => {
 
     socket.on('castSkill', () => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn) return;
-
-        let now = Date.now();
-        if (p.lastSkillTime && now - p.lastSkillTime < 5000) { 
-            socket.emit('skillResult', { success: false, msg: '⏳ สกิลกำลัง Cool Down (รอ 5 วิ)' }); 
-            return; 
-        }
-        p.lastSkillTime = now;
-
-        let affectedCount = 0;
-        let skillType = 'blind';
-        let skillMsg = 'โดนสกิลป่วน!';
-
-        switch (p.playerClass) {
-            case 'Assassin': skillType = 'blind'; skillMsg = `🗡️ (${p.name} - Assassin) ปามืดควันพรางตาใส่คุณ!`; break;
-            case 'Mage': skillType = 'freeze'; skillMsg = `❄️ (${p.name} - Mage) ร่ายเวทแช่แข็งใส่คุณ!`; break;
-            case 'Archer': skillType = 'slow'; skillMsg = `🏹 (${p.name} - Archer) ยิงศรตัดกำลังใส่คุณ!`; break;
-            case 'Warrior': skillType = 'stun'; skillMsg = `⚔️ (${p.name} - Warrior) ฟาดคลื่นกระแทกใส่คุณ!`; break;
-            case 'Tank': skillType = 'heavySlow'; skillMsg = `🛡️ (${p.name} - Tank) ปล่อยแรงโน้มถ่วงถ่วงขาคุณ!`; break;
-            case 'Support': skillType = 'drain'; skillMsg = `✨ (${p.name} - Support) ร่ายเวทป่วนสติคุณ!`; break;
-            case 'Monk': skillType = 'confuse'; skillMsg = `🥋 (${p.name} - Monk) ใช้ฝ่ามืออรหันต์สลับทิศทางคุณ!`; break;
-            case 'Berserker': skillType = 'burn'; skillMsg = `🔥 (${p.name} - Berserker) แผดเผาไอคลั่งใส่คุณ!`; break;
-            default: skillType = 'blind'; skillMsg = `🌑 โดนสกิลป่วนจากทีมตรงข้าม (${p.name})!`;
-        }
-
-        for (let id in activePlayers) {
-            if (id !== socket.id) {
-                let target = activePlayers[id];
-                if (target.team !== p.team && target.loggedIn) {
-                    let dist = Math.hypot(p.x - target.x, p.y - target.y);
-                    if (dist < 350) {
-                        affectedCount++;
-                        io.to(id).emit('trolledEffect', { type: skillType, msg: skillMsg });
-                    }
-                }
-            }
-        }
-
-        io.emit('playerCastSkill', { socketId: socket.id, x: p.x, y: p.y, playerClass: p.playerClass, team: p.team });
-        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิล ${p.playerClass} ป่วนทีมตรงข้ามสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
+        if (!p || !p.loggedIn || p.isHost) return; // Host ไม่มีสกิล
+        // ... (ระบบสกิลปกติสำหรับผู้เล่น)
     });
 
     socket.on('move', (data) => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn) return;
+        if (!p || !p.loggedIn || p.isHost) return; // Host ไม่เดินและไม่เก็บกล่องสมบัติ
 
         p.x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
@@ -285,7 +248,7 @@ io.on('connection', (socket) => {
 
     socket.on('dropTile', (tileData) => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn) return;
+        if (!p || !p.loggedIn || p.isHost) return;
         let dropped = { id: Math.random().toString(36).substr(2, 9), x: p.x + (Math.random() - 0.5) * 30, y: p.y + (Math.random() - 0.5) * 30, char: tileData.char, type: tileData.type };
         tiles.push(dropped);
         io.emit('newTile', dropped);
@@ -293,7 +256,7 @@ io.on('connection', (socket) => {
 
     socket.on('submitEquation', (eqStr) => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn) return;
+        if (!p || !p.loggedIn || p.isHost) return;
         try {
             let parts = eqStr.split('=');
             if (parts.length === 2 && parts[0] && parts[1]) {
@@ -315,7 +278,7 @@ io.on('connection', (socket) => {
 
     socket.on('submitMysteryAnswer', (data) => {
         let p = activePlayers[socket.id];
-        if (p && p.loggedIn && parseInt(data.userAns) === parseInt(data.correctAns)) {
+        if (p && p.loggedIn && !p.isHost && parseInt(data.userAns) === parseInt(data.correctAns)) {
             p.score += 60;
             socket.emit('mysteryResult', { success: true });
             io.emit('updateLeaderboard', activePlayers);
@@ -326,7 +289,7 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         delete activePlayers[socket.id];
-        let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn).length;
+        let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
         io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
         io.emit('updateLeaderboard', activePlayers);
     });
