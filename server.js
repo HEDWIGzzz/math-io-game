@@ -1,6 +1,8 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -8,12 +10,30 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-const players = {};
+const DB_FILE = path.join(__dirname, 'database.json');
+
+// โหลดฐานข้อมูลผู้เล่นจากไฟล์
+function loadDatabase() {
+    if (fs.existsSync(DB_FILE)) {
+        try {
+            return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+        } catch (e) {
+            return {};
+        }
+    }
+    return {};
+}
+
+function saveDatabase(data) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+let playersDb = loadDatabase();
+const activePlayers = {};
 const tiles = [];
 const mysteryBoxes = [];
-const MAP_SIZE = 4000; // ขยายแผนที่เป็น 4000x4000 สำหรับ 80 คน
+const MAP_SIZE = 4000;
 
-// เพิ่มจำนวนเบี้ยและกล่องให้สมกับแผนที่ใหญ่
 for (let i = 0; i < 150; i++) spawnTile();
 for (let i = 0; i < 35; i++) spawnMysteryBox();
 
@@ -46,7 +66,7 @@ function spawnMysteryBox() {
 io.on('connection', (socket) => {
     console.log('Player connected:', socket.id);
 
-    players[socket.id] = {
+    activePlayers[socket.id] = {
         socketId: socket.id,
         name: 'จอมเวทย์ฝึกหัด',
         avatar: 'hero',
@@ -61,25 +81,34 @@ io.on('connection', (socket) => {
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE });
 
     socket.on('setupPlayer', (data) => {
-        if (players[socket.id]) {
-            players[socket.id].name = data.name ? data.name.substring(0, 15) : 'จอมเวทย์ฝึกหัด';
-            players[socket.id].avatar = data.avatar || 'hero';
-            players[socket.id].outfitColor = data.outfitColor || '#3498db';
-            players[socket.id].hat = data.hat || 'none';
-            io.emit('updateLeaderboard', players);
+        let name = data.name ? data.name.trim().substring(0, 15) : 'จอมเวทย์ฝึกหัด';
+        
+        // ตรวจสอบว่ามีข้อมูลในฐานข้อมูลหรือไม่ ถ้ามีให้โหลดคะแนนเดิม
+        if (playersDb[name]) {
+            activePlayers[socket.id].score = playersDb[name].score || 0;
+        } else {
+            playersDb[name] = { score: 0 };
+            saveDatabase(playersDb);
         }
+
+        activePlayers[socket.id].name = name;
+        activePlayers[socket.id].avatar = data.avatar || 'hero';
+        activePlayers[socket.id].outfitColor = data.outfitColor || '#3498db';
+        activePlayers[socket.id].hat = data.hat || 'none';
+
+        socket.emit('loginSuccess', { score: activePlayers[socket.id].score });
+        io.emit('updateLeaderboard', activePlayers);
     });
 
     socket.on('move', (data) => {
-        if (players[socket.id]) {
-            players[socket.id].x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
-            players[socket.id].y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
-            players[socket.id].isMoving = data.isMoving;
+        if (activePlayers[socket.id]) {
+            activePlayers[socket.id].x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
+            activePlayers[socket.id].y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
+            activePlayers[socket.id].isMoving = data.isMoving;
 
-            // ตรวจสอบการเก็บเบี้ย
             for (let i = tiles.length - 1; i >= 0; i--) {
-                let dx = players[socket.id].x - tiles[i].x;
-                let dy = players[socket.id].y - tiles[i].y;
+                let dx = activePlayers[socket.id].x - tiles[i].x;
+                let dy = activePlayers[socket.id].y - tiles[i].y;
                 if (Math.hypot(dx, dy) < 40) {
                     let collectedTile = tiles[i];
                     tiles.splice(i, 1);
@@ -90,10 +119,9 @@ io.on('connection', (socket) => {
                 }
             }
 
-            // ตรวจสอบการเก็บกล่องปริศนา
             for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
-                let dx = players[socket.id].x - mysteryBoxes[i].x;
-                let dy = players[socket.id].y - mysteryBoxes[i].y;
+                let dx = activePlayers[socket.id].x - mysteryBoxes[i].x;
+                let dy = activePlayers[socket.id].y - mysteryBoxes[i].y;
                 if (Math.hypot(dx, dy) < 40) {
                     let box = mysteryBoxes[i];
                     mysteryBoxes.splice(i, 1);
@@ -115,6 +143,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitEquation', (eqStr) => {
+        let p = activePlayers[socket.id];
+        if (!p) return;
         try {
             let parts = eqStr.split('=');
             if (parts.length === 2 && parts[0] && parts[1]) {
@@ -122,9 +152,12 @@ io.on('connection', (socket) => {
                 let right = eval(parts[1].replace(/\b0+(\d)/g, '$1'));
 
                 if (left === right) {
-                    players[socket.id].score += eqStr.length * 15;
-                    socket.emit('equationResult', { success: true, score: players[socket.id].score });
-                    io.emit('updateLeaderboard', players);
+                    p.score += eqStr.length * 15;
+                    playersDb[p.name] = { score: p.score };
+                    saveDatabase(playersDb);
+
+                    socket.emit('equationResult', { success: true, score: p.score });
+                    io.emit('updateLeaderboard', activePlayers);
                 } else {
                     socket.emit('equationResult', { success: false, msg: "สมการไม่ถูกต้อง (ผลลัพธ์สองฝั่งไม่เท่ากัน)" });
                 }
@@ -137,11 +170,15 @@ io.on('connection', (socket) => {
     });
 
     socket.on('submitMysteryAnswer', (data) => {
-        if (players[socket.id]) {
+        let p = activePlayers[socket.id];
+        if (p) {
             if (parseInt(data.userAns) === parseInt(data.correctAns)) {
-                players[socket.id].score += 60;
+                p.score += 60;
+                playersDb[p.name] = { score: p.score };
+                saveDatabase(playersDb);
+
                 socket.emit('mysteryResult', { success: true });
-                io.emit('updateLeaderboard', players);
+                io.emit('updateLeaderboard', activePlayers);
             } else {
                 socket.emit('mysteryResult', { success: false });
             }
@@ -150,13 +187,13 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('Player disconnected:', socket.id);
-        delete players[socket.id];
-        io.emit('updateLeaderboard', players);
+        delete activePlayers[socket.id];
+        io.emit('updateLeaderboard', activePlayers);
     });
 });
 
 setInterval(() => {
-    io.emit('stateUpdate', players);
+    io.emit('stateUpdate', activePlayers);
 }, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
