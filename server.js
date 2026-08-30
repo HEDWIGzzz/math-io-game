@@ -95,6 +95,17 @@ function spawnMysteryBox() {
     });
 }
 
+function getTeamCounts() {
+    let counts = { red: 0, blue: 0, green: 0, yellow: 0 };
+    for (let id in activePlayers) {
+        let pl = activePlayers[id];
+        if (pl.loggedIn && !pl.isHost && counts[pl.team] !== undefined) {
+            counts[pl.team]++;
+        }
+    }
+    return counts;
+}
+
 io.on('connection', (socket) => {
     activePlayers[socket.id] = {
         socketId: socket.id,
@@ -112,7 +123,7 @@ io.on('connection', (socket) => {
         loggedIn: false
     };
 
-    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, redBase, blueBase, greenBase, yellowBase, settings: gameSettings, gameStarted: globalGameStarted });
+    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, redBase, blueBase, greenBase, yellowBase, teamCounts: getTeamCounts(), settings: gameSettings, gameStarted: globalGameStarted });
 
     socket.on('joinGame', (data) => {
         let name = data.name ? data.name.trim() : 'Player';
@@ -133,6 +144,7 @@ io.on('connection', (socket) => {
 
             let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
             io.emit('roomStatus', { count: totalIngame, required: 40, gameStarted: globalGameStarted });
+            io.emit('teamCountsUpdate', getTeamCounts());
             socket.emit('joinResult', { success: true, team: 'host', isHost: true, gameStarted: globalGameStarted });
             io.emit('updateLeaderboard', activePlayers);
             return;
@@ -143,16 +155,8 @@ io.on('connection', (socket) => {
             requestedTeam = 'red';
         }
 
-        // ตรวจสอบจำนวนสมาชิกในทีมที่เลือก (จำกัดทีมละ 10 คน)
-        let teamCount = 0;
-        for (let id in activePlayers) {
-            let pl = activePlayers[id];
-            if (pl.loggedIn && !pl.isHost && pl.team === requestedTeam) {
-                teamCount++;
-            }
-        }
-
-        if (teamCount >= 10) {
+        let counts = getTeamCounts();
+        if (counts[requestedTeam] >= 10) {
             socket.emit('joinResult', { success: false, msg: '❌ ทีมนี้เต็มแล้ว (จำกัด 10 คนต่อทีม)' });
             return;
         }
@@ -165,7 +169,6 @@ io.on('connection', (socket) => {
         p.isHost = false;
         p.loggedIn = true;
 
-        // กำหนดจุดเกิดตามทีมที่เลือก
         if (requestedTeam === 'red') { p.x = 1200; p.y = 1200; }
         else if (requestedTeam === 'blue') { p.x = MAP_SIZE - 1200; p.y = 1200; }
         else if (requestedTeam === 'green') { p.x = 1200; p.y = MAP_SIZE - 1200; }
@@ -173,6 +176,7 @@ io.on('connection', (socket) => {
 
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
         io.emit('roomStatus', { count: totalIngame, required: 40, gameStarted: globalGameStarted });
+        io.emit('teamCountsUpdate', getTeamCounts());
         socket.emit('joinResult', { success: true, team: requestedTeam, isHost: false, gameStarted: globalGameStarted });
         io.emit('updateLeaderboard', activePlayers);
     });
@@ -353,6 +357,7 @@ io.on('connection', (socket) => {
         delete activePlayers[socket.id];
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
         io.emit('roomStatus', { count: totalIngame, required: 40, gameStarted: globalGameStarted });
+        io.emit('teamCountsUpdate', getTeamCounts());
         io.emit('updateLeaderboard', activePlayers);
     });
 });
