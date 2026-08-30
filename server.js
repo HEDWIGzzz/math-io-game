@@ -9,7 +9,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// เปิดใช้งาน static folder สำหรับเสิร์ฟไฟล์ใน public (รองรับทั้ง index.html และ admin.html)
 app.use(express.static('public'));
 
 const DB_FILE = path.join(__dirname, 'database.json');
@@ -43,7 +42,6 @@ const tiles = [];
 const mysteryBoxes = [];
 const MAP_SIZE = 4000;
 
-// ⚙️ ตั้งค่าระบบเกม (Admin Configurable)
 let gameSettings = {
     bossMaxHp: 5000,
     bossSpeed: 1.8,
@@ -51,7 +49,6 @@ let gameSettings = {
     bossPenalty: 20
 };
 
-// 📐 พจนานุกรมคะแนนอิงตามเบี้ย A-Math ของโด้
 const AMATH_SCORES = {
     "0": 1, "1": 1, "2": 1, "3": 1,
     "4": 2, "5": 2, "6": 2, "7": 2, "8": 2, "9": 2,
@@ -60,7 +57,6 @@ const AMATH_SCORES = {
     "+": 2, "-": 2, "+/-": 1, "×": 2, "÷": 2, "×/÷": 1, "=": 1, "BLANK": 0
 };
 
-// 📐 ฟังก์ชันคำนวณคะแนนตามตาราง AMATH_SCORES (รองรับตัวเลข 2 หลักและเครื่องหมาย)
 function calculateAMathScore(eqStr) {
     let baseScore = 0;
     let i = 0;
@@ -94,7 +90,6 @@ function calculateAMathScore(eqStr) {
     return Math.max(10, finalScore);
 }
 
-// 🐐 ข้อมูลบอสแพะปีศาจ
 let demonBoss = {
     x: MAP_SIZE / 2,
     y: MAP_SIZE / 2,
@@ -111,7 +106,6 @@ let demonBoss = {
 for (let i = 0; i < 150; i++) spawnTile();
 for (let i = 0; i < 35; i++) spawnMysteryBox();
 
-// 🎲 ฟังก์ชันสุ่มและกระจายเบี้ย (รองรับเลข 0-20 และเครื่องหมาย '×' / '÷')
 function spawnTile() {
     let randType = Math.random();
     let char, type;
@@ -119,9 +113,9 @@ function spawnTile() {
     if (randType < 0.65) {
         let numRand = Math.random();
         if (numRand < 0.8) {
-            char = Math.floor(Math.random() * 10).toString(); // เลขเดี่ยว 0-9
+            char = Math.floor(Math.random() * 10).toString();
         } else {
-            char = Math.floor(Math.random() * 11 + 10).toString(); // เลขพิเศษ 10-20
+            char = Math.floor(Math.random() * 11 + 10).toString();
         }
         type = 'num';
     } else if (randType < 0.9) {
@@ -269,31 +263,6 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
-    // ⚙️ อัปเดตตั้งค่า Admin จากหน้าจอเกมหลัก
-    socket.on('updateAdminSettings', (newSettings) => {
-        let p = activePlayers[socket.id];
-        if (!p || (p.name !== 'admin' && p.name !== 'Do')) {
-            socket.emit('skillResult', { success: false, msg: '❌ ไม่มีสิทธิ์ใช้งานระบบ Admin!' });
-            return;
-        }
-
-        gameSettings.bossMaxHp = parseInt(newSettings.bossMaxHp) || 5000;
-        gameSettings.bossSpeed = parseFloat(newSettings.bossSpeed) || 1.8;
-        gameSettings.scoreMultiplier = parseInt(newSettings.scoreMultiplier) || 15;
-        gameSettings.bossPenalty = parseInt(newSettings.bossPenalty) || 20;
-
-        if (demonBoss.hp >= demonBoss.maxHp) {
-            demonBoss.maxHp = gameSettings.bossMaxHp;
-            demonBoss.hp = gameSettings.bossMaxHp;
-        } else {
-            demonBoss.maxHp = gameSettings.bossMaxHp;
-        }
-
-        io.emit('settingsUpdated', { settings: gameSettings, boss: demonBoss });
-        socket.emit('skillResult', { success: true, msg: '⚙️ บันทึกการตั้งค่า Admin สำเร็จ!' });
-    });
-
-    // 🔐 ยืนยันตัวตนสำหรับหน้าเว็บ Admin แยก (/admin.html)
     socket.on('adminAuth', async (data) => {
         let name = data.name ? data.name.trim() : '';
         let pass = data.pass ? data.pass.trim() : '';
@@ -309,7 +278,39 @@ io.on('connection', (socket) => {
         socket.emit('adminAuthResult', { success: false, msg: '❌ ชื่อผู้ใช้หรือรหัสผ่าน Admin ไม่ถูกต้อง!' });
     });
 
-    // ⚙️ อัปเดตตั้งค่าจากหน้าเว็บ Admin แยก
+    socket.on('adminRegisterAccount', async (data) => {
+        let name = data.name ? data.name.trim() : '';
+        let pass = data.pass ? data.pass.trim() : '';
+
+        if (!name || !pass || pass.length < 6) {
+            socket.emit('adminAuthResult', { success: false, msg: '❌ กรุณากรอกชื่อและรหัสผ่านอย่างน้อย 6 ตัวอักษร' });
+            return;
+        }
+
+        if (playersDb[name]) {
+            socket.emit('adminAuthResult', { success: false, msg: '❌ ชื่อนี้ถูกใช้งานแล้ว ลองเข้าสู่ระบบ' });
+            return;
+        }
+
+        try {
+            const hashedPassword = await bcrypt.hash(pass, 10);
+            playersDb[name] = {
+                playerId: 'PLY_' + Math.random().toString(36).substr(2, 9),
+                password: hashedPassword,
+                score: 0,
+                playerClass: 'Warrior',
+                outfitColor: '#9b59b6',
+                hat: 'none'
+            };
+            saveDatabase(playersDb);
+
+            socket.isVerifiedAdmin = true;
+            socket.emit('adminAuthResult', { success: true, settings: gameSettings });
+        } catch (e) {
+            socket.emit('adminAuthResult', { success: false, msg: '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+        }
+    });
+
     socket.on('updateAdminSettingsFromWeb', (newSettings) => {
         if (!socket.isVerifiedAdmin) {
             socket.emit('adminUpdateResult', { success: false, msg: '❌ ไม่มีสิทธิ์ดำเนินการ กรุณาเข้าสู่ระบบใหม่' });
