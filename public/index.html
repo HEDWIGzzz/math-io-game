@@ -17,11 +17,11 @@
         .modal-box {
             background: #221e3f; padding: 25px; border-radius: 15px; text-align: center;
             display: flex; flex-direction: column; gap: 12px; border: 3px solid #9b59b6; box-shadow: 0 0 40px rgba(155, 89, 182, 0.4);
-            width: 90%; max-width: 400px; max-height: 95vh; overflow-y: auto;
+            width: 90%; max-width: 420px; max-height: 95vh; overflow-y: auto;
         }
         .modal-box h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
         .modal-box input, .modal-box select {
-            padding: 10px; font-size: 15px; border-radius: 8px; border: 2px solid #9b59b6; text-align: center;
+            padding: 10px; font-size: 14px; border-radius: 8px; border: 2px solid #9b59b6; text-align: center;
             font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%;
         }
         .modal-box label { font-size: 13px; color: #d7bde2; text-align: left; }
@@ -124,20 +124,34 @@
         </div>
     </div>
 
-    <!-- สเต็ปที่ 2: หน้าต่างเลือกตกแต่งตัวละคร พร้อมช่อง Preview ตัวละครจริง -->
+    <!-- สเต็ปที่ 2: หน้าต่างเลือกอาชีพ & ตกแต่งตัวละคร พร้อม Live Preview -->
     <div id="customizationModal" class="modal-overlay" style="display: none;">
         <div class="modal-box">
-            <h2>✨ ตกแต่งจอมเวทย์ของคุณ</h2>
+            <h2>✨ เลือกคลาส & ตกแต่งตัวละคร</h2>
             
-            <!-- Canvas สำหรับพรีวิวตัวละครแบบเรียลไทม์ -->
             <canvas id="previewCanvas" width="140" height="140"></canvas>
 
             <div>
-                <label>สายเวทมนตร์</label>
-                <select id="playerAvatar" onchange="updatePreview()">
-                    <option value="hero">⚔️ อัศวินผู้พิทักษ์</option>
-                    <option value="wizard">🧙‍♂️ จอมเวทย์โบราณ</option>
-                    <option value="robot">🔮 โกลมเวทมนตร์</option>
+                <label>เลือกสายอาชีพ & คลาส</label>
+                <select id="playerClass" onchange="updatePreview()">
+                    <optgroup label="⚔️ สายพื้นฐาน">
+                        <option value="Assassin">🗡️ Assassin (ดาเมจระเบิด / ลอบโจมตี)</option>
+                        <option value="Warrior">⚔️ Warrior (สมดุลประชิด / อึด)</option>
+                        <option value="Tank">🛡️ Tank (HP/เกราะสูงรับดาเมจ)</option>
+                        <option value="Archer">🏹 Archer (ยิงไกลระยะปลอดภัย)</option>
+                        <option value="Mage">🔮 Mage (เวทหมู่ / คุมพื้นที่)</option>
+                        <option value="Support">✨ Support (Heal / Buff / Debuff)</option>
+                        <option value="Monk">🥋 Monk (คล่องตัวคอมโบต่อเนื่อง)</option>
+                        <option value="Berserker">🔥 Berserker (ยิ่งเจ็บยิ่งแรงแลกเลือด)</option>
+                    </optgroup>
+                    <optgroup label="⚡ สายขั้นสูง (Advanced Classes)">
+                        <option value="Blood Knight">🩸 Blood Knight (ดูดเลือด + ประชิด)</option>
+                        <option value="Storm Mage">⚡ Storm Mage (สายฟ้า + CC)</option>
+                        <option value="Shadow Assassin">🌑 Shadow Assassin (ล่องหน + Critical)</option>
+                        <option value="Frost Archer">❄️ Frost Archer (ยิงช้า / แช่แข็ง)</option>
+                        <option value="Necromancer">☠️ Necromancer (เรียก Undead ช่วย)</option>
+                        <option value="Dragon Knight">🐉 Dragon Knight (แปลงร่างพลังมังกร)</option>
+                    </optgroup>
                 </select>
             </div>
             <div>
@@ -145,9 +159,9 @@
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
             </div>
             <div>
-                <label>หมวกเริ่มต้น</label>
+                <label>หมวกเพิ่มเติม</label>
                 <select id="playerHat" onchange="updatePreview()">
-                    <option value="none">ไม่มีหมวก</option>
+                    <option value="none">ไม่มีหมวกเพิ่มเติม</option>
                     <option value="wizard_hat">🎩 หมวกพ่อมดมนตรา</option>
                     <option value="cap">🪖 หมวกเกราะอัศวิน</option>
                 </select>
@@ -311,26 +325,25 @@
                 myScore = res.score;
                 document.getElementById('scoreDisplay').innerText = myScore;
                 
-                // ตั้งค่าฟอร์มแต่งตัวให้ตรงกับค่าที่เคยบันทึกไว้ (ถ้ามี)
-                if (res.avatar) document.getElementById('playerAvatar').value = res.avatar;
+                if (res.playerClass) document.getElementById('playerClass').value = res.playerClass;
                 if (res.outfitColor) document.getElementById('playerColor').value = res.outfitColor;
                 if (res.hat) document.getElementById('playerHat').value = res.hat;
 
                 document.getElementById('authModal').style.display = 'none';
                 document.getElementById('customizationModal').style.display = 'flex';
-                updatePreview(); // วาดพรีวิวตัวละคร
+                updatePreview();
             } else {
                 document.getElementById('authError').innerText = res.msg;
             }
         });
 
-        // ฟังก์ชันวาดตัวอย่างตัวละคร (Live Preview)
         function updatePreview() {
             const pCanvas = document.getElementById('previewCanvas');
             const pCtx = pCanvas.getContext('2d');
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
 
             let previewPl = {
+                playerClass: document.getElementById('playerClass').value,
                 outfitColor: document.getElementById('playerColor').value,
                 hat: document.getElementById('playerHat').value
             };
@@ -342,11 +355,11 @@
         }
 
         function joinGame() {
-            const avatar = document.getElementById('playerAvatar').value;
+            const playerClass = document.getElementById('playerClass').value;
             const outfitColor = document.getElementById('playerColor').value;
             const hat = document.getElementById('playerHat').value;
 
-            socket.emit('setupPlayer', { avatar, outfitColor, hat });
+            socket.emit('setupPlayer', { playerClass, outfitColor, hat });
             document.getElementById('customizationModal').style.display = 'none';
             gameStarted = true;
             showMsg("✨ เข้าสู่ปราสาทเวทมนตร์สำเร็จ!", "#f1c40f");
@@ -416,7 +429,7 @@
             let list = Object.values(allPlayers).sort((a,b) => b.score - a.score);
             let html = '';
             list.slice(0, 5).forEach((p, i) => {
-                html += `<li>${i+1}. ${p.name} (${p.score})</li>`;
+                html += `<li>${i+1}. ${p.name} [${p.playerClass || 'Warrior'}] (${p.score})</li>`;
             });
             document.getElementById('leaderboardList').innerHTML = html;
         });
@@ -462,50 +475,150 @@
             setTimeout(() => msg.classList.remove('show'), 2500);
         }
 
+        // ฟังก์ชันวาดตัวละครตามสายอาชีพ (Customized per Class)
         function drawCastleAvatar(ctx, x, y, pl, isMoving, isTop1) {
             ctx.save();
             ctx.translate(x, y);
 
             let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 5 : 0;
+            let pClass = pl.playerClass || 'Warrior';
+            let baseColor = pl.outfitColor || '#9b59b6';
 
-            ctx.fillStyle = pl.outfitColor || '#9b59b6';
-            ctx.beginPath();
-            ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 8);
-            ctx.fill();
-            ctx.lineWidth = 2; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
+            // --- 1. ออกแบบรูปร่างลำตัวตามสายอาชีพ ---
+            if (pClass === 'Tank') {
+                // รูปร่างหนาบึกบึน (Tank)
+                ctx.fillStyle = baseColor;
+                ctx.beginPath();
+                ctx.roundRect(-20, -12 + walkAnim/2, 40, 32, 6);
+                ctx.fill();
+                ctx.lineWidth = 3; ctx.strokeStyle = '#7f8c8d'; ctx.stroke();
+            } else if (pClass === 'Mage' || pClass === 'Storm Mage') {
+                // ทรงชุดคลุมยาว (Mage Robe)
+                ctx.fillStyle = baseColor;
+                ctx.beginPath();
+                ctx.moveTo(-14, -12 + walkAnim/2);
+                ctx.lineTo(14, -12 + walkAnim/2);
+                ctx.lineTo(22, 18 + walkAnim/2);
+                ctx.lineTo(-22, 18 + walkAnim/2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = '#f1c40f'; ctx.stroke();
+            } else if (pClass === 'Support') {
+                // ออร่าซัพพอร์ตสีเขียวรอบตัว
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.25)';
+                ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI*2); ctx.fill();
+                
+                ctx.fillStyle = baseColor;
+                ctx.beginPath(); ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 8);
+                ctx.fill(); ctx.stroke();
+            } else if (pClass === 'Berserker' || pClass === 'Blood Knight') {
+                // ชุดเกราะมีหนามดุดัน
+                ctx.fillStyle = baseColor;
+                ctx.beginPath();
+                ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 6);
+                ctx.fill();
+                ctx.stroke();
+                // ไหล่หนาม
+                ctx.fillStyle = pClass === 'Blood Knight' ? '#c0392b' : '#e74c3c';
+                ctx.beginPath();
+                ctx.moveTo(-14, -10); ctx.lineTo(-22, -18); ctx.lineTo(-10, -8);
+                ctx.moveTo(14, -10); ctx.lineTo(22, -18); ctx.lineTo(10, -8);
+                ctx.fill();
+            } else {
+                // ชุดมาตรฐาน (Warrior, Assassin, Archer, Monk, etc.)
+                ctx.fillStyle = baseColor;
+                ctx.beginPath();
+                ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 8);
+                ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
+            }
 
+            // ขาและเท้า
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(-9, 16, 6, 10 - walkAnim);
             ctx.fillRect(3, 16, 6, 10 + walkAnim);
 
+            // ส่วนหัว (Head)
             ctx.fillStyle = '#f5b041';
             ctx.beginPath();
             ctx.arc(0, -18 + walkAnim/2, 13, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
+            // ดวงตา (Eyes)
             ctx.fillStyle = '#3498db';
+            if (pClass.includes('Assassin')) {
+                ctx.fillStyle = '#e74c3c'; // ตาแดงดุดันสำหรับสายนักฆ่า
+            } else if (pClass === 'Necromancer') {
+                ctx.fillStyle = '#2ecc71'; // ตาเขียวมรกตสำหรับเนโครแมนเซอร์
+            }
             ctx.fillRect(-5, -21 + walkAnim/2, 3, 3);
             ctx.fillRect(2, -21 + walkAnim/2, 3, 3);
 
-            if (pl.hat === 'wizard_hat') {
+            // --- 2. ออกแบบหมวกและเครื่องประดับศีรษะตามสายอาชีพ ---
+            if (pClass === 'Assassin' || pClass === 'Shadow Assassin') {
+                // ฮู้ดนักฆ่า
+                ctx.fillStyle = '#1e1e1e';
+                ctx.beginPath();
+                ctx.moveTo(-16, -22); ctx.lineTo(16, -22); ctx.lineTo(0, -40);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            } else if (pClass === 'Mage' || pClass === 'Storm Mage') {
+                // หมวกพ่อมด
                 ctx.fillStyle = '#8e44ad';
                 ctx.beginPath();
-                ctx.moveTo(-16, -28); ctx.lineTo(16, -28); ctx.lineTo(0, -46);
+                ctx.moveTo(-18, -26); ctx.lineTo(18, -26); ctx.lineTo(0, -48);
                 ctx.closePath(); ctx.fill(); ctx.stroke();
-            } else if (pl.hat === 'cap') {
-                ctx.fillStyle = '#34495e';
+            } else if (pClass === 'Dragon Knight') {
+                // เขามังกร
+                ctx.fillStyle = '#d35400';
                 ctx.beginPath();
-                ctx.arc(0, -25, 12, Math.PI, 0, false);
+                ctx.moveTo(-10, -28); ctx.lineTo(-18, -38); ctx.lineTo(-6, -30);
+                ctx.moveTo(10, -28); ctx.lineTo(18, -38); ctx.lineTo(6, -30);
                 ctx.fill(); ctx.stroke();
+            } else if (pClass === 'Blood Knight') {
+                // เขาลั่งอัศวินโลหิต
+                ctx.fillStyle = '#922b21';
+                ctx.beginPath();
+                ctx.moveTo(-12, -28); ctx.lineTo(-16, -38); ctx.lineTo(-6, -30);
+                ctx.moveTo(12, -28); ctx.lineTo(16, -38); ctx.lineTo(6, -30);
+                ctx.fill(); ctx.stroke();
+            } else if (pClass === 'Tank') {
+                // หมวกเหล็กอัศวินเกราะหนัก
+                ctx.fillStyle = '#7f8c8d';
+                ctx.beginPath();
+                ctx.arc(0, -23, 13, Math.PI, 0, false);
+                ctx.fill(); ctx.stroke();
+            } else if (pClass === 'Archer' || pClass === 'Frost Archer') {
+                // หมวกเรนเจอร์พร้อมขนนก
+                ctx.fillStyle = pClass === 'Frost Archer' ? '#2980b9' : '#27ae60';
+                ctx.beginPath();
+                ctx.arc(0, -24, 12, Math.PI, 0, false);
+                ctx.fill(); ctx.stroke();
+                // ขนนก
+                ctx.fillStyle = '#f1c40f';
+                ctx.beginPath(); ctx.moveTo(8, -26); ctx.lineTo(18, -36); ctx.lineTo(10, -24); ctx.fill();
+            } else {
+                // หมวกเสริมตามที่เลือก
+                if (pl.hat === 'wizard_hat') {
+                    ctx.fillStyle = '#8e44ad';
+                    ctx.beginPath();
+                    ctx.moveTo(-16, -28); ctx.lineTo(16, -28); ctx.lineTo(0, -46);
+                    ctx.closePath(); ctx.fill(); ctx.stroke();
+                } else if (pl.hat === 'cap') {
+                    ctx.fillStyle = '#34495e';
+                    ctx.beginPath();
+                    ctx.arc(0, -25, 12, Math.PI, 0, false);
+                    ctx.fill(); ctx.stroke();
+                }
             }
 
+            // --- 3. มงกุฎอันดับ 1 (Top 1 Crown) ---
             if (isTop1) {
                 let crownFloat = Math.sin(Date.now() / 150) * 4;
                 let sparkleAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.5;
 
                 ctx.save();
-                ctx.translate(0, -40 + crownFloat);
+                ctx.translate(0, -50 + crownFloat);
                 
                 ctx.fillStyle = '#f1c40f';
                 ctx.strokeStyle = '#b7950b';
@@ -613,12 +726,12 @@
 
                 for (let id in players) {
                     if (!renderPlayers[id]) {
-                        renderPlayers[id] = { x: players[id].x, y: players[id].y, name: players[id].name, avatar: players[id].avatar, outfitColor: players[id].outfitColor, hat: players[id].hat, score: players[id].score, isMoving: false };
+                        renderPlayers[id] = { x: players[id].x, y: players[id].y, name: players[id].name, playerClass: players[id].playerClass, outfitColor: players[id].outfitColor, hat: players[id].hat, score: players[id].score, isMoving: false };
                     }
                     renderPlayers[id].x += (players[id].x - renderPlayers[id].x) * 0.25;
                     renderPlayers[id].y += (players[id].y - renderPlayers[id].y) * 0.25;
                     renderPlayers[id].name = players[id].name;
-                    renderPlayers[id].avatar = players[id].avatar;
+                    renderPlayers[id].playerClass = players[id].playerClass;
                     renderPlayers[id].outfitColor = players[id].outfitColor;
                     renderPlayers[id].hat = players[id].hat;
                     renderPlayers[id].score = players[id].score;
@@ -660,7 +773,7 @@
                     ctx.fillStyle = isTop1 ? '#f1c40f' : '#ffffff';
                     ctx.font = isTop1 ? 'bold 16px Kanit' : 'bold 14px Kanit';
                     ctx.textAlign = 'center';
-                    ctx.fillText(pl.name, pl.x, pl.y - 55);
+                    ctx.fillText(`${pl.name} [${pl.playerClass || 'Warrior'}]`, pl.x, pl.y - 60);
                 }
 
                 ctx.restore();
