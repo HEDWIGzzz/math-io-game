@@ -142,6 +142,7 @@
         button.action-btn { padding: 6px 20px; font-size: 15px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
         .btn-submit { background: #2ecc71; color: white; }
         .btn-clear { background: #e67e22; color: white; }
+        .btn-drop { background: #8e44ad; color: white; }
         
         .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 80; }
         .sys-msg.show { opacity: 1; top: 10%; }
@@ -235,7 +236,6 @@
         </div>
     </div>
 
-    <!-- ⚙️ หน้าต่างตั้งค่า Admin -->
     <div id="adminModal" class="screen-layer" style="display: none;">
         <div class="modal-box">
             <h2>⚙️ ADMIN SETTINGS</h2>
@@ -326,6 +326,7 @@
             <div class="equation-area" id="equationZone"></div>
             <div class="controls">
                 <button class="action-btn btn-clear" onclick="returnTiles()">ล้างคาถา</button>
+                <button class="action-btn btn-drop" onclick="dropTile()">🗑️ ทิ้งเบี้ย</button>
                 <button class="action-btn btn-submit" onclick="sendEquation()">ร่ายคาถาสมการ!</button>
             </div>
             <div class="inventory-area" id="inventoryZone"></div>
@@ -599,7 +600,19 @@
         });
         function submitMystery() { let ans = document.getElementById('mysteryInput').value; if (ans !== '') { socket.emit('submitMysteryAnswer', { userAns: ans, correctAns: currentMysteryAns }); document.getElementById('mysteryModal').style.display = 'none'; } }
         socket.on('mysteryResult', (res) => { showMsg(res.success ? "✨ ปลดผนึกสำเร็จ! +60 แต้ม" : "❌ ผิดพลาด!", res.success ? "#f1c40f" : "#e74c3c"); });
-        socket.on('equationResult', (res) => { if (res.success) { showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); equation = []; renderUI(); } else { showMsg("❌ " + res.msg, "#e74c3c"); } });
+        
+        socket.on('equationResult', (res) => { 
+            if (res.success) { 
+                showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); 
+                equation = []; 
+                renderUI(); 
+                if (renderPlayers[myId]) {
+                    addFloatingText(`+${res.earnedScore} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 50, '#2ecc71');
+                }
+            } else { 
+                showMsg("❌ " + res.msg, "#e74c3c"); 
+            } 
+        });
         
         socket.on('updateLeaderboard', (allPlayers) => {
             let list = Object.values(allPlayers).sort((a,b) => b.score - a.score);
@@ -614,6 +627,19 @@
             equation.forEach((tile, index) => { let el = document.createElement('div'); el.className = `tile ${tile.type}`; el.innerText = tile.char; el.onclick = () => { inventory.push(equation.splice(index, 1)[0]); renderUI(); }; eqZone.appendChild(el); });
         }
         function returnTiles() { inventory = inventory.concat(equation); equation = []; renderUI(); }
+        
+        // 🗑️ ฟังก์ชันทิ้งเบี้ยตัวล่าสุดจากกระเป๋าลงพื้น
+        function dropTile() {
+            if (inventory.length === 0) {
+                showMsg("❌ ไม่มีเบี้ยในกระเป๋าให้ทิ้ง!", "#e74c3c");
+                return;
+            }
+            let tileToDrop = inventory.pop();
+            renderUI();
+            socket.emit('dropTile', tileToDrop);
+            showMsg("🗑️ ทิ้งเบี้ยลงพื้นแล้ว!", "#f1c40f");
+        }
+
         function sendEquation() { if (equation.length === 0) return; socket.emit('submitEquation', equation.map(t => t.char).join('')); }
         function showMsg(text, color) { const msg = document.getElementById('sysMsg'); msg.innerText = text; msg.style.color = color; msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2500); }
 
