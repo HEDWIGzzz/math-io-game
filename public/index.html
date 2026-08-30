@@ -70,16 +70,10 @@
         }
         .lobby-btn:hover { transform: scale(1.05); background: linear-gradient(135deg, #9b59b6, #2980b9); }
 
-        #shopModal {
+        #adminModal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 150;
         }
-        .shop-box {
-            background: #221e3f; padding: 25px; border-radius: 15px; text-align: center;
-            border: 4px solid #f1c40f; box-shadow: 0 0 35px rgba(241, 196, 15, 0.5); width: 90%; max-width: 400px;
-            display: flex; flex-direction: column; gap: 12px;
-        }
-        .shop-item { background: #151328; padding: 12px; border-radius: 8px; border: 1px solid #9b59b6; display: flex; justify-content: space-between; align-items: center; }
 
         #mysteryModal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -241,6 +235,34 @@
         </div>
     </div>
 
+    <!-- ⚙️ หน้าต่างตั้งค่า Admin -->
+    <div id="adminModal" class="screen-layer" style="display: none;">
+        <div class="modal-box">
+            <h2>⚙️ ADMIN SETTINGS</h2>
+            <p style="font-size: 13px; color: #d7bde2;">กำหนดค่าพารามิเตอร์ของเกม (เฉพาะบัญชี admin หรือ Do)</p>
+            <div>
+                <label>พลังชีวิตสูงสุดของบอส (Boss Max HP)</label>
+                <input type="number" id="settingBossHp" value="5000">
+            </div>
+            <div>
+                <label>ความเร็วการเดินของบอส (Boss Speed)</label>
+                <input type="number" step="0.1" id="settingBossSpeed" value="1.8">
+            </div>
+            <div>
+                <label>ตัวคูณคะแนนสมการ (Score Multiplier)</label>
+                <input type="number" id="settingScoreMult" value="15">
+            </div>
+            <div>
+                <label>ดาเมจบทลงโทษบอสโจมตี (Boss Penalty)</label>
+                <input type="number" id="settingBossPenalty" value="20">
+            </div>
+            <div class="btn-group">
+                <button class="action-btn btn-submit" onclick="saveAdminSettings()">💾 บันทึกค่าตั้งค่า</button>
+                <button class="action-btn" style="background:#e74c3c; color:white;" onclick="closeAdminModal()">✖ ปิด</button>
+            </div>
+        </div>
+    </div>
+
     <div id="lobbyOverlay">
         <div class="lobby-header">
             <div>ชื่อ: <span id="lobbyName" style="color: #f1c40f; font-weight: bold;">-</span></div>
@@ -249,26 +271,10 @@
         </div>
         <div class="lobby-menu">
             <button class="lobby-btn" onclick="startPvPGame()">⚔️ เล่นเกม (Boss Raid)</button>
-            <button class="lobby-btn" onclick="openShopModal()">🛒 ร้านค้าอัปเกรดดาเมจ</button>
+            <button class="lobby-btn" onclick="openAdminModal()" style="background: linear-gradient(135deg, #e67e22, #d35400);">⚙️ ตั้งค่าระบบ (Admin)</button>
             <button class="lobby-btn" onclick="openCharacterEdit()">👤 ตัวละคร</button>
         </div>
         <div style="text-align: center; color: #a569bd; font-size: 13px;">Mage Castle Arena & Boss Raid</div>
-    </div>
-
-    <div id="shopModal" class="screen-layer" style="display: none;">
-        <div class="shop-box">
-            <h2>🛒 ร้านค้าอัปเกรดพลัง</h2>
-            <p style="font-size: 13px; color: #d7bde2;">ใช้คะแนนสะสมเพิ่มความรุนแรงในการโจมตีบอส (ค่าใช้จ่าย: 100 แต้ม)</p>
-            <div class="shop-item">
-                <div style="text-align: left;"><b>⚔️ พลังโจมตีบอส (Damage)</b><br><span style="font-size:12px; color:#f1c40f;" id="dmgLvlText">Lv. 1</span></div>
-                <button class="action-btn btn-submit" onclick="buyUpgrade('damage')">อัปเกรด</button>
-            </div>
-            <div class="shop-item">
-                <div style="text-align: left;"><b>✨ โบนัสแต้มสมการ (Luck)</b><br><span style="font-size:12px; color:#f1c40f;" id="luckLvlText">Lv. 1</span></div>
-                <button class="action-btn btn-submit" onclick="buyUpgrade('luck')">อัปเกรด</button>
-            </div>
-            <button class="action-btn" style="background: #e74c3c; color: white; margin-top: 10px;" onclick="closeShopModal()">✖ ปิดร้านค้า</button>
-        </div>
     </div>
 
     <div id="mysteryModal">
@@ -357,9 +363,9 @@
         let characterSaved = false;
         let previewAngle = 0;
         let currentMysteryAns = null;
+        let gameSettings = { bossMaxHp: 5000, bossSpeed: 1.8, scoreMultiplier: 15, bossPenalty: 20 };
         let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true, slowedUntil: 0, poisonedUntil: 0 };
         let renderBossX = 2000, renderBossY = 1850;
-        let playerUpgrades = { speedLevel: 1, damageLevel: 1, luckLevel: 1 };
 
         let floatingTexts = [];
         function addFloatingText(text, x, y, color = '#f1c40f') {
@@ -369,23 +375,29 @@
         let activeEffect = null;
         let effectTimer = 0;
 
-        function openShopModal() {
-            document.getElementById('shopModal').style.display = 'flex';
-            document.getElementById('dmgLvlText').innerText = `Lv. ${playerUpgrades.damageLevel}`;
-            document.getElementById('luckLvlText').innerText = `Lv. ${playerUpgrades.luckLevel}`;
-        }
-        function closeShopModal() { document.getElementById('shopModal').style.display = 'none'; }
-        function buyUpgrade(type) { socket.emit('buyUpgrade', type); }
+        function openAdminModal() { document.getElementById('adminModal').style.display = 'flex'; }
+        function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
+        
+        function saveAdminSettings() {
+            let newHp = document.getElementById('settingBossHp').value;
+            let newSpeed = document.getElementById('settingBossSpeed').value;
+            let newMult = document.getElementById('settingScoreMult').value;
+            let newPen = document.getElementById('settingBossPenalty').value;
 
-        socket.on('upgradeResult', (res) => {
-            if (res.success) {
-                playerUpgrades = res.upgrades;
-                myScore = res.score;
-                document.getElementById('scoreDisplay').innerText = myScore;
-                document.getElementById('dmgLvlText').innerText = `Lv. ${playerUpgrades.damageLevel}`;
-                document.getElementById('luckLvlText').innerText = `Lv. ${playerUpgrades.luckLevel}`;
-                showMsg("🛒 อัปเกรดพลังโจมตีสำเร็จ!", "#2ecc71");
-            } else { showMsg(res.msg, "#e74c3c"); }
+            socket.emit('updateAdminSettings', {
+                bossMaxHp: newHp,
+                bossSpeed: newSpeed,
+                scoreMultiplier: newMult,
+                bossPenalty: newPen
+            });
+            closeAdminModal();
+        }
+
+        socket.on('settingsUpdated', (data) => {
+            gameSettings = data.settings;
+            bossData = data.boss;
+            updateBossHUD();
+            showMsg("⚙️ อัปเดตการตั้งค่าระบบเรียบร้อย!", "#2ecc71");
         });
 
         function attackBoss() { socket.emit('attackBoss'); }
@@ -417,7 +429,7 @@
         socket.on('bossHitPlayer', (data) => {
             showMsg(data.msg, "#e74c3c");
             if(renderPlayers[myId]) {
-                addFloatingText('-20 PTS', renderPlayers[myId].x, renderPlayers[myId].y - 40, '#e74c3c');
+                addFloatingText(`-${gameSettings.bossPenalty} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 40, '#e74c3c');
             }
         });
 
@@ -563,7 +575,15 @@
         }
         window.addEventListener('pointerup', endJoystick); window.addEventListener('pointercancel', endJoystick);
 
-        socket.on('initGame', (data) => { myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD(); });
+        socket.on('initGame', (data) => {
+            myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; gameSettings = data.settings;
+            renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD();
+            document.getElementById('settingBossHp').value = gameSettings.bossMaxHp;
+            document.getElementById('settingBossSpeed').value = gameSettings.bossSpeed;
+            document.getElementById('settingScoreMult').value = gameSettings.scoreMultiplier;
+            document.getElementById('settingBossPenalty').value = gameSettings.bossPenalty;
+        });
+
         socket.on('tileCollected', (tile) => { inventory.push(tile); renderUI(); });
         socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
         socket.on('newTile', (tile) => { tiles.push(tile); });
