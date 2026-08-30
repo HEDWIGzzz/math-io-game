@@ -235,7 +235,6 @@
             </div>
         </div>
 
-        <!-- แก้ไขเป็น onpointerdown เพื่อให้กดได้ทันทีแม้กำลังใช้นิ้วเดินอยู่ -->
         <button class="attack-base-btn" id="attackBaseBtn" onpointerdown="tryAttackNearestBase()">🏰 โจมตีฐาน<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
         <button class="skill-btn-hud" id="skillBtnHud" onpointerdown="castPrankSkill()">⚡ สกิลอาชีพ</button>
 
@@ -698,7 +697,15 @@
             equation.forEach((tile, index) => { let el = document.createElement('div'); el.className = `tile ${tile.type}`; el.innerText = tile.char; el.onclick = () => { inventory.push(equation.splice(index, 1)[0]); renderUI(); }; eqZone.appendChild(el); });
         }
         function returnTiles() { if(!isHost) { inventory = inventory.concat(equation); equation = []; renderUI(); } }
-        function dropTile() { if (!isHost && inventory.length > 0) { socket.emit('dropTile', inventory.pop()); renderUI(); } }
+        
+        // ฟังก์ชันทิ้งเบี้ยลงพื้น
+        function dropTile() { 
+            if (!isHost && inventory.length > 0) { 
+                socket.emit('dropTile', inventory.pop()); 
+                renderUI(); 
+            } 
+        }
+
         function sendEquation() { if (!isHost && equation.length > 0) { socket.emit('submitEquation', equation.map(t => t.char).join('')); } }
         function showMsg(text, color) { const msg = document.getElementById('sysMsg'); msg.innerText = text; msg.style.color = color; msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2500); }
 
@@ -718,120 +725,9 @@
             ctx.restore();
         }
 
-        function drawBackground(camX, camY) {
-            ctx.fillStyle = '#151328'; ctx.fillRect(0, 0, width, height);
-            ctx.save(); ctx.translate(-camX, -camY);
-            ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 25; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
-            ctx.restore();
-        }
-
-        function gameLoop() {
-            if (gameStarted && myId) {
-                if (!isHost && players[myId]) {
-                    let p = players[myId];
-                    let dx = 0, dy = 0, speed = 5;
-                    
-                    if (activeBuff && Date.now() < buffTimer) {
-                        if (activeBuff === 'speedBoost') speed = 7.5;
-                        else if (activeBuff === 'slow') speed = 3.0;
-                    } else if (activeBuff && Date.now() >= buffTimer) {
-                        if (activeBuff === 'speedBoost' || activeBuff === 'slow') activeBuff = null;
-                    }
-
-                    if (keys.w) dy -= speed; if (keys.s) dy += speed;
-                    if (keys.a) dx -= speed; if (keys.d) dx += speed;
-                    if (dx !== 0 || dy !== 0) socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
-                    else socket.emit('move', { x: p.x, y: p.y, isMoving: false });
-                } else if (isHost) {
-                    let camSpeed = 12;
-                    if (keys.w) hostCamY -= camSpeed; if (keys.s) hostCamY += camSpeed;
-                    if (keys.a) hostCamX -= camSpeed; if (keys.d) hostCamX += camSpeed;
-                    hostCamX = Math.max(100, Math.min(MAP_SIZE - 100, hostCamX));
-                    hostCamY = Math.max(100, Math.min(MAP_SIZE - 100, hostCamY));
-                }
-
-                for (let id in players) {
-                    let serverPl = players[id];
-                    if (!renderPlayers[id]) renderPlayers[id] = { ...serverPl };
-                    else {
-                        renderPlayers[id].targetX = serverPl.x; renderPlayers[id].targetY = serverPl.y;
-                        renderPlayers[id].name = serverPl.name; renderPlayers[id].playerClass = serverPl.playerClass;
-                        renderPlayers[id].outfitColor = serverPl.outfitColor; renderPlayers[id].team = serverPl.team;
-                        renderPlayers[id].isMoving = serverPl.isMoving; renderPlayers[id].isHost = serverPl.isHost;
-                    }
-                    if (renderPlayers[id].targetX !== undefined) {
-                        renderPlayers[id].x += (renderPlayers[id].targetX - renderPlayers[id].x) * 0.3;
-                        renderPlayers[id].y += (renderPlayers[id].targetY - renderPlayers[id].y) * 0.3;
-                    }
-                }
-                for (let id in renderPlayers) if (!players[id]) delete renderPlayers[id];
-
-                let camX, camY;
-                if (isHost) {
-                    camX = hostCamX - (width / 2); camY = hostCamY - (height / 2);
-                } else {
-                    let me = renderPlayers[myId] || players[myId];
-                    camX = me.x - (width / 2); camY = me.y - (height / 2);
-                }
-
-                drawBackground(camX, camY);
-                ctx.save(); ctx.translate(-camX, -camY);
-
-                drawFortress(ctx, redBase, 'rgba(231, 76, 60, 0.4)', redBase.name);
-                drawFortress(ctx, blueBase, 'rgba(52, 152, 219, 0.4)', blueBase.name);
-                drawFortress(ctx, greenBase, 'rgba(46, 204, 113, 0.4)', greenBase.name);
-                drawFortress(ctx, yellowBase, 'rgba(241, 196, 15, 0.4)', yellowBase.name);
-
-                for (let i = skillVisualEffects.length - 1; i >= 0; i--) {
-                    let fx = skillVisualEffects[i];
-                    fx.radius += 8; fx.alpha -= 0.025;
-                    if (fx.alpha <= 0 || fx.radius >= fx.maxRadius) { skillVisualEffects.splice(i, 1); continue; }
-                    ctx.save(); ctx.globalAlpha = fx.alpha;
-                    ctx.strokeStyle = teamColorsMap[fx.team] || '#fff';
-                    ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2); ctx.stroke();
-                    ctx.fillStyle = teamColorsMap[fx.team] ? teamColorsMap[fx.team] + '33' : 'rgba(255,255,255,0.2)';
-                    ctx.fill(); ctx.restore();
-                }
-
-                tiles.forEach(t => {
-                    ctx.fillStyle = t.type === 'num' ? '#f1c40f' : (t.type === 'op' ? '#e74c3c' : '#3498db');
-                    ctx.beginPath(); ctx.arc(t.x, t.y, 18, 0, Math.PI * 2); ctx.fill();
-                    ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke();
-                    ctx.fillStyle = '#ffffff'; ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    ctx.fillText(t.char, t.x, t.y);
-                });
-
-                mysteryBoxes.forEach(b => {
-                    ctx.fillStyle = '#f39c12'; ctx.fillRect(b.x - 18, b.y - 18, 36, 36);
-                    ctx.lineWidth = 2; ctx.strokeStyle = '#f1c40f'; ctx.strokeRect(b.x - 18, b.y - 18, 36, 36);
-                    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                    ctx.fillText('?', b.x, b.y);
-                });
-
-                for (let id in renderPlayers) {
-                    let pl = renderPlayers[id];
-                    if (!pl.loggedIn || pl.isHost) continue;
-                    drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
-                    ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
-                    ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
-                    ctx.fillText(`${pl.name} [${pl.playerClass}]`, pl.x, pl.y - 65);
-                }
-
-                for (let i = floatingTexts.length - 1; i >= 0; i--) {
-                    let ft = floatingTexts[i];
-                    ft.y += ft.vy; ft.alpha -= 0.02;
-                    if (ft.alpha <= 0) { floatingTexts.splice(i, 1); continue; }
-                    ctx.save(); ctx.globalAlpha = ft.alpha; ctx.fillStyle = ft.color;
-                    ctx.font = 'bold 24px Kanit'; ctx.textAlign = 'center';
-                    ctx.fillText(ft.text, ft.x, ft.y);
-                    ctx.restore();
-                }
-
-                ctx.restore();
-            }
-            requestAnimationFrame(gameLoop);
-        }
-        gameLoop();
-    </script>
-</body>
-</html>
+    // Task suggestions
+<ElicitationsGroup message="อยากให้ฉันทำอะไรอีกไหม">
+<Elicitation label="Test dropping tiles during movement" query="Test dropping tiles during movement in the game" query_intent="CLICKABLE_SUGGESTION" />
+<Elicitation label="Add sound effects for tile drop actions" query="Add sound effects for tile drop actions in the game" query_intent="CLICKABLE_SUGGESTION" />
+<Elicitation label="Optimize mobile touch controls responsiveness" query="Optimize mobile touch controls responsiveness for all buttons" query_intent="CLICKABLE_SUGGESTION" />
+</ElicitationsGroup>
