@@ -23,33 +23,49 @@
         .action-btn {
             padding: 14px; font-size: 18px; font-family: 'Kanit', sans-serif; font-weight: bold;
             border: none; border-radius: 8px; cursor: pointer; background: linear-gradient(135deg, #e74c3c, #d35400);
-            color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: 0.2s; margin-top: 10px;
+            color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: 0.2s; margin-top: 5px;
         }
         .action-btn:hover { transform: scale(1.02); }
+        .switch-btn { background: none; border: none; color: #3498db; cursor: pointer; font-family: 'Kanit', sans-serif; font-size: 14px; margin-top: 5px; text-decoration: underline; }
         .error-text { color: #e74c3c; font-size: 14px; font-weight: bold; min-height: 20px; }
         .success-text { color: #2ecc71; font-size: 14px; font-weight: bold; min-height: 20px; }
-        #loginSection, #controlSection { display: flex; flex-direction: column; gap: 14px; }
-        #controlSection { display: none; }
+        #loginSection, #registerSection, #controlSection { display: flex; flex-direction: column; gap: 14px; }
+        #registerSection, #controlSection { display: none; }
     </style>
 </head>
 <body>
 
     <div class="admin-box">
-        <h2>⚙️ ADMIN CONTROL PANEL</h2>
+        <h2 id="panelTitle">⚙️ ADMIN LOGIN</h2>
         
         <!-- ส่วนเข้าสู่ระบบ Admin -->
         <div id="loginSection">
-            <p style="font-size: 13px; color: #d7bde2;">กรุณายืนยันตัวตนผู้ดูแลระบบ (Admin / Do)</p>
             <div id="loginError" class="error-text"></div>
             <div class="form-group">
-                <label>ชื่อผู้ใช้งาน (Username)</label>
+                <label>ชื่อผู้ใช้งาน (admin หรือ Do)</label>
                 <input type="text" id="adminUser" placeholder="admin หรือ Do..." autocomplete="off">
             </div>
             <div class="form-group">
                 <label>รหัสผ่าน (Password)</label>
                 <input type="password" id="adminPass" placeholder="รหัสผ่าน..." autocomplete="off">
             </div>
-            <button class="action-btn" onclick="adminLogin()">🔑 เข้าสู่ระบบ Admin</button>
+            <button class="action-btn" onclick="adminLogin()">🔑 เข้าสู่ระบบ</button>
+            <button class="switch-btn" onclick="showRegister()">ยังไม่มีบัญชี? สมัครสมาชิก Admin</button>
+        </div>
+
+        <!-- ส่วนสมัครสมาชิก Admin -->
+        <div id="registerSection">
+            <div id="regError" class="error-text"></div>
+            <div class="form-group">
+                <label>ตั้งชื่อผู้ใช้งาน (แนะนำ: admin หรือ Do)</label>
+                <input type="text" id="regUser" placeholder="admin หรือ Do..." autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>ตั้งรหัสผ่าน (อย่างน้อย 6 ตัวอักษร)</label>
+                <input type="password" id="regPass" placeholder="รหัสผ่านอย่างน้อย 6 ตัว..." autocomplete="off">
+            </div>
+            <button class="action-btn" style="background: linear-gradient(135deg, #2980b9, #27ae60);" onclick="adminRegister()">📝 สมัครสมาชิก Admin</button>
+            <button class="switch-btn" onclick="showLogin()">มีบัญชีอยู่แล้ว? กลับไปเข้าสู่ระบบ</button>
         </div>
 
         <!-- ส่วนหน้าจอตั้งค่าเกม -->
@@ -79,22 +95,38 @@
     <script>
         const socket = io();
 
+        function showRegister() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('registerSection').style.display = 'flex';
+            document.getElementById('panelTitle').innerText = '📝 ADMIN REGISTER';
+        }
+
+        function showLogin() {
+            document.getElementById('registerSection').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'flex';
+            document.getElementById('panelTitle').innerText = '⚙️ ADMIN LOGIN';
+        }
+
         function adminLogin() {
             let name = document.getElementById('adminUser').value.trim();
             let pass = document.getElementById('adminPass').value.trim();
-
-            if (!name || !pass) {
-                document.getElementById('loginError').innerText = "กรุณากรอกข้อมูลให้ครบถ้วน";
-                return;
-            }
-
+            if (!name || !pass) { document.getElementById('loginError').innerText = "กรุณากรอกข้อมูลให้ครบถ้วน"; return; }
             socket.emit('adminAuth', { name, pass });
+        }
+
+        function adminRegister() {
+            let name = document.getElementById('regUser').value.trim();
+            let pass = document.getElementById('regPass').value.trim();
+            if (!name || !pass) { document.getElementById('regError').innerText = "กรุณากรอกข้อมูลให้ครบถ้วน"; return; }
+            socket.emit('adminRegisterAccount', { name, pass });
         }
 
         socket.on('adminAuthResult', (res) => {
             if (res.success) {
                 document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('registerSection').style.display = 'none';
                 document.getElementById('controlSection').style.display = 'flex';
+                document.getElementById('panelTitle').innerText = '⚙️ ADMIN CONTROL PANEL';
                 if (res.settings) {
                     document.getElementById('settingBossHp').value = res.settings.bossMaxHp;
                     document.getElementById('settingBossSpeed').value = res.settings.bossSpeed;
@@ -103,21 +135,16 @@
                 }
             } else {
                 document.getElementById('loginError').innerText = res.msg;
+                document.getElementById('regError').innerText = res.msg;
             }
         });
 
         function saveSettings() {
             let hp = document.getElementById('settingBossHp').value;
-            let speed = document.getElementById('settingBossSpeed').value;
+            let speed = document.getElementById('settingBossSpeed'].value;
             let mult = document.getElementById('settingScoreMult').value;
             let penalty = document.getElementById('settingBossPenalty').value;
-
-            socket.emit('updateAdminSettingsFromWeb', {
-                bossMaxHp: hp,
-                bossSpeed: speed,
-                scoreMultiplier: mult,
-                bossPenalty: penalty
-            });
+            socket.emit('updateAdminSettingsFromWeb', { bossMaxHp: hp, bossSpeed: speed, scoreMultiplier: mult, bossPenalty: penalty });
         }
 
         socket.on('adminUpdateResult', (res) => {
