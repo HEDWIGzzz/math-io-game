@@ -34,7 +34,15 @@ const tiles = [];
 const mysteryBoxes = [];
 const MAP_SIZE = 4000;
 
-// 🐐 ข้อมูลบอสแพะปีศาจ พร้อมสถานะดีบัฟ
+// ⚙️ ตั้งค่าระบบเกม (Admin Configurable)
+let gameSettings = {
+    bossMaxHp: 5000,
+    bossSpeed: 1.8,
+    scoreMultiplier: 15,
+    bossPenalty: 20
+};
+
+// 🐐 ข้อมูลบอสแพะปีศาจ
 let demonBoss = {
     x: MAP_SIZE / 2,
     y: MAP_SIZE / 2,
@@ -87,7 +95,6 @@ io.on('connection', (socket) => {
         playerClass: 'Warrior',
         outfitColor: '#9b59b6',
         hat: 'none',
-        upgrades: { speedLevel: 1, damageLevel: 1, luckLevel: 1 },
         x: MAP_SIZE / 2,
         y: MAP_SIZE / 2,
         score: 0,
@@ -96,7 +103,7 @@ io.on('connection', (socket) => {
         loggedIn: false
     };
 
-    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss });
+    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss, settings: gameSettings });
 
     socket.on('registerPlayer', async (data) => {
         let name = data.name ? data.name.trim() : '';
@@ -134,7 +141,6 @@ io.on('connection', (socket) => {
             playerClass: 'Warrior',
             outfitColor: '#9b59b6',
             hat: 'none',
-            upgrades: { speedLevel: 1, damageLevel: 1, luckLevel: 1 },
             characterData: {}
         };
         saveDatabase(playersDb);
@@ -171,7 +177,6 @@ io.on('connection', (socket) => {
         activePlayers[socket.id].playerClass = pData.playerClass || 'Warrior';
         activePlayers[socket.id].outfitColor = pData.outfitColor || '#9b59b6';
         activePlayers[socket.id].hat = pData.hat || 'none';
-        activePlayers[socket.id].upgrades = pData.upgrades || { speedLevel: 1, damageLevel: 1, luckLevel: 1 };
 
         socket.emit('authResult', { success: true, action: 'login', playerData: pData });
     });
@@ -192,6 +197,32 @@ io.on('connection', (socket) => {
         }
 
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
+    });
+
+    // ⚙️ อัปเดตตั้งค่าจากแอดมิน
+    socket.on('updateAdminSettings', (newSettings) => {
+        let p = activePlayers[socket.id];
+        // ตรวจสอบสิทธิ์แอดมิน (สามารถตั้งเงื่อนไขชื่อ เช่น แอดมินชื่อ 'admin' หรือ 'Do')
+        if (!p || (p.name !== 'admin' && p.name !== 'Do')) {
+            socket.emit('skillResult', { success: false, msg: '❌ คุณไม่มีสิทธิ์ใช้งานระบบ Admin!' });
+            return;
+        }
+
+        gameSettings.bossMaxHp = parseInt(newSettings.bossMaxHp) || 5000;
+        gameSettings.bossSpeed = parseFloat(newSettings.bossSpeed) || 1.8;
+        gameSettings.scoreMultiplier = parseInt(newSettings.scoreMultiplier) || 15;
+        gameSettings.bossPenalty = parseInt(newSettings.bossPenalty) || 20;
+
+        // อัปเดตเลือดบอดตามค่าใหม่หากบอสเต็มเลือดอยู่
+        if (demonBoss.hp >= demonBoss.maxHp) {
+            demonBoss.maxHp = gameSettings.bossMaxHp;
+            demonBoss.hp = gameSettings.bossMaxHp;
+        } else {
+            demonBoss.maxHp = gameSettings.bossMaxHp;
+        }
+
+        io.emit('settingsUpdated', { settings: gameSettings, boss: demonBoss });
+        socket.emit('skillResult', { success: true, msg: '⚙️ บันทึกการตั้งค่า Admin สำเร็จ!' });
     });
 
     socket.on('enterGameLobby', () => {
@@ -219,7 +250,7 @@ io.on('connection', (socket) => {
         }
 
         p.score -= scoreCost;
-        let damage = 80 * (p.upgrades.damageLevel || 1);
+        let damage = 150; // ดาเมจมาตรฐาน
         demonBoss.hp -= damage;
 
         if (playersDb[p.name]) playersDb[p.name].score = p.score;
@@ -233,39 +264,13 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 demonBoss.hp = demonBoss.maxHp;
                 demonBoss.isAlive = true;
-                io.emit('bossRespawn', { msg: `⚠️ แพะปีศาจตนใหม่ฟื้นคืนชีพกลับมาแล้ว!` });
+                io.emit('bossRespawn', { msg: `⚠️ แพะปีศาจฟื้นคืนชีพแล้ว!` });
             }, 30000);
         }
 
         io.emit('bossUpdate', demonBoss);
         io.emit('updateLeaderboard', activePlayers);
         socket.emit('skillResult', { success: true, msg: `🔥 ใช้ ${scoreCost} คะแนนโจมตีบอส สร้างดาเมจ ${damage} แต้ม!` });
-    });
-
-    socket.on('buyUpgrade', (type) => {
-        let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn) return;
-
-        let cost = 100;
-        if (type === 'damage' && p.score >= cost) {
-            p.score -= cost;
-            p.upgrades.damageLevel++;
-        } else if (type === 'luck' && p.score >= cost) {
-            p.score -= cost;
-            p.upgrades.luckLevel++;
-        } else {
-            socket.emit('skillResult', { success: false, msg: '❌ คะแนนไม่พออัปเกรด (ต้องการ 100 คะแนน)' });
-            return;
-        }
-
-        if (playersDb[p.name]) {
-            playersDb[p.name].score = p.score;
-            playersDb[p.name].upgrades = p.upgrades;
-            saveDatabase(playersDb);
-        }
-
-        socket.emit('upgradeResult', { success: true, upgrades: p.upgrades, score: p.score });
-        io.emit('updateLeaderboard', activePlayers);
     });
 
     socket.on('castSkill', () => {
@@ -366,8 +371,7 @@ io.on('connection', (socket) => {
                 let right = eval(parts[1].replace(/\b0+(\d)/g, '$1'));
 
                 if (left === right) {
-                    let bonusMultiplier = p.upgrades.luckLevel || 1;
-                    let earnedScore = eqStr.length * 15 * bonusMultiplier;
+                    let earnedScore = eqStr.length * gameSettings.scoreMultiplier;
                     p.score += earnedScore;
                     playersDb[p.name].score = p.score;
                     saveDatabase(playersDb);
@@ -407,10 +411,8 @@ io.on('connection', (socket) => {
     });
 });
 
-// 🐐 ลูป AI บอส + ระบบบอสโจมตีสวนกลับผู้เล่นที่เข้าใกล้เกินไป
 setInterval(() => {
     if (demonBoss.isAlive) {
-        // พิษกัดเลือดบอส
         if (demonBoss.poisonedUntil && Date.now() < demonBoss.poisonedUntil) {
             demonBoss.hp -= 2;
             if (demonBoss.hp <= 0) {
@@ -425,7 +427,7 @@ setInterval(() => {
             }
         }
 
-        let speed = (demonBoss.slowedUntil && Date.now() < demonBoss.slowedUntil) ? 0.7 : 1.8;
+        let currentSpeed = (demonBoss.slowedUntil && Date.now() < demonBoss.slowedUntil) ? (gameSettings.bossSpeed * 0.4) : gameSettings.bossSpeed;
 
         let dx = demonBoss.targetX - demonBoss.x;
         let dy = demonBoss.targetY - demonBoss.y;
@@ -436,11 +438,10 @@ setInterval(() => {
             demonBoss.targetX = center + (Math.random() - 0.5) * 800;
             demonBoss.targetY = center + (Math.random() - 0.5) * 800;
         } else {
-            demonBoss.x += (dx / dist) * speed;
-            demonBoss.y += (dy / dist) * speed;
+            demonBoss.x += (dx / dist) * currentSpeed;
+            demonBoss.y += (dy / dist) * currentSpeed;
         }
 
-        // ⚔️ บอสโจมตีผู้เล่นที่เข้ามาประชิด (ระยะ < 100)
         for (let id in activePlayers) {
             let p = activePlayers[id];
             if (p.loggedIn && !p.inLobby) {
@@ -449,12 +450,11 @@ setInterval(() => {
                     let now = Date.now();
                     if (!p.lastBossAttack || now - p.lastBossAttack > 1500) {
                         p.lastBossAttack = now;
-                        let penalty = 20;
+                        let penalty = gameSettings.bossPenalty;
                         p.score = Math.max(0, p.score - penalty);
                         if (playersDb[p.name]) playersDb[p.name].score = p.score;
                         saveDatabase(playersDb);
 
-                        // กระเด็นถอยหลัง
                         let angle = Math.atan2(p.y - demonBoss.y, p.x - demonBoss.x);
                         p.x = Math.max(50, Math.min(MAP_SIZE - 50, p.x + Math.cos(angle) * 100));
                         p.y = Math.max(50, Math.min(MAP_SIZE - 50, p.y + Math.sin(angle) * 100));
