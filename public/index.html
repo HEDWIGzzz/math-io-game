@@ -76,7 +76,6 @@
         .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
-        /* Fixed Virtual Joystick Styles (Bottom-Left) */
         #joystickContainer {
             position: absolute; bottom: 170px; left: 30px; width: 120px; height: 120px;
             pointer-events: auto; z-index: 60; display: flex; justify-content: center; align-items: center;
@@ -139,7 +138,6 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Fixed Virtual Joystick UI at Bottom-Left -->
     <div id="joystickContainer">
         <div id="joystickBase">
             <div id="joystickThumb"></div>
@@ -208,7 +206,6 @@
             if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
-        // Fixed Joystick Controller Logic
         const joystickContainer = document.getElementById('joystickContainer');
         const joystickBase = document.getElementById('joystickBase');
         const joystickThumb = document.getElementById('joystickThumb');
@@ -282,6 +279,12 @@
             tiles = data.tiles;
             mysteryBoxes = data.mysteryBoxes;
             MAP_SIZE = data.mapSize;
+        });
+
+        socket.on('loginSuccess', (data) => {
+            myScore = data.score;
+            document.getElementById('scoreDisplay').innerText = myScore;
+            showMsg("✨ โหลดข้อมูลจอมเวทย์สำเร็จ!", "#f1c40f");
         });
 
         socket.on('stateUpdate', (serverPlayers) => {
