@@ -237,8 +237,10 @@
         let width, height, MAP_SIZE = 4000;
         function resize() {
             width = window.innerWidth; height = window.innerHeight;
-            canvas.width = width * window.devicePixelRatio; canvas.height = height * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            canvas.width = width * window.devicePixelRatio; 
+            canvas.height = height * window.devicePixelRatio;
+            // ใช้ setTransform ป้องกันสเกลทับซ้อนจนค้าง
+            ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
         }
         window.addEventListener('resize', resize);
         resize();
@@ -278,6 +280,7 @@
 
         function updatePreview() {
             let pCtx = pCanvas.getContext('2d');
+            pCtx.setTransform(1, 0, 0, 1, 0, 0);
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
             pCtx.save(); pCtx.translate(pCanvas.width / 2, pCanvas.height / 2 + 10); pCtx.rotate(previewAngle);
             drawCastleAvatar(pCtx, 0, 0, { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, team: 'red' }, true);
