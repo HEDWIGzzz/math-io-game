@@ -76,20 +76,20 @@
         .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
-        #joystickContainer {
-            position: absolute; bottom: 170px; left: 30px; width: 120px; height: 120px;
-            pointer-events: auto; z-index: 60; display: flex; justify-content: center; align-items: center;
-            touch-action: none;
+        /* Floating Dynamic Joystick Styles */
+        #virtualJoystick {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 60; display: none;
         }
         #joystickBase {
-            position: relative; width: 100px; height: 100px; border-radius: 50%;
+            position: absolute; width: 100px; height: 100px; border-radius: 50%;
             background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7);
-            display: flex; justify-content: center; align-items: center;
+            transform: translate(-50%, -50%); display: none;
         }
         #joystickThumb {
             position: absolute; width: 50px; height: 50px; border-radius: 50%;
             background: rgba(155, 89, 182, 0.85); box-shadow: 0 0 10px rgba(155, 89, 182, 0.8);
-            transform: translate(0px, 0px); pointer-events: none;
+            top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
         }
     </style>
 </head>
@@ -138,7 +138,8 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="joystickContainer">
+    <!-- Floating Dynamic Joystick Overlay -->
+    <div id="virtualJoystick">
         <div id="joystickBase">
             <div id="joystickThumb"></div>
         </div>
@@ -206,46 +207,39 @@
             if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
-        const joystickContainer = document.getElementById('joystickContainer');
-        const joystickBase = document.getElementById('joystickBase');
-        const joystickThumb = document.getElementById('joystickThumb');
+        // Dynamic Floating Joystick Controller (Appears wherever touched)
+        let activeTouchId = null;
+        let joystickStartX = 0;
+        let joystickStartY = 0;
 
-        let joyTouchId = null;
-        let baseRect = null;
-
-        joystickContainer.addEventListener('pointerdown', (e) => {
+        window.addEventListener('pointerdown', (e) => {
             if (!gameStarted) return;
-            joyTouchId = e.pointerId;
-            baseRect = joystickBase.getBoundingClientRect();
-            updateJoystick(e.clientX, e.clientY);
-            joystickContainer.setPointerCapture(e.pointerId);
-        });
+            // Ignore if clicking UI elements, buttons, inputs, modals, etc.
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || 
+                e.target.closest('.modal-box') || e.target.closest('.bottom-panel') || e.target.closest('.header') || e.target.closest('.tile')) {
+                return;
+            }
 
-        joystickContainer.addEventListener('pointermove', (e) => {
-            if (joyTouchId === null || e.pointerId !== joyTouchId) return;
-            updateJoystick(e.clientX, e.clientY);
-        });
+            activeTouchId = e.pointerId;
+            joystickStartX = e.clientX;
+            joystickStartY = e.clientY;
 
-        function endJoystick(e) {
-            if (joyTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== joyTouchId)) return;
-            joyTouchId = null;
-            keys.w = false;
-            keys.s = false;
-            keys.a = false;
-            keys.d = false;
-            joystickThumb.style.transform = `translate(0px, 0px)`;
-        }
+            const joystickContainer = document.getElementById('virtualJoystick');
+            const base = document.getElementById('joystickBase');
+            const thumb = document.getElementById('joystickThumb');
 
-        joystickContainer.addEventListener('pointerup', endJoystick);
-        joystickContainer.addEventListener('pointercancel', endJoystick);
+            joystickContainer.style.display = 'block';
+            base.style.left = joystickStartX + 'px';
+            base.style.top = joystickStartY + 'px';
+            base.style.display = 'block';
+            thumb.style.transform = 'translate(-50%, -50%) translate(0px, 0px)';
+        }, { passive: true });
 
-        function updateJoystick(clientX, clientY) {
-            if (!baseRect) baseRect = joystickBase.getBoundingClientRect();
-            let centerX = baseRect.left + baseRect.width / 2;
-            let centerY = baseRect.top + baseRect.height / 2;
+        window.addEventListener('pointermove', (e) => {
+            if (activeTouchId === null || e.pointerId !== activeTouchId) return;
 
-            let dx = clientX - centerX;
-            let dy = clientY - centerY;
+            let dx = e.clientX - joystickStartX;
+            let dy = e.clientY - joystickStartY;
             let dist = Math.hypot(dx, dy);
             let maxR = 35;
 
@@ -254,14 +248,32 @@
                 dy = (dy / dist) * maxR;
             }
 
-            joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
+            const thumb = document.getElementById('joystickThumb');
+            thumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
 
             let threshold = 8;
             keys.w = dy < -threshold;
             keys.s = dy > threshold;
             keys.a = dx < -threshold;
             keys.d = dx > threshold;
+        }, { passive: true });
+
+        function endJoystick(e) {
+            if (activeTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== activeTouchId)) return;
+            activeTouchId = null;
+            keys.w = false;
+            keys.a = false;
+            keys.s = false;
+            keys.d = false;
+
+            const joystickContainer = document.getElementById('virtualJoystick');
+            const base = document.getElementById('joystickBase');
+            base.style.display = 'none';
+            joystickContainer.style.display = 'none';
         }
+
+        window.addEventListener('pointerup', endJoystick);
+        window.addEventListener('pointercancel', endJoystick);
 
         function joinGame() {
             const name = document.getElementById('playerNameInput').value.trim() || 'จอมเวทย์ฝึกหัด';
@@ -591,7 +603,7 @@
                     ctx.fillText(pl.name, pl.x, pl.y - 55);
                 }
 
-                ctx.restore();
+                    ctx.restore();
             }
             requestAnimationFrame(gameLoop);
         }
