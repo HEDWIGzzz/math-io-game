@@ -235,8 +235,9 @@
             </div>
         </div>
 
-        <button class="attack-base-btn" id="attackBaseBtn" onclick="tryAttackNearestBase()">🏰 โจมตีฐาน<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
-        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลอาชีพ</button>
+        <!-- แก้ไขเป็น onpointerdown เพื่อให้กดได้ทันทีแม้กำลังใช้นิ้วเดินอยู่ -->
+        <button class="attack-base-btn" id="attackBaseBtn" onpointerdown="tryAttackNearestBase()">🏰 โจมตีฐาน<br><span style="font-size: 8px;">ใช้ 50 แต้ม</span></button>
+        <button class="skill-btn-hud" id="skillBtnHud" onpointerdown="castPrankSkill()">⚡ สกิลอาชีพ</button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
 
