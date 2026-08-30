@@ -15,11 +15,13 @@ const MAP_SIZE = 4000;
 let globalGameStarted = false;
 
 let gameSettings = {
-    bossMaxHp: 5000,
-    bossSpeed: 1.8,
-    scoreMultiplier: 15,
-    bossPenalty: 20
+    baseMaxHp: 3000,
+    scoreMultiplier: 15
 };
+
+// ฐานทัพสองฝั่ง (Red Fortress & Blue Fortress)
+let redBase = { x: 800, y: MAP_SIZE / 2, hp: 3000, maxHp: 3000, name: 'Red Fortress', isAlive: true };
+let blueBase = { x: MAP_SIZE - 800, y: MAP_SIZE / 2, hp: 3000, maxHp: 3000, name: 'Blue Fortress', isAlive: true };
 
 const AMATH_SCORES = {
     "0": 1, "1": 1, "2": 1, "3": 1,
@@ -57,19 +59,6 @@ function calculateAMathScore(eqStr) {
     return Math.max(10, finalScore);
 }
 
-let demonBoss = {
-    x: MAP_SIZE / 2,
-    y: MAP_SIZE / 2,
-    targetX: MAP_SIZE / 2,
-    targetY: MAP_SIZE / 2,
-    hp: 5000,
-    maxHp: 5000,
-    name: 'Demon Goat Lord',
-    isAlive: true,
-    slowedUntil: 0,
-    poisonedUntil: 0
-};
-
 for (let i = 0; i < 150; i++) spawnTile();
 for (let i = 0; i < 35; i++) spawnMysteryBox();
 
@@ -90,8 +79,8 @@ function spawnTile() {
     }
     tiles.push({
         id: Math.random().toString(36).substr(2, 9),
-        x: Math.random() * (MAP_SIZE - 200) + 100,
-        y: Math.random() * (MAP_SIZE - 200) + 100,
+        x: Math.random() * (MAP_SIZE - 400) + 200,
+        y: Math.random() * (MAP_SIZE - 400) + 200,
         char: char,
         type: type
     });
@@ -100,8 +89,8 @@ function spawnTile() {
 function spawnMysteryBox() {
     mysteryBoxes.push({
         id: Math.random().toString(36).substr(2, 9),
-        x: Math.random() * (MAP_SIZE - 200) + 100,
-        y: Math.random() * (MAP_SIZE - 200) + 100
+        x: Math.random() * (MAP_SIZE - 400) + 200,
+        y: Math.random() * (MAP_SIZE - 400) + 200
     });
 }
 
@@ -117,12 +106,12 @@ io.on('connection', (socket) => {
         x: MAP_SIZE / 2,
         y: MAP_SIZE / 2,
         score: 0,
-        bossDamage: 0,
+        baseDamage: 0,
         isMoving: false,
         loggedIn: false
     };
 
-    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss, settings: gameSettings, gameStarted: globalGameStarted });
+    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, redBase, blueBase, settings: gameSettings, gameStarted: globalGameStarted });
 
     socket.on('joinGame', (data) => {
         let name = data.name ? data.name.trim() : 'Player';
@@ -146,8 +135,8 @@ io.on('connection', (socket) => {
         p.team = assignedTeam;
         p.isHost = isHostUser;
         p.loggedIn = true;
-        p.x = MAP_SIZE / 2;
-        p.y = MAP_SIZE / 2;
+        p.x = assignedTeam === 'red' ? 1000 : MAP_SIZE - 1000;
+        p.y = MAP_SIZE / 2 + (Math.random() - 0.5) * 400;
 
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
         io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
@@ -159,74 +148,95 @@ io.on('connection', (socket) => {
         let p = activePlayers[socket.id];
         if (p && p.isHost) {
             globalGameStarted = true;
-            io.emit('gameStartedEvent', { msg: '🚀 โด้ (Host) สั่งเริ่มเกมแล้ว! ลุยเลย!' });
+            io.emit('gameStartedEvent', { msg: '🚀 โด้ (Host) สั่งเริ่มศึกถล่มฐานแล้ว!' });
         }
     });
 
     socket.on('updateGameSettings', (newSettings) => {
         let p = activePlayers[socket.id];
         if (p && p.isHost) {
-            gameSettings.bossMaxHp = parseInt(newSettings.bossMaxHp) || 5000;
-            gameSettings.bossSpeed = parseFloat(newSettings.bossSpeed) || 1.8;
+            gameSettings.baseMaxHp = parseInt(newSettings.baseMaxHp) || 3000;
             gameSettings.scoreMultiplier = parseInt(newSettings.scoreMultiplier) || 15;
 
-            demonBoss.maxHp = gameSettings.bossMaxHp;
-            if (demonBoss.hp > demonBoss.maxHp) demonBoss.hp = demonBoss.maxHp;
+            redBase.maxHp = gameSettings.baseMaxHp;
+            blueBase.maxHp = gameSettings.baseMaxHp;
+            if (redBase.hp > redBase.maxHp) redBase.hp = redBase.maxHp;
+            if (blueBase.hp > blueBase.maxHp) blueBase.hp = blueBase.maxHp;
 
-            io.emit('settingsUpdated', { settings: gameSettings, boss: demonBoss });
-            io.emit('bossUpdate', demonBoss);
-            socket.emit('skillResult', { success: true, msg: '⚙️ บันทึกการตั้งค่าเกมสำเร็จ!' });
+            io.emit('settingsUpdated', { settings: gameSettings, redBase, blueBase });
+            socket.emit('skillResult', { success: true, msg: '⚙️ บันทึกการตั้งค่าฐานสำเร็จ!' });
         }
     });
 
-    socket.on('attackBoss', () => {
+    // โจมตีฐานทัพฝ่ายตรงข้าม
+    socket.on('attackBase', () => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn || p.isHost) return; // Host ไม่สามารถโจมตีบอสได้
+        if (!p || !p.loggedIn || p.isHost) return;
 
-        let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn && !pl.isHost).length;
-        if (!globalGameStarted && totalIngame < 20) {
-            socket.emit('skillResult', { success: false, msg: `⏳ รอโด้กดเริ่มเกม หรือรอผู้เล่นครบ 20 คน (${totalIngame}/20)` });
+        let targetBase = p.team === 'red' ? blueBase : redBase;
+        if (!targetBase.isAlive) {
+            socket.emit('skillResult', { success: false, msg: '🏰 ฐานฝ่ายตรงข้ามถูกทำลายไปแล้ว!' });
             return;
         }
 
-        if (!demonBoss.isAlive) return;
-
-        let dist = Math.hypot(p.x - demonBoss.x, p.y - demonBoss.y);
-        if (dist > 350) { socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากบอสเกินไป' }); return; }
+        let dist = Math.hypot(p.x - targetBase.x, p.y - targetBase.y);
+        if (dist > 400) {
+            socket.emit('skillResult', { success: false, msg: '❌ อยู่ไกลจากฐานฝ่ายตรงข้ามเกินไป (ต้องเข้าใกล้ฐาน)' });
+            return;
+        }
 
         let scoreCost = 50;
-        if (p.score < scoreCost) { socket.emit('skillResult', { success: false, msg: `❌ คะแนนไม่พอ (ต้องการ ${scoreCost} แต้ม)` }); return; }
+        if (p.score < scoreCost) {
+            socket.emit('skillResult', { success: false, msg: `❌ คะแนนไม่พอ (ต้องการ ${scoreCost} แต้ม)` });
+            return;
+        }
 
         p.score -= scoreCost;
         let damage = 150;
-        demonBoss.hp -= damage;
-        p.bossDamage = (p.bossDamage || 0) + damage;
+        targetBase.hp -= damage;
+        p.baseDamage = (p.baseDamage || 0) + damage;
 
-        if (demonBoss.hp <= 0) {
-            demonBoss.hp = 0;
-            demonBoss.isAlive = false;
-            io.emit('bossDefeated', { msg: `🎉 แพะปีศาจถูกกำจัดแล้ว!` });
-            setTimeout(() => {
-                demonBoss.hp = demonBoss.maxHp;
-                demonBoss.isAlive = true;
-                io.emit('bossRespawn', { msg: `⚠️ แพะปีศาจฟื้นคืนชีพ!` });
-            }, 30000);
+        if (targetBase.hp <= 0) {
+            targetBase.hp = 0;
+            targetBase.isAlive = false;
+            let winnerTeamName = p.team === 'red' ? 'ทีมสีแดง (Red Team)' : 'ทีมสีน้ำเงิน (Blue Team)';
+            io.emit('gameOverEvent', { msg: `🎉 ${winnerTeamName} ถล่มฐานทัพข้าศึกราบคาบ! คว้าชัยชนะไปครอง!` });
         }
 
-        io.emit('bossUpdate', demonBoss);
+        io.emit('basesUpdate', { redBase, blueBase });
         io.emit('updateLeaderboard', activePlayers);
-        socket.emit('skillResult', { success: true, msg: `🔥 ทำดาเมจใส่บอส ${damage} แต้ม!` });
+        socket.emit('skillResult', { success: true, msg: `🔥 โจมตีฐานฝ่ายตรงข้ามเสียหาย ${damage} แต้ม!` });
     });
 
     socket.on('castSkill', () => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn || p.isHost) return; // Host ไม่มีสกิล
-        // ... (ระบบสกิลปกติสำหรับผู้เล่น)
+        if (!p || !p.loggedIn || p.isHost) return;
+        let now = Date.now();
+        if (p.lastSkillTime && now - p.lastSkillTime < 5000) {
+            socket.emit('skillResult', { success: false, msg: '⏳ สกิลกำลัง Cool Down (รอ 5 วิ)' });
+            return;
+        }
+        p.lastSkillTime = now;
+        let affectedCount = 0;
+        for (let id in activePlayers) {
+            if (id !== socket.id) {
+                let target = activePlayers[id];
+                if (target.team !== p.team && target.loggedIn && !target.isHost) {
+                    let dist = Math.hypot(p.x - target.x, p.y - target.y);
+                    if (dist < 350) {
+                        affectedCount++;
+                        io.to(id).emit('trolledEffect', { type: 'blind', msg: `⚡ โดนสกิลป่วนจาก ${p.name}!` });
+                    }
+                }
+            }
+        }
+        io.emit('playerCastSkill', { socketId: socket.id, x: p.x, y: p.y, playerClass: p.playerClass, team: p.team });
+        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนทีมตรงข้ามสำเร็จ ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
     });
 
     socket.on('move', (data) => {
         let p = activePlayers[socket.id];
-        if (!p || !p.loggedIn || p.isHost) return; // Host ไม่เดินและไม่เก็บกล่องสมบัติ
+        if (!p || !p.loggedIn || p.isHost) return;
 
         p.x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
@@ -296,22 +306,7 @@ io.on('connection', (socket) => {
 });
 
 setInterval(() => {
-    if (demonBoss.isAlive) {
-        let speed = (demonBoss.slowedUntil && Date.now() < demonBoss.slowedUntil) ? gameSettings.bossSpeed * 0.4 : gameSettings.bossSpeed;
-        let dx = demonBoss.targetX - demonBoss.x, dy = demonBoss.targetY - demonBoss.y;
-        let dist = Math.hypot(dx, dy);
-        if (dist < 15) {
-            demonBoss.targetX = MAP_SIZE/2 + (Math.random() - 0.5) * 800;
-            demonBoss.targetY = MAP_SIZE/2 + (Math.random() - 0.5) * 800;
-        } else if (dist > 0) {
-            demonBoss.x += (dx / dist) * speed;
-            demonBoss.y += (dy / dist) * speed;
-        }
-    }
-}, 50);
-
-setInterval(() => {
-    io.emit('stateUpdate', { players: activePlayers, boss: demonBoss });
+    io.emit('stateUpdate', { players: activePlayers, redBase, blueBase });
 }, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
