@@ -76,20 +76,21 @@
         .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
-        /* Virtual Joystick Styles */
-        #virtualJoystick {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 60; display: none;
+        /* Fixed Virtual Joystick Styles (Bottom-Left) */
+        #joystickContainer {
+            position: absolute; bottom: 170px; left: 30px; width: 120px; height: 120px;
+            pointer-events: auto; z-index: 60; display: flex; justify-content: center; align-items: center;
+            touch-action: none;
         }
         #joystickBase {
-            position: absolute; width: 90px; height: 90px; border-radius: 50%;
-            background: rgba(155, 89, 182, 0.2); border: 2px solid rgba(155, 89, 182, 0.6);
-            transform: translate(-50%, -50%); display: none;
+            position: relative; width: 100px; height: 100px; border-radius: 50%;
+            background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7);
+            display: flex; justify-content: center; align-items: center;
         }
         #joystickThumb {
-            position: absolute; width: 45px; height: 45px; border-radius: 50%;
-            background: rgba(155, 89, 182, 0.8); top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            position: absolute; width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(155, 89, 182, 0.85); box-shadow: 0 0 10px rgba(155, 89, 182, 0.8);
+            transform: translate(0px, 0px); pointer-events: none;
         }
     </style>
 </head>
@@ -138,8 +139,8 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Virtual Floating Joystick Overlay -->
-    <div id="virtualJoystick">
+    <!-- Fixed Virtual Joystick UI at Bottom-Left -->
+    <div id="joystickContainer">
         <div id="joystickBase">
             <div id="joystickThumb"></div>
         </div>
@@ -207,35 +208,47 @@
             if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
-        // Virtual Joystick Controller with touch-action support
-        let activeTouchId = null;
-        let joystickStartX = 0;
-        let joystickStartY = 0;
+        // Fixed Joystick Controller Logic
+        const joystickContainer = document.getElementById('joystickContainer');
+        const joystickBase = document.getElementById('joystickBase');
+        const joystickThumb = document.getElementById('joystickThumb');
 
-        window.addEventListener('pointerdown', (e) => {
+        let joyTouchId = null;
+        let baseRect = null;
+
+        joystickContainer.addEventListener('pointerdown', (e) => {
             if (!gameStarted) return;
-            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || 
-                e.target.closest('.modal-box') || e.target.closest('.bottom-panel') || e.target.closest('.header')) {
-                return;
-            }
+            joyTouchId = e.pointerId;
+            baseRect = joystickBase.getBoundingClientRect();
+            updateJoystick(e.clientX, e.clientY);
+            joystickContainer.setPointerCapture(e.pointerId);
+        });
 
-            activeTouchId = e.pointerId;
-            joystickStartX = e.clientX;
-            joystickStartY = e.clientY;
+        joystickContainer.addEventListener('pointermove', (e) => {
+            if (joyTouchId === null || e.pointerId !== joyTouchId) return;
+            updateJoystick(e.clientX, e.clientY);
+        });
 
-            const base = document.getElementById('joystickBase');
-            const thumb = document.getElementById('joystickThumb');
-            base.style.left = joystickStartX + 'px';
-            base.style.top = joystickStartY + 'px';
-            base.style.display = 'block';
-            thumb.style.transform = 'translate(-50%, -50%) translate(0px, 0px)';
-        }, { passive: true });
+        function endJoystick(e) {
+            if (joyTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== joyTouchId)) return;
+            joyTouchId = null;
+            keys.w = false;
+            keys.s = false;
+            keys.a = false;
+            keys.d = false;
+            joystickThumb.style.transform = `translate(0px, 0px)`;
+        }
 
-        window.addEventListener('pointermove', (e) => {
-            if (activeTouchId === null || e.pointerId !== activeTouchId) return;
+        joystickContainer.addEventListener('pointerup', endJoystick);
+        joystickContainer.addEventListener('pointercancel', endJoystick);
 
-            let dx = e.clientX - joystickStartX;
-            let dy = e.clientY - joystickStartY;
+        function updateJoystick(clientX, clientY) {
+            if (!baseRect) baseRect = joystickBase.getBoundingClientRect();
+            let centerX = baseRect.left + baseRect.width / 2;
+            let centerY = baseRect.top + baseRect.height / 2;
+
+            let dx = clientX - centerX;
+            let dy = clientY - centerY;
             let dist = Math.hypot(dx, dy);
             let maxR = 35;
 
@@ -244,30 +257,14 @@
                 dy = (dy / dist) * maxR;
             }
 
-            const thumb = document.getElementById('joystickThumb');
-            thumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+            joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
 
             let threshold = 8;
             keys.w = dy < -threshold;
             keys.s = dy > threshold;
             keys.a = dx < -threshold;
             keys.d = dx > threshold;
-        }, { passive: true });
-
-        function endJoystick(e) {
-            if (activeTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== activeTouchId)) return;
-            activeTouchId = null;
-            keys.w = false;
-            keys.a = false;
-            keys.s = false;
-            keys.d = false;
-
-            const base = document.getElementById('joystickBase');
-            base.style.display = 'none';
         }
-
-        window.addEventListener('pointerup', endJoystick);
-        window.addEventListener('pointercancel', endJoystick);
 
         function joinGame() {
             const name = document.getElementById('playerNameInput').value.trim() || 'จอมเวทย์ฝึกหัด';
@@ -390,38 +387,32 @@
             setTimeout(() => msg.classList.remove('show'), 2500);
         }
 
-        // วาดตัวละคร พร้อมมงกุฎทองคำวิบวับสำหรับอันดับ 1
         function drawCastleAvatar(ctx, x, y, pl, isMoving, isTop1) {
             ctx.save();
             ctx.translate(x, y);
 
             let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 5 : 0;
 
-            // เสื้อคลุมจอมเวทย์
             ctx.fillStyle = pl.outfitColor || '#9b59b6';
             ctx.beginPath();
             ctx.roundRect(-14, -10 + walkAnim/2, 28, 28, 8);
             ctx.fill();
             ctx.lineWidth = 2; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
 
-            // ขา
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(-9, 16, 6, 10 - walkAnim);
             ctx.fillRect(3, 16, 6, 10 + walkAnim);
 
-            // หัว
             ctx.fillStyle = '#f5b041';
             ctx.beginPath();
             ctx.arc(0, -18 + walkAnim/2, 13, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
-            // ตา
             ctx.fillStyle = '#3498db';
             ctx.fillRect(-5, -21 + walkAnim/2, 3, 3);
             ctx.fillRect(2, -21 + walkAnim/2, 3, 3);
 
-            // หมวกพื้นฐาน
             if (pl.hat === 'wizard_hat') {
                 ctx.fillStyle = '#8e44ad';
                 ctx.beginPath();
@@ -434,7 +425,6 @@
                 ctx.fill(); ctx.stroke();
             }
 
-            // ถ้าเป็นอันดับ 1 จะมีมงกุฎสีทองวิบวับลอยอยู่บนหัว
             if (isTop1) {
                 let crownFloat = Math.sin(Date.now() / 150) * 4;
                 let sparkleAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.5;
@@ -442,7 +432,6 @@
                 ctx.save();
                 ctx.translate(0, -40 + crownFloat);
                 
-                // มงกุฎทองคำ
                 ctx.fillStyle = '#f1c40f';
                 ctx.strokeStyle = '#b7950b';
                 ctx.lineWidth = 2;
@@ -458,7 +447,6 @@
                 ctx.fill();
                 ctx.stroke();
 
-                // ประกายวิบวับรอบมงกุฎ
                 ctx.fillStyle = `rgba(255, 255, 255, ${sparkleAlpha})`;
                 ctx.beginPath();
                 ctx.arc(-16 + Math.sin(Date.now()/80)*8, -12, 3, 0, Math.PI*2);
@@ -472,7 +460,6 @@
             ctx.restore();
         }
 
-        // วาดแผนที่ปราสาทและสิ่งปลูกสร้างตรงกลาง
         function drawCastleBackground(camX, camY) {
             ctx.fillStyle = '#151328';
             ctx.fillRect(0, 0, width, height);
@@ -480,27 +467,22 @@
             ctx.save();
             ctx.translate(-camX, -camY);
 
-            // ขอบเขตกําแพงปราสาทรอบนอก
             ctx.strokeStyle = '#4a235a';
             ctx.lineWidth = 25;
             ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-            // --- สิ่งปลูกสร้าง: ปราสาทมหาเวทย์ตรงกลางแผนที่ ---
             let cx = MAP_SIZE / 2;
             let cy = MAP_SIZE / 2;
 
-            // ฐานปราสาทหลัก
             ctx.fillStyle = '#221e3f';
             ctx.strokeStyle = '#9b59b6';
             ctx.lineWidth = 6;
             ctx.fillRect(cx - 350, cy - 350, 700, 700);
             ctx.strokeRect(cx - 350, cy - 350, 700, 700);
 
-            // ลานพิธีด้านใน
             ctx.fillStyle = '#1b1734';
             ctx.fillRect(cx - 250, cy - 250, 500, 500);
 
-            // หอคอย 4 มุมปราสาท
             let towerSize = 100;
             ctx.fillStyle = '#2d2650';
             ctx.fillRect(cx - 380, cy - 380, towerSize, towerSize);
@@ -512,19 +494,16 @@
             ctx.strokeRect(cx - 380, cy + 280, towerSize, towerSize);
             ctx.strokeRect(cx + 280, cy + 280, towerSize, towerSize);
 
-            // ประตูเวทมนตร์เรืองแสงตรงกลาง
             ctx.fillStyle = '#f1c40f';
             ctx.fillRect(cx - 60, cy + 250, 120, 100);
             ctx.strokeStyle = '#d35400'; ctx.lineWidth = 4;
             ctx.strokeRect(cx - 60, cy + 250, 120, 100);
 
-            // วงเวทมนตร์ยักษ์กลางปราสาท
             ctx.strokeStyle = 'rgba(241, 196, 15, 0.2)';
             ctx.lineWidth = 6;
             ctx.beginPath(); ctx.arc(cx, cy, 320, 0, Math.PI * 2); ctx.stroke();
             ctx.beginPath(); ctx.arc(cx, cy, 180, 0, Math.PI * 2); ctx.stroke();
 
-            // ลวดลายตารางพื้นหิน
             ctx.strokeStyle = 'rgba(155, 89, 182, 0.08)';
             ctx.lineWidth = 2;
             let gridSize = 100;
@@ -554,11 +533,9 @@
                     socket.emit('move', { x: p.x, y: p.y, isMoving: false });
                 }
 
-                // ค้นหาผู้เล่นที่อยู่อันดับ 1 (คะแนนสูงสุด)
                 let sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
                 let topPlayerId = sortedPlayers.length > 0 ? sortedPlayers[0].socketId : null;
 
-                // Smooth Interpolation
                 for (let id in players) {
                     if (!renderPlayers[id]) {
                         renderPlayers[id] = { x: players[id].x, y: players[id].y, name: players[id].name, avatar: players[id].avatar, outfitColor: players[id].outfitColor, hat: players[id].hat, score: players[id].score, isMoving: false };
@@ -585,7 +562,6 @@
                 ctx.save();
                 ctx.translate(-camX, -camY);
 
-                // วาดเบี้ย
                 ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 tiles.forEach(t => {
                     ctx.fillStyle = t.type === 'num' ? '#f1c40f' : (t.type === 'op' ? '#e74c3c' : '#3498db');
@@ -594,7 +570,6 @@
                     ctx.fillStyle = '#ffffff'; ctx.fillText(t.char, t.x, t.y);
                 });
 
-                // วาดกล่องสมบัติ
                 mysteryBoxes.forEach(b => {
                     ctx.fillStyle = '#f39c12';
                     ctx.fillRect(b.x - 18, b.y - 18, 36, 36);
@@ -602,7 +577,6 @@
                     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 22px Kanit'; ctx.fillText('?', b.x, b.y);
                 });
 
-                // วาดตัวละครทั้งหมด พร้อมเช็กว่าใครคืออันดับ 1
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
                     let isTop1 = (id === topPlayerId && pl.score > 0);
