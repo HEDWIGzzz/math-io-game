@@ -14,18 +14,22 @@ app.use(express.static('public'));
 const DB_FILE = path.join(__dirname, 'database.json');
 
 function loadDatabase() {
-    if (fs.existsSync(DB_FILE)) {
-        try {
+    try {
+        if (fs.existsSync(DB_FILE)) {
             return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        } catch (e) {
-            return {};
         }
+    } catch (e) {
+        console.error('Database load error:', e);
     }
     return {};
 }
 
 function saveDatabase(data) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+        console.error('Database save error:', e);
+    }
 }
 
 let playersDb = loadDatabase();
@@ -42,7 +46,6 @@ let gameSettings = {
     bossPenalty: 20
 };
 
-// 🐐 ข้อมูลบอสแพะปีศาจ
 let demonBoss = {
     x: MAP_SIZE / 2,
     y: MAP_SIZE / 2,
@@ -86,7 +89,7 @@ function spawnMysteryBox() {
 }
 
 io.on('connection', (socket) => {
-    console.log('Player connected:', socket.id);
+    console.log('Student/Player connected:', socket.id);
 
     activePlayers[socket.id] = {
         socketId: socket.id,
@@ -106,79 +109,86 @@ io.on('connection', (socket) => {
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss, settings: gameSettings });
 
     socket.on('registerPlayer', async (data) => {
-        let name = data.name ? data.name.trim() : '';
-        let password = data.password ? data.password.trim() : '';
-        let confirmPassword = data.confirmPassword ? data.confirmPassword.trim() : '';
+        try {
+            let name = data.name ? data.name.trim() : '';
+            let password = data.password ? data.password.trim() : '';
+            let confirmPassword = data.confirmPassword ? data.confirmPassword.trim() : '';
 
-        if (!name || !password || !confirmPassword) {
-            socket.emit('authResult', { success: false, msg: 'กรุณากรอกข้อมูลให้ครบ' });
-            return;
-        }
-        if (name.length < 3 || name.length > 15) {
-            socket.emit('authResult', { success: false, msg: 'ชื่อผู้เล่นต้องมีความยาว 3-15 ตัวอักษร' });
-            return;
-        }
-        if (password.length < 6) {
-            socket.emit('authResult', { success: false, msg: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
-            return;
-        }
-        if (password !== confirmPassword) {
-            socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ตรงกัน' });
-            return;
-        }
-        if (playersDb[name]) {
-            socket.emit('authResult', { success: false, msg: 'ชื่อนี้ถูกใช้งานแล้ว' });
-            return;
-        }
+            if (!name || !password || !confirmPassword) {
+                socket.emit('authResult', { success: false, msg: 'กรุณากรอกข้อมูลให้ครบ' });
+                return;
+            }
+            if (name.length < 3 || name.length > 15) {
+                socket.emit('authResult', { success: false, msg: 'ชื่อผู้เล่นต้องมีความยาว 3-15 ตัวอักษร' });
+                return;
+            }
+            if (password.length < 6) {
+                socket.emit('authResult', { success: false, msg: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+                return;
+            }
+            if (password !== confirmPassword) {
+                socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ตรงกัน' });
+                return;
+            }
+            if (playersDb[name]) {
+                socket.emit('authResult', { success: false, msg: 'ชื่อนี้ถูกใช้งานแล้ว' });
+                return;
+            }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newPlayerId = 'PLY_' + Math.random().toString(36).substr(2, 9);
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const newPlayerId = 'PLY_' + Math.random().toString(36).substr(2, 9);
 
-        playersDb[name] = {
-            playerId: newPlayerId,
-            password: hashedPassword,
-            score: 0,
-            playerClass: 'Warrior',
-            outfitColor: '#9b59b6',
-            hat: 'none',
-            characterData: {}
-        };
-        saveDatabase(playersDb);
+            playersDb[name] = {
+                playerId: newPlayerId,
+                password: hashedPassword,
+                score: 0,
+                playerClass: 'Warrior',
+                outfitColor: '#9b59b6',
+                hat: 'none'
+            };
+            saveDatabase(playersDb);
 
-        activePlayers[socket.id].name = name;
-        activePlayers[socket.id].playerId = newPlayerId;
+            activePlayers[socket.id].name = name;
+            activePlayers[socket.id].playerId = newPlayerId;
 
-        socket.emit('authResult', { success: true, action: 'register', msg: 'ACCOUNT CREATED!' });
+            socket.emit('authResult', { success: true, action: 'register', msg: 'ACCOUNT CREATED!' });
+        } catch (e) {
+            socket.emit('authResult', { success: false, msg: 'เกิดข้อผิดพลาดในระบบ' });
+        }
     });
 
     socket.on('loginPlayer', async (data) => {
-        let name = data.name ? data.name.trim() : '';
-        let password = data.password ? data.password.trim() : '';
+        try {
+            let name = data.name ? data.name.trim() : '';
+            let password = data.password ? data.password.trim() : '';
 
-        if (!name || !password) {
-            socket.emit('authResult', { success: false, msg: 'กรุณากรอกข้อมูลให้ครบ' });
-            return;
+            if (!name || !password) {
+                socket.emit('authResult', { success: false, msg: 'กรุณากรอกข้อมูลให้ครบ' });
+                return;
+            }
+            if (!playersDb[name]) {
+                socket.emit('authResult', { success: false, msg: 'ไม่พบชื่อผู้ใช้นี้' });
+                return;
+            }
+
+            const isMatch = await bcrypt.compare(password, playersDb[name].password);
+            if (!isMatch) {
+                socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ถูกต้อง' });
+                return;
+            }
+
+            let pData = playersDb[name];
+            activePlayers[socket.id].name = name;
+            activePlayers[socket.id].playerId = pData.playerId;
+            activePlayers[socket.id].score = pData.score || 0;
+            activePlayers[socket.id].playerClass = pData.playerClass || 'Warrior';
+            activePlayers[socket.id].outfitColor = pData.outfitColor || '#9b59b6';
+            activePlayers[socket.id].hat = pData.hat || 'none';
+
+            socket.emit('authResult', { success: true, action: 'login', playerData: pData });
+        } catch (e) {
+            socket.emit('authResult', { success: false, msg: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' });
         }
-        if (!playersDb[name]) {
-            socket.emit('authResult', { success: false, msg: 'ไม่พบชื่อผู้ใช้นี้' });
-            return;
-        }
-
-        const isMatch = await bcrypt.compare(password, playersDb[name].password);
-        if (!isMatch) {
-            socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ถูกต้อง' });
-            return;
-        }
-
-        let pData = playersDb[name];
-        activePlayers[socket.id].name = name;
-        activePlayers[socket.id].playerId = pData.playerId;
-        activePlayers[socket.id].score = pData.score || 0;
-        activePlayers[socket.id].playerClass = pData.playerClass || 'Warrior';
-        activePlayers[socket.id].outfitColor = pData.outfitColor || '#9b59b6';
-        activePlayers[socket.id].hat = pData.hat || 'none';
-
-        socket.emit('authResult', { success: true, action: 'login', playerData: pData });
     });
 
     socket.on('saveCharacter', (data) => {
@@ -199,12 +209,11 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
-    // ⚙️ อัปเดตตั้งค่าจากแอดมิน
+    // ⚙️ อัปเดตตั้งค่า Admin (จำกัดให้เฉพาะ Do หรือ admin เท่านั้นที่เปลี่ยนได้)
     socket.on('updateAdminSettings', (newSettings) => {
         let p = activePlayers[socket.id];
-        // ตรวจสอบสิทธิ์แอดมิน (สามารถตั้งเงื่อนไขชื่อ เช่น แอดมินชื่อ 'admin' หรือ 'Do')
         if (!p || (p.name !== 'admin' && p.name !== 'Do')) {
-            socket.emit('skillResult', { success: false, msg: '❌ คุณไม่มีสิทธิ์ใช้งานระบบ Admin!' });
+            socket.emit('skillResult', { success: false, msg: '❌ ไม่มีสิทธิ์ใช้งานระบบ Admin!' });
             return;
         }
 
@@ -213,7 +222,6 @@ io.on('connection', (socket) => {
         gameSettings.scoreMultiplier = parseInt(newSettings.scoreMultiplier) || 15;
         gameSettings.bossPenalty = parseInt(newSettings.bossPenalty) || 20;
 
-        // อัปเดตเลือดบอดตามค่าใหม่หากบอสเต็มเลือดอยู่
         if (demonBoss.hp >= demonBoss.maxHp) {
             demonBoss.maxHp = gameSettings.bossMaxHp;
             demonBoss.hp = gameSettings.bossMaxHp;
@@ -250,7 +258,7 @@ io.on('connection', (socket) => {
         }
 
         p.score -= scoreCost;
-        let damage = 150; // ดาเมจมาตรฐาน
+        let damage = 150;
         demonBoss.hp -= damage;
 
         if (playersDb[p.name]) playersDb[p.name].score = p.score;
@@ -373,8 +381,10 @@ io.on('connection', (socket) => {
                 if (left === right) {
                     let earnedScore = eqStr.length * gameSettings.scoreMultiplier;
                     p.score += earnedScore;
-                    playersDb[p.name].score = p.score;
-                    saveDatabase(playersDb);
+                    if (playersDb[p.name]) {
+                        playersDb[p.name].score = p.score;
+                        saveDatabase(playersDb);
+                    }
 
                     socket.emit('equationResult', { success: true, score: p.score });
                     io.emit('updateLeaderboard', activePlayers);
@@ -394,8 +404,10 @@ io.on('connection', (socket) => {
         if (p && p.loggedIn && !p.inLobby) {
             if (parseInt(data.userAns) === parseInt(data.correctAns)) {
                 p.score += 60;
-                playersDb[p.name].score = p.score;
-                saveDatabase(playersDb);
+                if (playersDb[p.name]) {
+                    playersDb[p.name].score = p.score;
+                    saveDatabase(playersDb);
+                }
                 socket.emit('mysteryResult', { success: true });
                 io.emit('updateLeaderboard', activePlayers);
             } else {
@@ -411,6 +423,7 @@ io.on('connection', (socket) => {
     });
 });
 
+// บอส AI ลูป
 setInterval(() => {
     if (demonBoss.isAlive) {
         if (demonBoss.poisonedUntil && Date.now() < demonBoss.poisonedUntil) {
@@ -452,8 +465,10 @@ setInterval(() => {
                         p.lastBossAttack = now;
                         let penalty = gameSettings.bossPenalty;
                         p.score = Math.max(0, p.score - penalty);
-                        if (playersDb[p.name]) playersDb[p.name].score = p.score;
-                        saveDatabase(playersDb);
+                        if (playersDb[p.name]) {
+                            playersDb[p.name].score = p.score;
+                            saveDatabase(playersDb);
+                        }
 
                         let angle = Math.atan2(p.y - demonBoss.y, p.x - demonBoss.x);
                         p.x = Math.max(50, Math.min(MAP_SIZE - 50, p.x + Math.cos(angle) * 100));
