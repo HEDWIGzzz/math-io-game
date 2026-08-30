@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Math.io - Action RPG & Boss Raid</title>
+    <title>Math.io - Red vs Blue Boss Raid</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
         * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -28,33 +28,17 @@
         .modal-box label { font-size: 13px; color: #d7bde2; text-align: left; font-weight: bold; }
         .password-container { position: relative; display: flex; align-items: center; width: 100%; }
         .password-container input { width: 100%; padding-right: 45px; }
-        .toggle-eye {
-            position: absolute; right: 12px; background: none; border: none; color: #d7bde2;
-            cursor: pointer; font-size: 18px; outline: none; padding: 5px;
-        }
+        .toggle-eye { position: absolute; right: 12px; background: none; border: none; color: #d7bde2; cursor: pointer; font-size: 18px; outline: none; padding: 5px; }
         .btn-group { display: flex; gap: 10px; margin-top: 5px; }
-        .modal-box button.action-btn {
-            flex: 1; padding: 12px; font-size: 16px; font-family: 'Kanit', sans-serif; font-weight: bold;
-            border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: 0.2s;
-        }
+        .modal-box button.action-btn { flex: 1; padding: 12px; font-size: 16px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
         .btn-login { background: linear-gradient(135deg, #2980b9, #27ae60); color: white; }
         .btn-register { background: linear-gradient(135deg, #8e44ad, #d35400); color: white; }
         .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; margin-top: 5px; font-size: 18px; }
         .error-text { color: #e74c3c; font-size: 13px; min-height: 20px; font-weight: bold; }
         .success-text { color: #2ecc71; font-size: 14px; font-weight: bold; }
 
-        #previewCanvas {
-            background: #151328; border: 2px dashed #9b59b6; border-radius: 12px;
-            margin: 0 auto; display: block; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
-            cursor: grab;
-        }
-        #previewCanvas:active { cursor: grabbing; }
-
-        .class-desc {
-            background: rgba(155, 89, 182, 0.15); border: 1px solid #9b59b6; padding: 10px; border-radius: 8px;
-            font-size: 13px; color: #f39c12; text-align: left; line-height: 1.4;
-        }
+        #previewCanvas { background: #151328; border: 2px dashed #9b59b6; border-radius: 12px; margin: 0 auto; display: block; cursor: grab; }
+        .class-desc { background: rgba(155, 89, 182, 0.15); border: 1px solid #9b59b6; padding: 10px; border-radius: 8px; font-size: 13px; color: #f39c12; text-align: left; }
 
         #lobbyOverlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -63,34 +47,20 @@
         }
         .lobby-header { display: flex; justify-content: space-between; align-items: center; background: #221e3f; padding: 15px 25px; border-radius: 12px; border: 2px solid #9b59b6; }
         .lobby-menu { display: flex; flex-direction: column; gap: 15px; width: 280px; align-self: center; margin-bottom: 40px; }
-        .lobby-btn {
-            padding: 15px; font-size: 18px; font-family: 'Kanit', sans-serif; font-weight: bold;
-            background: linear-gradient(135deg, #8e44ad, #3498db); color: white; border: none; border-radius: 10px;
-            cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: 0.2s; text-align: center;
-        }
-        .lobby-btn:hover { transform: scale(1.05); background: linear-gradient(135deg, #9b59b6, #2980b9); }
+        .lobby-btn { padding: 15px; font-size: 18px; font-family: 'Kanit'; font-weight: bold; background: linear-gradient(135deg, #8e44ad, #3498db); color: white; border: none; border-radius: 10px; cursor: pointer; text-align: center; }
 
-        #mysteryModal {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 150;
-        }
-        .mystery-box {
-            background: #221e3f; padding: 30px; border-radius: 15px; text-align: center;
-            border: 4px solid #f39c12; box-shadow: 0 0 35px rgba(243, 156, 18, 0.6); width: 90%; max-width: 350px;
-            display: flex; flex-direction: column; gap: 15px;
-        }
-        .mystery-box h2 { color: #f39c12; }
-        .mystery-box input {
-            padding: 12px; font-size: 24px; border-radius: 8px; border: 2px solid #f39c12; text-align: center;
-            font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none;
+        #waitingBanner {
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(231, 76, 60, 0.9); border: 2px solid #f1c40f; padding: 8px 20px;
+            border-radius: 10px; font-size: 14px; font-weight: bold; z-index: 85; display: none; text-align: center;
         }
 
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50;
-        }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
         .header { padding: 15px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; align-items: flex-start; }
-        .leaderboard { background: rgba(21, 19, 40, 0.85); border: 2px solid #f39c12; padding: 10px 15px; border-radius: 10px; font-size: 13px; min-width: 210px; pointer-events: auto; }
+        
+        /* กระดานคะแนนแบ่งทีม */
+        .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 10px 15px; border-radius: 10px; font-size: 12px; min-width: 230px; pointer-events: auto; }
+        .team-score-box { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; }
         
         .boss-hud-container {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
@@ -102,60 +72,40 @@
 
         .skill-btn-hud {
             position: absolute; right: 25px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
-            background: linear-gradient(135deg, #e74c3c, #f39c12); border: 3px solid #fff; color: white;
-            font-family: 'Kanit', sans-serif; font-weight: bold; font-size: 13px; text-align: center;
+            background: linear-gradient(135deg, #3498db, #2980b9); border: 3px solid #fff; color: white;
+            font-family: 'Kanit'; font-weight: bold; font-size: 12px; text-align: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(231, 76, 60, 0.7); transition: 0.1s; z-index: 70; line-height: 1.1;
+            cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(52, 152, 219, 0.7); z-index: 70; line-height: 1.1;
         }
-        .skill-btn-hud:active { transform: scale(0.92); }
-
         .boss-attack-btn {
             position: absolute; right: 125px; bottom: 140px; width: 85px; height: 85px; border-radius: 50%;
-            background: linear-gradient(135deg, #e74c3c, #8e44ad); border: 3px solid #fff; color: white;
-            font-family: 'Kanit', sans-serif; font-weight: bold; font-size: 12px; text-align: center;
+            background: linear-gradient(135deg, #e74c3c, #f39c12); border: 3px solid #fff; color: white;
+            font-family: 'Kanit'; font-weight: bold; font-size: 11px; text-align: center;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(231, 76, 60, 0.7); transition: 0.1s; z-index: 70; line-height: 1.1;
+            cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(231, 76, 60, 0.7); z-index: 70; line-height: 1.1;
         }
-        .boss-attack-btn:active { transform: scale(0.92); }
 
-        .bottom-panel {
-            background: rgba(21, 19, 40, 0.95); padding: 12px 15px; border-top: 4px solid #9b59b6;
-            pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center;
-        }
+        .bottom-panel { background: rgba(21, 19, 40, 0.95); padding: 12px 15px; border-top: 4px solid #9b59b6; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; }
         .equation-area { background: #151328; width: 100%; max-width: 650px; min-height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 2px dashed #9b59b6; padding: 5px; }
         .inventory-area { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; min-height: 40px; width: 100%; }
 
-        .tile {
-            width: 36px; height: 40px; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center;
-            border-radius: 6px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.4);
-        }
+        .tile { width: 36px; height: 40px; font-size: 20px; font-weight: bold; display: flex; justify-content: center; align-items: center; border-radius: 6px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,0.4); }
         .tile.num { background: #f1c40f; color: #2d3436; }
         .tile.op { background: #e74c3c; color: white; }
         .tile.eq { background: #3498db; color: white; }
 
         .controls { display: flex; gap: 10px; }
-        button.action-btn { padding: 6px 20px; font-size: 15px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        button.action-btn { padding: 6px 20px; font-size: 15px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
         .btn-submit { background: #2ecc71; color: white; }
         .btn-clear { background: #e67e22; color: white; }
         .btn-drop { background: #8e44ad; color: white; }
         
-        .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 80; }
-        .sys-msg.show { opacity: 1; top: 10%; }
+        .sys-msg { position: absolute; top: 14%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 80; }
+        .sys-msg.show { opacity: 1; top: 12%; }
 
-        #virtualJoystick {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 60; display: none;
-        }
-        #joystickBase {
-            position: absolute; width: 100px; height: 100px; border-radius: 50%;
-            background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7);
-            transform: translate(-50%, -50%); display: none;
-        }
-        #joystickThumb {
-            position: absolute; width: 50px; height: 50px; border-radius: 50%;
-            background: rgba(155, 89, 182, 0.85); box-shadow: 0 0 10px rgba(155, 89, 182, 0.8);
-            top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
-        }
+        #virtualJoystick { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; display: none; }
+        #joystickBase { position: absolute; width: 100px; height: 100px; border-radius: 50%; background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7); transform: translate(-50%, -50%); display: none; }
+        #joystickThumb { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: rgba(155, 89, 182, 0.85); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
     </style>
 </head>
 <body>
@@ -194,9 +144,8 @@
         <div class="modal-box">
             <h2>✨ CREATE YOUR CHARACTER</h2>
             <canvas id="previewCanvas" width="140" height="140"></canvas>
-            <div style="font-size: 11px; color: #a569bd;">💡 ลากเมาส์/นิ้วเพื่อหมุนตัวละคร 360°</div>
             <div>
-                <label>เลือก 8 สายอาชีพหลัก (SELECT CLASS)</label>
+                <label>เลือกสายอาชีพ (SELECT CLASS)</label>
                 <select id="playerClass" onchange="onClassChange()">
                     <option value="Assassin">🗡️ Assassin</option>
                     <option value="Warrior">⚔️ Warrior</option>
@@ -208,20 +157,10 @@
                     <option value="Berserker">🔥 Berserker</option>
                 </select>
             </div>
-            <div class="class-desc" id="classDescription">
-                <b>ASSASSIN</b><br>“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind / Poison Boss
-            </div>
+            <div class="class-desc" id="classDescription"><b>ASSASSIN</b><br>สกิล: ป่วนผู้เล่นทีมตรงข้าม</div>
             <div>
-                <label>สีหลัก (OUTFIT COLOR)</label>
+                <label>สีตัวละคร (OUTFIT COLOR)</label>
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
-            </div>
-            <div>
-                <label>เครื่องประดับศีรษะ (ACCESSORIES)</label>
-                <select id="playerHat" onchange="updatePreview()">
-                    <option value="none">ไม่มีเครื่องประดับ</option>
-                    <option value="wizard_hat">🎩 หมวกพ่อมดมนตรา</option>
-                    <option value="cap">🪖 หมวกเกราะอัศวิน</option>
-                </select>
             </div>
             <div class="btn-group">
                 <button class="action-btn" style="background:#7f8c8d; color:white;" onclick="resetCharacter()">↻ รีเซ็ต</button>
@@ -234,20 +173,20 @@
     <div id="lobbyOverlay">
         <div class="lobby-header">
             <div>ชื่อ: <span id="lobbyName" style="color: #f1c40f; font-weight: bold;">-</span></div>
-            <div>Level: <span style="color: #2ecc71;">1</span> | คะแนน: <span id="lobbyScore" style="color: #f1c40f;">0</span></div>
-            <div>คลาส: <span id="lobbyClass" style="color: #e74c3c; font-weight: bold;">-</span></div>
+            <div>ทีม: <span id="lobbyTeam" style="color: #3498db; font-weight: bold;">-</span></div>
+            <div>คะแนน: <span id="lobbyScore" style="color: #f1c40f;">0</span></div>
         </div>
         <div class="lobby-menu">
-            <button class="lobby-btn" onclick="startPvPGame()">⚔️ เล่นเกม (Boss Raid)</button>
-            <button class="lobby-btn" onclick="openCharacterEdit()">👤 ตัวละคร</button>
+            <button class="lobby-btn" onclick="startPvPGame()">⚔️ เข้าสู่สนามรบ (Boss Raid)</button>
         </div>
-        <div style="text-align: center; color: #a569bd; font-size: 13px;">Mage Castle Arena & Boss Raid</div>
+        <div style="text-align: center; color: #a569bd; font-size: 13px;">Red Team vs Blue Team - Math.io</div>
     </div>
+
+    <div id="waitingBanner">⏳ กำลังรอผู้เล่นเข้าห้อง (0/20 คน)</div>
 
     <div id="mysteryModal">
         <div class="mystery-box">
             <h2>✨ กล่องสมบัติเวทมนตร์!</h2>
-            <p style="font-size: 15px; color: #d7bde2;">แก้รูนคาถานี้เพื่อรับ +60 คะแนน</p>
             <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #f1c40f;">15 + 8 = ?</div>
             <input type="number" id="mysteryInput" placeholder="ผลลัพธ์...">
             <button onclick="submitMystery()" style="background: #f1c40f; color: #2d3436; font-weight: bold; padding: 10px; border-radius: 8px; border:none; cursor:pointer;">ปลดผนึกเวท!</button>
@@ -257,37 +196,34 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="virtualJoystick">
-        <div id="joystickBase">
-            <div id="joystickThumb"></div>
-        </div>
+        <div id="joystickBase"><div id="joystickThumb"></div></div>
     </div>
 
     <div id="ui-layer">
         <div class="boss-hud-container">
             <div style="font-size: 13px; color: #e74c3c; font-weight: bold;" id="bossNameDisplay">🐐 Demon Goat Lord</div>
-            <div class="boss-hp-bar">
-                <div class="boss-hp-fill" id="bossHpFill"></div>
-            </div>
+            <div class="boss-hp-bar"><div class="boss-hp-fill" id="bossHpFill"></div></div>
             <div style="font-size: 11px; color: #d7bde2; margin-top: 2px;" id="bossHpText">HP: 5000 / 5000</div>
         </div>
 
         <div class="header">
-            <div style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5);">คะแนน: <span id="scoreDisplay">0</span></div>
+            <div style="color: #f1c40f;">คะแนนส่วนตัว: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
             <button onclick="returnToLobby()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 กลับ Lobby</button>
             
-            <!-- กระดานดาเมจบอสสูงสุด (แสดงเฉพาะดาเมจบอสอย่างเดียว) -->
+            <!-- กระดานคะแนน Red vs Blue -->
             <div class="leaderboard">
-                <h3 style="color: #f39c12; margin-bottom: 3px; text-align: center;">🐐 ดาเมจบอสสูงสุด</h3>
+                <div class="team-score-box">
+                    <span style="color: #e74c3c;">🔴 ทีมสีแดง: <span id="redTeamDmg">0</span> DMG</span>
+                    <span style="color: #3498db;">🔵 ทีมสีน้ำเงิน: <span id="blueTeamDmg">0</span> DMG</span>
+                </div>
+                <hr style="border:0; border-top:1px solid #555; margin: 4px 0;">
+                <h3 style="color: #f39c12; margin-bottom: 2px; text-align: center;">🏆 ดาเมจบอสสูงสุด</h3>
                 <ol id="bossLeaderboardList" style="padding-left: 15px;"></ol>
             </div>
         </div>
 
-        <button class="boss-attack-btn" onclick="attackBoss()">
-            🐐 โจมตีแพะปีศาจ<br><span style="font-size: 9px; opacity: 0.9;">ใช้ 50 คะแนน</span>
-        </button>
-        <button class="skill-btn-hud" onclick="castPrankSkill()">
-            ⚡ สกิลป่วน/ดีบัฟบอส<br><span id="skillNameLabel" style="font-size: 9px; opacity: 0.9;">Skill</span>
-        </button>
+        <button class="boss-attack-btn" onclick="attackBoss()">🐐 โจมตีบอส<br><span style="font-size: 9px;">ใช้ 50 แต้ม</span></button>
+        <button class="skill-btn-hud" onclick="castPrankSkill()">⚡ สกิลป่วนทีมตรงข้าม</button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
 
@@ -308,131 +244,85 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        let width, height;
-        let MAP_SIZE = 4000;
-
+        let width, height, MAP_SIZE = 4000;
         function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width * window.devicePixelRatio;
-            canvas.height = height * window.devicePixelRatio;
+            width = window.innerWidth; height = window.innerHeight;
+            canvas.width = width * window.devicePixelRatio; canvas.height = height * window.devicePixelRatio;
             ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
         }
         window.addEventListener('resize', resize);
         resize();
 
-        let myId = null;
-        let players = {};
-        let renderPlayers = {};
-        let tiles = [];
-        let mysteryBoxes = [];
-        let inventory = [];
-        let equation = [];
-        let myScore = 0;
-        let gameStarted = false;
-        let characterSaved = false;
-        let previewAngle = 0;
-        let currentMysteryAns = null;
-        let gameSettings = { bossMaxHp: 5000, bossSpeed: 1.8, scoreMultiplier: 15, bossPenalty: 20 };
-        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true, slowedUntil: 0, poisonedUntil: 0 };
+        let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
+        let myScore = 0, myTeam = 'red', gameStarted = false, characterSaved = false, previewAngle = 0, currentMysteryAns = null;
+        let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true };
         let renderBossX = 2000, renderBossY = 1850;
+        let floatingTexts = [], activeEffect = null, effectTimer = 0;
 
-        let floatingTexts = [];
         function addFloatingText(text, x, y, color = '#f1c40f') {
             floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
         }
 
-        let activeEffect = null;
-        let effectTimer = 0;
-
         function attackBoss() { socket.emit('attackBoss'); }
+        function castPrankSkill() { socket.emit('castSkill'); }
 
         socket.on('stateUpdate', (data) => {
             players = data.players;
-            if (data.boss) {
-                let oldHp = bossData.hp;
-                bossData = data.boss;
-                updateBossHUD();
-                
-                if (bossData.hp < oldHp) {
-                    let dmg = oldHp - bossData.hp;
-                    addFloatingText(`-${dmg}`, bossData.x + (Math.random() - 0.5) * 40, bossData.y - 60, '#e74c3c');
-                }
-            }
-            if(players[myId]) {
+            if (data.boss) bossData = data.boss;
+            if (players[myId]) {
                 myScore = players[myId].score;
+                myTeam = players[myId].team || 'red';
                 document.getElementById('scoreDisplay').innerText = myScore;
                 document.getElementById('lobbyScore').innerText = myScore;
+                let badge = document.getElementById('myTeamBadge');
+                badge.innerText = myTeam === 'red' ? 'ทีมสีแดง 🔴' : 'ทีมสีน้ำเงิน 🔵';
+                badge.style.color = myTeam === 'red' ? '#e74c3c' : '#3498db';
+                document.getElementById('lobbyTeam').innerText = myTeam === 'red' ? 'ทีมสีแดง 🔴' : 'ทีมสีน้ำเงิน 🔵';
+                document.getElementById('lobbyTeam').style.color = myTeam === 'red' ? '#e74c3c' : '#3498db';
             }
         });
 
-        socket.on('bossDebuff', (data) => {
-            showMsg(data.msg, "#3498db");
-            addFloatingText(data.type.toUpperCase() + '!', bossData.x, bossData.y - 90, '#3498db');
-        });
-
-        socket.on('bossHitPlayer', (data) => {
-            showMsg(data.msg, "#e74c3c");
-            if(renderPlayers[myId]) {
-                addFloatingText(`-${gameSettings.bossPenalty} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 40, '#e74c3c');
+        socket.on('roomStatus', (data) => {
+            let banner = document.getElementById('waitingBanner');
+            if (data.count < data.required) {
+                banner.innerText = `⏳ กำลังรอผู้เล่นเข้าห้อง (${data.count}/${data.required} คน)`;
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
             }
         });
 
-        socket.on('bossDefeated', (data) => {
-            showMsg(data.msg, "#f1c40f");
-            addFloatingText('DEFEATED!', bossData.x, bossData.y - 90, '#f1c40f');
-        });
-
-        socket.on('bossRespawn', (data) => {
-            showMsg(data.msg, "#e74c3c");
-            addFloatingText('RESPAWN!', bossData.x, bossData.y - 90, '#e74c3c');
-        });
-
-        function updateBossHUD() {
-            let pct = Math.max(0, (bossData.hp / bossData.maxHp) * 100);
-            document.getElementById('bossHpFill').style.width = pct + '%';
-            document.getElementById('bossHpText').innerText = `HP: ${bossData.hp} / ${bossData.maxHp}`;
-            document.getElementById('bossNameDisplay').innerText = `🐐 ${bossData.name} (${bossData.isAlive ? 'Active' : 'Defeated'})`;
-        }
+        socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
+        socket.on('kickedOut', (data) => { alert(data.msg); window.location.reload(); });
+        socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 3500; });
 
         const classInfo = {
-            'Assassin': { desc: '“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Blind / Poison Boss' },
-            'Warrior': { desc: '“สมส่วนแบบนักรบ แข็งแกร่งและสมดุลในการต่อสู้ระยะประชิด”<br>SKILL: ⚔️ Force Push / Stun Boss' },
-            'Tank': { desc: '“รูปร่างใหญ่หนาและมวลมาก เกราะหนักรับดาเมจเพื่อปกป้องเพื่อน”<br>SKILL: 🛡️ Iron Stun / Slow Boss' },
-            'Archer': { desc: '“สูงเพรียวและคล่องตัว โจมตีแม่นยำจากระยะปลอดภัย”<br>SKILL: 🏹 Score Snip / Poison Boss' },
-            'Mage': { desc: '“ควบคุมพลังเวทมนตร์รุนแรงและเวทหมู่เพื่อคุมพื้นที่”<br>SKILL: 🔮 Teleport Swap / Freeze Boss' },
-            'Support': { desc: '“สง่างาม สนับสนุนเพื่อนร่วมทีมด้วยพลัง Heal และ Buff”<br>SKILL: ✨ Color Invert / Freeze Boss' },
-            'Monk': { desc: '“ลีนและว่องไว ใช้ศิลปะการต่อสู้คอมโบหมัดต่อเนื่อง”<br>SKILL: 🥋 Lightning Spin / Stun Boss' },
-            'Berserker': { desc: '“กล้ามเนื้อมหาศาล ยิ่งเจ็บยิ่งแรงและบ้าคลั่งในสมรภูมิ”<br>SKILL: 🔥 Rage Smash / Stun Boss' }
+            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมตรงข้าม”', 'Warrior': '“นักรบสมดุลในสมรภูมิ”',
+            'Tank': '“เกราะหนาป้องกันตัว”', 'Archer': '“ยิงโจมตีระยะไกล”',
+            'Mage': '“เวทมนตร์ป่วนพื้นที่”', 'Support': '“สนับสนุนเพื่อนร่วมทีม”',
+            'Monk': '“หมัดคอมโบต่อเนื่อง”', 'Berserker': '“บ้าคลั่งในสงคราม”'
         };
-
         function onClassChange() {
-            const cls = document.getElementById('playerClass').value;
-            document.getElementById('classDescription').innerHTML = `<b>${cls.toUpperCase()}</b><br>${classInfo[cls].desc}`;
+            let cls = document.getElementById('playerClass').value;
+            document.getElementById('classDescription').innerHTML = `<b>${cls.toUpperCase()}</b><br>${classInfo[cls]}`;
             updatePreview();
         }
 
         function togglePassword(id, btn) {
-            const input = document.getElementById(id);
-            if (input.type === "password") { input.type = "text"; btn.innerText = "🙈"; }
-            else { input.type = "password"; btn.innerText = "👁"; }
+            let input = document.getElementById(id);
+            input.type = input.type === "password" ? "text" : "password";
+            btn.innerText = input.type === "password" ? "👁" : "🙈";
         }
 
         function switchToRegister() {
             document.querySelector('.modal-box h2').innerText = "CREATE ACCOUNT";
             document.getElementById('confirmPasswordGroup').style.display = "block";
-            document.getElementById('authBtnGroup').innerHTML = `
-                <button class="action-btn btn-register" onclick="submitRegister()">สมัครสมาชิก</button>
-                <button class="action-btn" style="background:#7f8c8d; color:white;" onclick="switchToLogin()">กลับ</button>
-            `;
+            document.getElementById('authBtnGroup').innerHTML = `<button class="action-btn btn-register" onclick="submitRegister()">สมัครสมาชิก</button><button class="action-btn" style="background:#7f8c8d; color:white;" onclick="switchToLogin()">กลับ</button>`;
         }
         function switchToLogin() {
             document.querySelector('.modal-box h2').innerText = "🏰 MAGE CASTLE ARENA";
             document.getElementById('confirmPasswordGroup').style.display = "none";
-            document.getElementById('authBtnGroup').innerHTML = `
-                <button class="action-btn btn-login" onclick="submitLogin()">เข้าสู่ระบบ</button>
-                <button class="action-btn btn-register" onclick="switchToRegister()">สมัครสมาชิก</button>
-            `;
+            document.getElementById('authBtnGroup').innerHTML = `<button class="action-btn btn-login" onclick="submitLogin()">เข้าสู่ระบบ</button><button class="action-btn btn-register" onclick="switchToRegister()">สมัครสมาชิก</button>`;
         }
 
         function submitLogin() { socket.emit('loginPlayer', { name: document.getElementById('playerNameInput').value.trim(), password: document.getElementById('playerPasswordInput').value.trim() }); }
@@ -440,14 +330,9 @@
 
         socket.on('authResult', (res) => {
             if (res.success) {
-                if (res.action === 'register') {
-                    document.getElementById('authSuccess').innerText = res.msg;
-                    setTimeout(() => { document.getElementById('authModal').style.display = 'none'; document.getElementById('customizationModal').style.display = 'flex'; updatePreview(); }, 1000);
-                } else {
-                    document.getElementById('authModal').style.display = 'none';
-                    document.getElementById('customizationModal').style.display = 'flex';
-                    updatePreview();
-                }
+                document.getElementById('authModal').style.display = 'none';
+                document.getElementById('customizationModal').style.display = 'flex';
+                updatePreview();
             } else { document.getElementById('authError').innerText = res.msg; }
         });
 
@@ -458,28 +343,20 @@
         window.addEventListener('pointerup', () => { isDragging = false; });
 
         function updatePreview() {
-            const pCtx = pCanvas.getContext('2d');
+            let pCtx = pCanvas.getContext('2d');
             pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-            pCtx.save();
-            pCtx.translate(pCanvas.width / 2, pCanvas.height / 2 + 10);
-            pCtx.rotate(previewAngle);
-            drawCastleAvatar(pCtx, 0, 0, { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, hat: document.getElementById('playerHat').value }, true, false);
+            pCtx.save(); pCtx.translate(pCanvas.width / 2, pCanvas.height / 2 + 10); pCtx.rotate(previewAngle);
+            drawCastleAvatar(pCtx, 0, 0, { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, team: 'red' }, true);
             pCtx.restore();
         }
 
-        function resetCharacter() { document.getElementById('playerClass').value = 'Warrior'; document.getElementById('playerColor').value = '#9b59b6'; document.getElementById('playerHat').value = 'none'; previewAngle = 0; onClassChange(); }
-        function saveCharacterData() { socket.emit('saveCharacter', { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, hat: document.getElementById('playerHat').value }); }
+        function resetCharacter() { document.getElementById('playerClass').value = 'Warrior'; document.getElementById('playerColor').value = '#9b59b6'; previewAngle = 0; onClassChange(); }
+        function saveCharacterData() { socket.emit('saveCharacter', { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, hat: 'none' }); }
         socket.on('saveResult', (res) => { if (res.success) { characterSaved = true; showMsg(res.msg, "#2ecc71"); document.getElementById('enterGameBtn').style.opacity = "1"; document.getElementById('enterGameBtn').style.pointerEvents = "auto"; } });
 
-        function enterMainLobby() { if (!characterSaved) return; document.getElementById('customizationModal').style.display = 'none'; document.getElementById('lobbyOverlay').style.display = 'flex'; document.getElementById('lobbyName').innerText = document.getElementById('playerNameInput').value.trim(); document.getElementById('lobbyClass').innerText = document.getElementById('playerClass').value; }
-        function openCharacterEdit() { document.getElementById('lobbyOverlay').style.display = 'none'; document.getElementById('customizationModal').style.display = 'flex'; updatePreview(); }
-        function startPvPGame() { document.getElementById('lobbyOverlay').style.display = 'none'; document.getElementById('ui-layer').style.display = 'flex'; socket.emit('enterGameLobby'); gameStarted = true; showMsg("⚔️ เริ่มศึกพิชิตแพะปีศาจ!", "#f1c40f"); }
+        function enterMainLobby() { if (!characterSaved) return; document.getElementById('customizationModal').style.display = 'none'; document.getElementById('lobbyOverlay').style.display = 'flex'; document.getElementById('lobbyName').innerText = document.getElementById('playerNameInput').value.trim(); }
+        function startPvPGame() { document.getElementById('lobbyOverlay').style.display = 'none'; document.getElementById('ui-layer').style.display = 'flex'; socket.emit('enterGameLobby'); gameStarted = true; showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f"); }
         function returnToLobby() { gameStarted = false; document.getElementById('ui-layer').style.display = 'none'; document.getElementById('lobbyOverlay').style.display = 'flex'; }
-
-        function castPrankSkill() { socket.emit('castSkill'); }
-        socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
-        socket.on('kickedOut', (data) => { alert(data.msg); window.location.reload(); });
-        socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 3500; });
 
         const keys = { w: false, a: false, s: false, d: false };
         window.addEventListener('keydown', e => { if(gameStarted) setKey(e.key, true); });
@@ -493,39 +370,7 @@
             if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
         }
 
-        let activeTouchId = null, joystickStartX = 0, joystickStartY = 0;
-        window.addEventListener('pointerdown', (e) => {
-            if (!gameStarted || e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || e.target.closest('.modal-box') || e.target.closest('.bottom-panel')) return;
-            activeTouchId = e.pointerId; joystickStartX = e.clientX; joystickStartY = e.clientY;
-            document.getElementById('virtualJoystick').style.display = 'block';
-            let base = document.getElementById('joystickBase');
-            base.style.left = joystickStartX + 'px'; base.style.top = joystickStartY + 'px'; base.style.display = 'block';
-            document.getElementById('joystickThumb').style.transform = 'translate(-50%, -50%) translate(0px, 0px)';
-        }, { passive: true });
-
-        window.addEventListener('pointermove', (e) => {
-            if (activeTouchId === null || e.pointerId !== activeTouchId) return;
-            let dx = e.clientX - joystickStartX, dy = e.clientY - joystickStartY, dist = Math.hypot(dx, dy), maxR = 35;
-            if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
-            document.getElementById('joystickThumb').style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
-            let isRev = (activeEffect === 'blind' && Date.now() < effectTimer);
-            keys.w = isRev ? dy > 8 : dy < -8; keys.s = isRev ? dy < -8 : dy > 8;
-            keys.a = isRev ? dx > 8 : dx < -8; keys.d = isRev ? dx < -8 : dx > 8;
-        }, { passive: true });
-
-        function endJoystick(e) {
-            if (activeTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== activeTouchId)) return;
-            activeTouchId = null; keys.w = keys.a = keys.s = keys.d = false;
-            document.getElementById('joystickBase').style.display = 'none';
-            document.getElementById('virtualJoystick').style.display = 'none';
-        }
-        window.addEventListener('pointerup', endJoystick); window.addEventListener('pointercancel', endJoystick);
-
-        socket.on('initGame', (data) => {
-            myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; gameSettings = data.settings;
-            renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD();
-        });
-
+        socket.on('initGame', (data) => { myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; });
         socket.on('tileCollected', (tile) => { inventory.push(tile); renderUI(); });
         socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
         socket.on('newTile', (tile) => { tiles.push(tile); });
@@ -543,27 +388,30 @@
         socket.on('mysteryResult', (res) => { showMsg(res.success ? "✨ ปลดผนึกสำเร็จ! +60 แต้ม" : "❌ ผิดพลาด!", res.success ? "#f1c40f" : "#e74c3c"); });
         
         socket.on('equationResult', (res) => { 
-            if (res.success) { 
-                showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); 
-                equation = []; 
-                renderUI(); 
-                if (renderPlayers[myId]) {
-                    addFloatingText(`+${res.earnedScore} PTS`, renderPlayers[myId].x, renderPlayers[myId].y - 50, '#2ecc71');
-                }
-            } else { 
-                showMsg("❌ " + res.msg, "#e74c3c"); 
-            } 
+            if (res.success) { showMsg("🌟 ร่ายคาถาสมการสำเร็จ!", "#2ecc71"); equation = []; renderUI(); } 
+            else { showMsg("❌ " + res.msg, "#e74c3c"); } 
         });
-        
-        // อัปเดตกระดานจัดอันดับเฉพาะดาเมจบอสสูงสุดอย่างเดียว
+
+        // อัปเดตกระดานคะแนนรวมของทีมและดาเมจบอส
         socket.on('updateLeaderboard', (allPlayers) => {
             let list = Object.values(allPlayers);
-            let bossSorted = [...list].sort((a,b) => (b.bossDamage || 0) - (a.bossDamage || 0));
-            let htmlBoss = ''; 
-            bossSorted.slice(0, 5).forEach((p, i) => { 
-                htmlBoss += `<li>${i+1}. ${p.name} (${p.bossDamage || 0} DMG)</li>`; 
+            let redTotal = 0, blueTotal = 0;
+            list.forEach(p => {
+                if (!p.inLobby) {
+                    if (p.team === 'red') redTotal += (p.bossDamage || 0);
+                    else blueTotal += (p.bossDamage || 0);
+                }
             });
-            document.getElementById('bossLeaderboardList').innerHTML = htmlBoss;
+            document.getElementById('redTeamDmg').innerText = redTotal;
+            document.getElementById('blueTeamDmg').innerText = blueTotal;
+
+            let bossSorted = [...list].sort((a,b) => (b.bossDamage || 0) - (a.bossDamage || 0));
+            let html = '';
+            bossSorted.slice(0, 5).forEach((p, i) => {
+                let color = p.team === 'red' ? '#e74c3c' : '#3498db';
+                html += `<li>${i+1}. <span style="color:${color};">${p.name}</span> (${p.bossDamage || 0} DMG)</li>`;
+            });
+            document.getElementById('bossLeaderboardList').innerHTML = html;
         });
 
         function renderUI() {
@@ -573,26 +421,18 @@
             equation.forEach((tile, index) => { let el = document.createElement('div'); el.className = `tile ${tile.type}`; el.innerText = tile.char; el.onclick = () => { inventory.push(equation.splice(index, 1)[0]); renderUI(); }; eqZone.appendChild(el); });
         }
         function returnTiles() { inventory = inventory.concat(equation); equation = []; renderUI(); }
-        
-        function dropTile() {
-            if (inventory.length === 0) {
-                showMsg("❌ ไม่มีเบี้ยในกระเป๋าให้ทิ้ง!", "#e74c3c");
-                return;
-            }
-            let tileToDrop = inventory.pop();
-            renderUI();
-            socket.emit('dropTile', tileToDrop);
-            showMsg("🗑️ ทิ้งเบี้ยลงพื้นแล้ว!", "#f1c40f");
-        }
-
+        function dropTile() { if (inventory.length === 0) return; socket.emit('dropTile', inventory.pop()); renderUI(); }
         function sendEquation() { if (equation.length === 0) return; socket.emit('submitEquation', equation.map(t => t.char).join('')); }
         function showMsg(text, color) { const msg = document.getElementById('sysMsg'); msg.innerText = text; msg.style.color = color; msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2500); }
 
-        function drawCastleAvatar(ctx, x, y, pl, isMoving, isTop1) {
+        function drawCastleAvatar(ctx, x, y, pl, isMoving) {
             ctx.save(); ctx.translate(x, y);
             let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
-            let pClass = pl.playerClass || 'Warrior', baseColor = pl.outfitColor || '#9b59b6';
-            ctx.fillStyle = baseColor;
+            // วาดวงแหวนสีทีมใต้เท้า
+            ctx.fillStyle = pl.team === 'red' ? 'rgba(231, 76, 60, 0.6)' : 'rgba(52, 152, 219, 0.6)';
+            ctx.beginPath(); ctx.ellipse(0, 20, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = pl.outfitColor || '#9b59b6';
             ctx.beginPath(); ctx.roundRect(-14, -12 + walkAnim/2, 28, 28, 8); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#1b1b2f'; ctx.stroke();
             ctx.fillStyle = '#1b1b2f'; ctx.fillRect(-9, 18, 6, 10 - walkAnim); ctx.fillRect(3, 18, 6, 10 + walkAnim);
             ctx.fillStyle = '#f5b041'; ctx.beginPath(); ctx.arc(0, -20 + walkAnim/2, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
@@ -600,82 +440,14 @@
         }
 
         function drawBoss(ctx) {
-            ctx.save();
-            ctx.translate(renderBossX, renderBossY);
-
-            if (bossData.poisonedUntil && Date.now() < bossData.poisonedUntil) {
-                ctx.fillStyle = 'rgba(155, 89, 182, 0.5)';
-                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#27ae60';
-                for (let i = 0; i < 4; i++) {
-                    let angle = (Date.now() / 200) + (i * Math.PI / 2);
-                    let px = Math.cos(angle) * 55;
-                    let py = Math.sin(angle) * 55;
-                    ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2); ctx.fill();
-                }
-            } else if (bossData.slowedUntil && Date.now() < bossData.slowedUntil) {
-                ctx.fillStyle = 'rgba(52, 152, 219, 0.5)';
-                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#00f2fe';
-                for (let i = 0; i < 4; i++) {
-                    let angle = (Date.now() / 300) + (i * Math.PI / 2);
-                    let px = Math.cos(angle) * 60;
-                    let py = Math.sin(angle) * 60;
-                    ctx.fillRect(px - 4, py - 4, 8, 8);
-                }
-            }
-
-            ctx.fillStyle = '#111111';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 3;
-
-            ctx.beginPath();
-            ctx.moveTo(-15, -20);
-            ctx.bezierCurveTo(-50, -50, -70, -10, -45, 10);
-            ctx.bezierCurveTo(-55, -10, -45, -35, -15, -15);
-            ctx.fill(); ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(15, -20);
-            ctx.bezierCurveTo(50, -50, 70, -10, 45, 10);
-            ctx.bezierCurveTo(55, -10, 45, -35, 15, -15);
-            ctx.fill(); ctx.stroke();
-
-            ctx.fillStyle = bossData.isAlive ? '#6c3483' : '#7f8c8d';
-            ctx.beginPath();
-            ctx.moveTo(0, -30);
-            ctx.lineTo(-25, 10);
-            ctx.lineTo(-15, 35);
-            ctx.lineTo(15, 35);
-            ctx.lineTo(25, 10);
-            ctx.closePath();
-            ctx.fill();
+            ctx.save(); ctx.translate(renderBossX, renderBossY);
+            ctx.fillStyle = '#6c3483'; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-25, 10); ctx.lineTo(-15, 35); ctx.lineTo(15, 35); ctx.lineTo(25, 10); ctx.closePath(); ctx.fill();
             ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(-12, -10, 8, 0, Math.PI * 2);
-            ctx.arc(12, -10, 8, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.arc(-12, -10, 3, 0, Math.PI * 2);
-            ctx.arc(12, -10, 3, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#000000';
-            ctx.beginPath();
-            ctx.ellipse(0, 15, 10, 16, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 18px Kanit';
-            ctx.textAlign = 'center';
-            ctx.fillText(`🐐 ${bossData.name}`, 0, -65);
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px Kanit'; ctx.textAlign = 'center'; ctx.fillText(`🐐 ${bossData.name}`, 0, -65);
             ctx.restore();
         }
 
-        function drawCastleBackground(camX, camY) {
+        function drawBackground(camX, camY) {
             ctx.fillStyle = '#151328'; ctx.fillRect(0, 0, width, height);
             ctx.save(); ctx.translate(-camX, -camY);
             ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 25; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
@@ -695,25 +467,16 @@
                 if (dx !== 0 || dy !== 0) socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
                 else socket.emit('move', { x: p.x, y: p.y, isMoving: false });
 
-                let sorted = Object.values(players).sort((a,b) => b.score - a.score);
-                let topId = sorted.length > 0 ? sorted[0].socketId : null;
-
                 renderBossX += (bossData.x - renderBossX) * 0.15;
                 renderBossY += (bossData.y - renderBossY) * 0.15;
 
                 for (let id in players) {
                     let serverPl = players[id];
-                    if (!renderPlayers[id]) {
-                        renderPlayers[id] = { ...serverPl };
-                    } else {
-                        renderPlayers[id].targetX = serverPl.x;
-                        renderPlayers[id].targetY = serverPl.y;
-                        renderPlayers[id].name = serverPl.name;
-                        renderPlayers[id].playerClass = serverPl.playerClass;
-                        renderPlayers[id].outfitColor = serverPl.outfitColor;
-                        renderPlayers[id].hat = serverPl.hat;
-                        renderPlayers[id].score = serverPl.score;
-                        renderPlayers[id].bossDamage = serverPl.bossDamage;
+                    if (!renderPlayers[id]) renderPlayers[id] = { ...serverPl };
+                    else {
+                        renderPlayers[id].targetX = serverPl.x; renderPlayers[id].targetY = serverPl.y;
+                        renderPlayers[id].name = serverPl.name; renderPlayers[id].playerClass = serverPl.playerClass;
+                        renderPlayers[id].outfitColor = serverPl.outfitColor; renderPlayers[id].team = serverPl.team;
                         renderPlayers[id].isMoving = serverPl.isMoving;
                     }
                     if (renderPlayers[id].targetX !== undefined) {
@@ -727,11 +490,8 @@
                 let camX = me.x - (width / 2), camY = me.y - (height / 2);
                 if (activeEffect && Date.now() < effectTimer) { camX += (Math.random() - 0.5) * 20; camY += (Math.random() - 0.5) * 20; }
 
-                drawCastleBackground(camX, camY);
-
-                ctx.save();
-                ctx.translate(-camX, -camY);
-
+                drawBackground(camX, camY);
+                ctx.save(); ctx.translate(-camX, -camY);
                 drawBoss(ctx);
 
                 tiles.forEach(t => {
@@ -751,31 +511,11 @@
 
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
-                    let isTop1 = (id === topId && pl.score > 0);
-                    drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving, isTop1);
-                    ctx.fillStyle = isTop1 ? '#f1c40f' : '#ffffff';
-                    ctx.font = isTop1 ? 'bold 16px Kanit' : 'bold 14px Kanit';
-                    ctx.textAlign = 'center';
+                    drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
+                    ctx.fillStyle = pl.team === 'red' ? '#e74c3c' : '#3498db';
+                    ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
                     ctx.fillText(`${pl.name} [${pl.playerClass}]`, pl.x, pl.y - 65);
                 }
-
-                for (let i = floatingTexts.length - 1; i >= 0; i--) {
-                    let ft = floatingTexts[i];
-                    ft.y += ft.vy;
-                    ft.alpha -= 0.02;
-                    if (ft.alpha <= 0) {
-                        floatingTexts.splice(i, 1);
-                        continue;
-                    }
-                    ctx.save();
-                    ctx.globalAlpha = ft.alpha;
-                    ctx.fillStyle = ft.color;
-                    ctx.font = 'bold 24px Kanit';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(ft.text, ft.x, ft.y);
-                    ctx.restore();
-                }
-
                 ctx.restore();
             }
             requestAnimationFrame(gameLoop);
