@@ -24,16 +24,15 @@ let blueBase = { x: MAP_SIZE - 800, y: 800, hp: 3000, maxHp: 3000, name: 'Blue F
 let greenBase = { x: 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Green Fortress', team: 'green', isAlive: true };
 let yellowBase = { x: MAP_SIZE - 800, y: MAP_SIZE - 800, hp: 3000, maxHp: 3000, name: 'Yellow Fortress', team: 'yellow', isAlive: true };
 
-// กำหนดระยะเวลาคูลดาวน์เฉพาะของแต่ละสายอาชีพ (หน่วยเป็นมิลลิวินาที)
 const CLASS_COOLDOWNS = {
-    'Assassin': 3000,  // พุ่งไว คูลดาวน์ 3 วิ
-    'Warrior': 6000,   // โจมตีฐานแรง 6 วิ
-    'Tank': 9000,      // ฮีลฐาน 9 วิ
-    'Archer': 5000,    // ยิงศรสโลว์ 5 วิ
-    'Mage': 5000,      // ดูดเบี้ย 5 วิ
-    'Support': 6000,   // บูสต์คะแนน 6 วิ
-    'Monk': 4000,      // ชำระล้าง 4 วิ
-    'Berserker': 6000  // คูณสอง 6 วิ
+    'Assassin': 3000,
+    'Warrior': 6000,
+    'Tank': 9000,
+    'Archer': 5000,
+    'Mage': 5000,
+    'Support': 6000,
+    'Monk': 4000,
+    'Berserker': 6000
 };
 
 const AMATH_SCORES = {
@@ -374,10 +373,17 @@ io.on('connection', (socket) => {
         }
     });
 
+    // ฟังก์ชันรองรับการทิ้งเบี้ยลงพื้น
     socket.on('dropTile', (tileData) => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.isHost) return;
-        let dropped = { id: Math.random().toString(36).substr(2, 9), x: p.x + (Math.random() - 0.5) * 30, y: p.y + (Math.random() - 0.5) * 30, char: tileData.char, type: tileData.type };
+        let dropped = { 
+            id: Math.random().toString(36).substr(2, 9), 
+            x: p.x + (Math.random() - 0.5) * 40, 
+            y: p.y + (Math.random() - 0.5) * 40, 
+            char: tileData.char, 
+            type: tileData.type 
+        };
         tiles.push(dropped);
         io.emit('newTile', dropped);
     });
