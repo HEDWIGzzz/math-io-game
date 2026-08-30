@@ -84,7 +84,7 @@ io.on('connection', (socket) => {
 
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE });
 
-    // ระบบสมัครสมาชิก (Register)
+    // ระบบสมัครสมาชิก
     socket.on('registerPlayer', async (data) => {
         let name = data.name ? data.name.trim() : '';
         let password = data.password ? data.password.trim() : '';
@@ -111,7 +111,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Hash Password ปลอดภัย
         const hashedPassword = await bcrypt.hash(password, 10);
         const newPlayerId = 'PLY_' + Math.random().toString(36).substr(2, 9);
 
@@ -132,7 +131,7 @@ io.on('connection', (socket) => {
         socket.emit('authResult', { success: true, action: 'register', msg: 'ACCOUNT CREATED!' });
     });
 
-    // ระบบเข้าสู่ระบบ (Login)
+    // ระบบเข้าสู่ระบบ
     socket.on('loginPlayer', async (data) => {
         let name = data.name ? data.name.trim() : '';
         let password = data.password ? data.password.trim() : '';
@@ -168,7 +167,7 @@ io.on('connection', (socket) => {
         });
     });
 
-    // บันทึกตัวละคร (Save Character)
+    // บันทึกตัวละคร
     socket.on('saveCharacter', (data) => {
         let p = activePlayers[socket.id];
         if (!p || !p.name) return;
@@ -189,13 +188,47 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
-    // เข้าสู่ Main Lobby / เข้าเกม PvP
+    // เข้าสู่ Main Lobby
     socket.on('enterGameLobby', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.name) return;
         p.loggedIn = true;
         p.inLobby = false;
         io.emit('updateLeaderboard', activePlayers);
+    });
+
+    // ระบบใช้สกิลป่วนเพื่อน (Prank Skill)
+    socket.on('castSkill', () => {
+        let p = activePlayers[socket.id];
+        if (!p || !p.loggedIn || p.inLobby) return;
+
+        let now = Date.now();
+        if (p.lastSkillTime && now - p.lastSkillTime < 4000) {
+            socket.emit('skillResult', { success: false, msg: 'สกิลกำลัง Cool Down (รอ 4 วินาที)' });
+            return;
+        }
+        p.lastSkillTime = now;
+
+        let affectedCount = 0;
+        for (let id in activePlayers) {
+            if (id !== socket.id) {
+                let target = activePlayers[id];
+                let dist = Math.hypot(p.x - target.x, p.y - target.y);
+                if (dist < 280) {
+                    io.to(id).emit('trolled', { 
+                        casterName: p.name, 
+                        playerClass: p.playerClass,
+                        msg: `💥 คุณโดนสกิล [${p.playerClass}] ของ ${p.name} แกล้งเข้าแล้ว!` 
+                    });
+                    affectedCount++;
+                }
+            }
+        }
+
+        socket.emit('skillResult', { 
+            success: true, 
+            msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนสำเร็จโดนเพื่อน ${affectedCount} คน!` : `✨ ร่ายสกิลเวทมนตร์กวนๆ สำเร็จ!` 
+        });
     });
 
     socket.on('move', (data) => {
