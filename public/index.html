@@ -285,6 +285,10 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
+        // ประกาศตัวแปร mapping สีและชื่อทีมไว้ด้านบนสุด ป้องกัน Error ตอนเรนเดอร์พรีวิว
+        const teamNamesMap = { red: 'ทีมแดง 🔴', blue: 'ทีมน้ำเงิน 🔵', green: 'ทีมเขียว 🟢', yellow: 'ทีมเหลือง 🟡' };
+        const teamColorsMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
+
         let width, height, MAP_SIZE = 4000;
         function resize() {
             width = window.innerWidth; height = window.innerHeight;
@@ -329,6 +333,19 @@
             toggleHostConfig(false);
         }
 
+        function drawCastleAvatar(ctx, x, y, pl, isMoving) {
+            ctx.save(); ctx.translate(x, y);
+            let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
+            ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
+            ctx.beginPath(); ctx.ellipse(0, 20, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = pl.outfitColor || '#9b59b6';
+            ctx.beginPath(); ctx.roundRect(-14, -12 + walkAnim/2, 28, 28, 8); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#1b1b2f'; ctx.stroke();
+            ctx.fillStyle = '#1b1b2f'; ctx.fillRect(-9, 18, 6, 10 - walkAnim); ctx.fillRect(3, 18, 6, 10 + walkAnim);
+            ctx.fillStyle = '#f5b041'; ctx.beginPath(); ctx.arc(0, -20 + walkAnim/2, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+            ctx.restore();
+        }
+
         const pCanvas = document.getElementById('previewCanvas');
         let isDragging = false, lastMouseX = 0;
         pCanvas.addEventListener('pointerdown', (e) => { isDragging = true; lastMouseX = e.clientX; });
@@ -362,6 +379,7 @@
         }
 
         document.getElementById('playerTeam').addEventListener('change', updatePreview);
+        document.getElementById('playerColor').addEventListener('input', updatePreview);
 
         function joinGame() {
             let name = document.getElementById('playerNameInput').value.trim();
@@ -432,9 +450,6 @@
             showMsg(data.msg, "#f1c40f");
             setTimeout(() => { window.location.reload(); }, 6000);
         });
-
-        const teamNamesMap = { red: 'ทีมแดง 🔴', blue: 'ทีมน้ำเงิน 🔵', green: 'ทีมเขียว 🟢', yellow: 'ทีมเหลือง 🟡' };
-        const teamColorsMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
 
         socket.on('stateUpdate', (data) => {
             players = data.players;
@@ -615,19 +630,6 @@
         function dropTile() { if (!isHost && inventory.length > 0) { socket.emit('dropTile', inventory.pop()); renderUI(); } }
         function sendEquation() { if (!isHost && equation.length > 0) { socket.emit('submitEquation', equation.map(t => t.char).join('')); } }
         function showMsg(text, color) { const msg = document.getElementById('sysMsg'); msg.innerText = text; msg.style.color = color; msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2500); }
-
-        function drawCastleAvatar(ctx, x, y, pl, isMoving) {
-            ctx.save(); ctx.translate(x, y);
-            let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
-            ctx.fillStyle = teamColorsMap[pl.team] || '#fff';
-            ctx.beginPath(); ctx.ellipse(0, 20, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
-
-            ctx.fillStyle = pl.outfitColor || '#9b59b6';
-            ctx.beginPath(); ctx.roundRect(-14, -12 + walkAnim/2, 28, 28, 8); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#1b1b2f'; ctx.stroke();
-            ctx.fillStyle = '#1b1b2f'; ctx.fillRect(-9, 18, 6, 10 - walkAnim); ctx.fillRect(3, 18, 6, 10 + walkAnim);
-            ctx.fillStyle = '#f5b041'; ctx.beginPath(); ctx.arc(0, -20 + walkAnim/2, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.restore();
-        }
 
         function drawFortress(ctx, base, color, label) {
             ctx.save(); ctx.translate(base.x, base.y);
