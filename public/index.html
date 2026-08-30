@@ -51,8 +51,17 @@
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
         .header { padding: 10px 15px; display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; align-items: flex-start; gap: 10px; }
         
-        .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 8px 12px; border-radius: 10px; font-size: 11px; min-width: 200px; max-width: 240px; pointer-events: auto; }
+        .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 8px 12px; border-radius: 10px; font-size: 11px; min-width: 180px; max-width: 220px; pointer-events: auto; }
         .team-score-box { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: bold; font-size: 10px; }
+
+        /* Minimap Container Style */
+        .minimap-container {
+            position: absolute; right: 15px; top: 70px; width: 125px; height: 125px;
+            background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; border-radius: 10px;
+            overflow: hidden; pointer-events: auto; z-index: 75; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.3);
+        }
+        #minimapCanvas { width: 115px; height: 115px; display: block; }
         
         .bases-hud-container {
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -192,6 +201,11 @@
     <canvas id="gameCanvas"></canvas>
 
     <div id="ui-layer">
+        <!-- 🗺️ มินิแมพแสดงตำแหน่งปราสาทและผู้เล่น -->
+        <div class="minimap-container">
+            <canvas id="minimapCanvas" width="115" height="115"></canvas>
+        </div>
+
         <div class="bases-hud-container">
             <div class="base-hud">
                 <div style="font-size: 9px; color: #e74c3c; font-weight: bold;">🔴 แดง</div>
@@ -224,17 +238,7 @@
             </div>
             <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-family: 'Kanit'; font-weight: bold; font-size: 12px; cursor: pointer; pointer-events: auto;">🏠 ออก</button>
             
-            <div class="leaderboard">
-                <div class="team-score-box">
-                    <span style="color: #e74c3c;">🔴แดง</span>
-                    <span style="color: #3498db;">🔵น้ำเงิน</span>
-                    <span style="color: #2ecc71;">🟢เขียว</span>
-                    <span style="color: #f1c40f;">🟡เหลือง</span>
-                </div>
-                <hr style="border:0; border-top:1px solid #555; margin: 3px 0;">
-                <h3 style="color: #f39c12; margin-bottom: 2px; text-align: center; font-size: 11px;">🏆 ดาเมจถล่มฐานสูงสุด</h3>
-                <ol id="bossLeaderboardList" style="padding-left: 12px;"></ol>
-            </div>
+            <div class="leaderboard" style="display:none;"></div> <!-- สำรองพื้นที่ -->
         </div>
 
         <button class="attack-base-btn" id="attackBaseBtn" onpointerdown="tryAttackNearestBase()">🏰 โจมตีฐาน<br><span style="font-size: 7px;">ใช้ 50 แต้ม</span></button>
@@ -274,6 +278,9 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
+        const mmCanvas = document.getElementById('minimapCanvas');
+        const mmCtx = mmCanvas ? mmCanvas.getContext('2d') : null;
+
         const teamNamesMap = { red: 'ทีมแดง 🔴', blue: 'ทีมน้ำเงิน 🔵', green: 'ทีมเขียว 🟢', yellow: 'ทีมเหลือง 🟡' };
         const teamColorsMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
 
@@ -470,7 +477,6 @@
                     document.getElementById('bottomPanel').style.display = 'none';
                     document.getElementById('attackBaseBtn').style.display = 'none';
                     document.getElementById('skillBtnHud').style.display = 'none';
-                    document.getElementById('playerInfoSection.innerHTML = `<span style="color: #f1c40f; font-weight: bold; font-size: 13px;">👑 Host Mode</span>`; --> Let's fix this cleanly:
                     document.getElementById('playerInfoSection').innerHTML = `<span style="color: #f1c40f; font-weight: bold; font-size: 13px;">👑 Host Mode</span>`;
                     showMsg("👑 ยินดีต้อนรับ Host! จัดการตั้งค่าและเริ่มเกมได้เลย", "#f1c40f");
                 } else {
@@ -687,14 +693,7 @@
         });
 
         socket.on('updateLeaderboard', (allPlayers) => {
-            let list = Object.values(allPlayers);
-            let baseSorted = [...list].filter(p => !p.isHost).sort((a,b) => (b.baseDamage || 0) - (a.baseDamage || 0));
-            let html = '';
-            baseSorted.slice(0, 5).forEach((p, i) => {
-                let color = teamColorsMap[p.team] || '#fff';
-                html += `<li>${i+1}. <span style="color:${color};">${p.name}</span> (${p.baseDamage || 0} DMG)</li>`;
-            });
-            document.getElementById('bossLeaderboardList').innerHTML = html;
+            // Leaderboard list can be customized here if needed
         });
 
         function renderUI() {
@@ -730,6 +729,47 @@
             ctx.save(); ctx.translate(-camX, -camY);
             ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 25; ctx.strokeRect(0, 0, MAP_SIZE, MAP_SIZE);
             ctx.restore();
+        }
+
+        // ฟังก์ชันวาดมินิแมพ
+        function drawMiniMap() {
+            if (!mmCtx) return;
+            mmCtx.clearRect(0, 0, mmCanvas.width, mmCanvas.height);
+            let scale = mmCanvas.width / MAP_SIZE;
+
+            // พื้นหลังมินิแมพ
+            mmCtx.fillStyle = '#151328';
+            mmCtx.fillRect(0, 0, mmCanvas.width, mmCanvas.height);
+
+            // ขอบเขตแมพ
+            mmCtx.strokeStyle = '#9b59b6';
+            mmCtx.lineWidth = 1;
+            mmCtx.strokeRect(0, 0, mmCanvas.width, mmCanvas.height);
+
+            // วาดฐานปราสาท 4 ทีม
+            let bases = [
+                { base: redBase, color: '#e74c3c' },
+                { base: blueBase, color: '#3498db' },
+                { base: greenBase, color: '#2ecc71' },
+                { base: yellowBase, color: '#f1c40f' }
+            ];
+
+            bases.forEach(b => {
+                if (b.base) {
+                    mmCtx.fillStyle = b.color;
+                    mmCtx.fillRect((b.base.x - 70) * scale, (b.base.y - 70) * scale, 140 * scale, 140 * scale);
+                }
+            });
+
+            // วาดตำแหน่งผู้เล่นทั้งหมด
+            for (let id in renderPlayers) {
+                let pl = renderPlayers[id];
+                if (!pl.loggedIn || pl.isHost) continue;
+                mmCtx.fillStyle = teamColorsMap[pl.team] || '#fff';
+                mmCtx.beginPath();
+                mmCtx.arc(pl.x * scale, pl.y * scale, id === myId ? 3.5 : 2, 0, Math.PI * 2);
+                mmCtx.fill();
+            }
         }
 
         function gameLoop() {
@@ -836,6 +876,9 @@
                 }
 
                 ctx.restore();
+
+                // อัปเดตรดมินิแมพทุกเฟรม
+                drawMiniMap();
             }
             requestAnimationFrame(gameLoop);
         }
