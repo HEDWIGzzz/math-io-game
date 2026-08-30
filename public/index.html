@@ -33,14 +33,14 @@
 
         #waitingBanner {
             position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-            background: rgba(231, 76, 60, 0.9); border: 2px solid #f1c40f; padding: 12px 25px;
+            background: rgba(231, 76, 60, 0.9); border: 2px solid #f1c40f; padding: 14px 28px;
             border-radius: 12px; font-size: 15px; font-weight: bold; z-index: 85; display: none; text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: auto;
         }
         .host-start-btn {
             background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none;
-            padding: 8px 18px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; font-size: 15px;
-            cursor: pointer; margin-top: 8px; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            padding: 10px 22px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; font-size: 16px;
+            cursor: pointer; margin-top: 10px; display: inline-block; box-shadow: 0 4px 15px rgba(46,204,113,0.4);
         }
 
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
@@ -72,6 +72,12 @@
             cursor: pointer; pointer-events: auto; box-shadow: 0 0 20px rgba(231, 76, 60, 0.7); z-index: 70; line-height: 1.1;
         }
 
+        .host-config-btn {
+            background: linear-gradient(135deg, #f39c12, #d35400); color: white; border: none;
+            padding: 8px 14px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; font-size: 14px;
+            cursor: pointer; pointer-events: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.3); display: none; margin-left: 10px;
+        }
+
         .bottom-panel { background: rgba(21, 19, 40, 0.95); padding: 12px 15px; border-top: 4px solid #9b59b6; pointer-events: auto; display: flex; flex-direction: column; gap: 8px; align-items: center; }
         .equation-area { background: #151328; width: 100%; max-width: 650px; min-height: 48px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 2px dashed #9b59b6; padding: 5px; }
         .inventory-area { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; min-height: 40px; width: 100%; }
@@ -89,10 +95,6 @@
         
         .sys-msg { position: absolute; top: 14%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; z-index: 80; }
         .sys-msg.show { opacity: 1; top: 12%; }
-
-        #virtualJoystick { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; display: none; }
-        #joystickBase { position: absolute; width: 100px; height: 100px; border-radius: 50%; background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7); transform: translate(-50%, -50%); display: none; }
-        #joystickThumb { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: rgba(155, 89, 182, 0.85); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
     </style>
 </head>
 <body>
@@ -103,7 +105,11 @@
             <canvas id="previewCanvas" width="140" height="140"></canvas>
             <div>
                 <label>ชื่อผู้เล่น (Username)</label>
-                <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ (พิมพ์ Do เพื่อเป็น Host)..." maxlength="15" autocomplete="off">
+                <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ..." maxlength="15" autocomplete="off">
+            </div>
+            <div>
+                <label>🔑 รหัสผ่านโฮส (Admin Password - 007007)</label>
+                <input type="password" id="hostPasswordInput" placeholder="ใส่รหัส 007007 เพื่อเป็น Host..." autocomplete="off">
             </div>
             <div>
                 <label>เลือกสายอาชีพ (SELECT CLASS)</label>
@@ -127,10 +133,33 @@
         </div>
     </div>
 
+    <!-- ⚙️ หน้าต่างตั้งค่าเกมสำหรับ Host -->
+    <div id="hostConfigModal" class="screen-layer" style="display:none;">
+        <div class="modal-box" style="border: 3px solid #f39c12; max-width: 380px;">
+            <h2 style="color: #f39c12;">⚙️ แผงควบคุมตั้งค่าเกม (Host)</h2>
+            <div>
+                <label>พลังชีวิตบอสสูงสุด (Boss Max HP)</label>
+                <input type="number" id="cfgBossHp" value="5000" step="500">
+            </div>
+            <div>
+                <label>ความเร็วบอส (Boss Speed)</label>
+                <input type="number" id="cfgBossSpeed" value="1.8" step="0.2">
+            </div>
+            <div>
+                <label>ตัวคูณคะแนนสมการ (Score Multiplier)</label>
+                <input type="number" id="cfgScoreMul" value="15" step="1">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button onclick="saveHostSettings()" style="background:#2ecc71; color:white; font-weight:bold; padding:10px; border-radius:8px; border:none; cursor:pointer; flex:1;">บันทึกการตั้งค่า</button>
+                <button onclick="toggleHostConfig(false)" style="background:#e74c3c; color:white; font-weight:bold; padding:10px; border-radius:8px; border:none; cursor:pointer; flex:1;">ปิด</button>
+            </div>
+        </div>
+    </div>
+
     <div id="waitingBanner">
         <div id="waitingText">⏳ กำลังรอผู้เล่นเข้าห้อง (0/20 คน)</div>
         <div id="hostButtonContainer" style="display: none;">
-            <button class="host-start-btn" onclick="forceStartGame()">🚀 เริ่มเกมทันที (สำหรับโด้)</button>
+            <button class="host-start-btn" onclick="forceStartGame()">🚀 เริ่มเกมทันที (สำหรับ Host)</button>
         </div>
     </div>
 
@@ -145,10 +174,6 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="virtualJoystick">
-        <div id="joystickBase"><div id="joystickThumb"></div></div>
-    </div>
-
     <div id="ui-layer">
         <div class="boss-hud-container">
             <div style="font-size: 13px; color: #e74c3c; font-weight: bold;" id="bossNameDisplay">🐐 Demon Goat Lord</div>
@@ -157,7 +182,10 @@
         </div>
 
         <div class="header">
-            <div style="color: #f1c40f;">คะแนนส่วนตัว: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="color: #f1c40f;">คะแนนส่วนตัว: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
+                <button id="hostConfigBtn" class="host-config-btn" onclick="toggleHostConfig(true)">⚙️ ตั้งค่าเกม</button>
+            </div>
             <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 ออกจากเกม</button>
             
             <div class="leaderboard">
@@ -216,6 +244,18 @@
         function attackBoss() { socket.emit('attackBoss'); }
         function castPrankSkill() { socket.emit('castSkill'); }
         function forceStartGame() { socket.emit('forceStartGame'); }
+        
+        function toggleHostConfig(show) {
+            document.getElementById('hostConfigModal').style.display = show ? 'flex' : 'none';
+        }
+
+        function saveHostSettings() {
+            let maxHp = document.getElementById('cfgBossHp').value;
+            let speed = document.getElementById('cfgBossSpeed').value;
+            let mul = document.getElementById('cfgScoreMul').value;
+            socket.emit('updateGameSettings', { bossMaxHp: maxHp, bossSpeed: speed, scoreMultiplier: mul });
+            toggleHostConfig(false);
+        }
 
         const pCanvas = document.getElementById('previewCanvas');
         let isDragging = false, lastMouseX = 0;
@@ -250,9 +290,11 @@
 
         function joinGame() {
             let name = document.getElementById('playerNameInput').value.trim();
+            let hostPassword = document.getElementById('hostPasswordInput').value.trim();
             if (!name) { alert("กรุณากรอกชื่อผู้เล่นก่อนเข้าเกม"); return; }
             socket.emit('joinGame', {
                 name: name,
+                hostPassword: hostPassword,
                 playerClass: document.getElementById('playerClass').value,
                 outfitColor: document.getElementById('playerColor').value
             });
@@ -261,13 +303,19 @@
         socket.on('joinResult', (res) => {
             if (res.success) {
                 isHost = res.isHost;
+                gameStarted = res.gameStarted;
                 document.getElementById('setupModal').style.display = 'none';
                 document.getElementById('ui-layer').style.display = 'flex';
-                gameStarted = true;
+                
                 if (isHost) {
-                    showMsg("👑 ยินดีต้อนรับ Host (โด้)! คุณสามารถกดเริ่มเกมได้ทันที", "#f1c40f");
+                    document.getElementById('hostConfigBtn').style.display = 'inline-block';
+                    showMsg("👑 ยินดีต้อนรับ Host! คุณสามารถกดเริ่มเกมและตั้งค่าเกมได้", "#f1c40f");
                 } else {
                     showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f");
+                }
+
+                if (gameStarted) {
+                    document.getElementById('waitingBanner').style.display = 'none';
                 }
             }
         });
@@ -301,7 +349,7 @@
 
         socket.on('roomStatus', (data) => {
             let banner = document.getElementById('waitingBanner');
-            if (!data.gameStarted) {
+            if (!data.gameStarted && !gameStarted) {
                 document.getElementById('waitingText').innerText = `⏳ กำลังรอผู้เล่นเข้าห้อง (${data.count}/${data.required} คน)`;
                 if (isHost) {
                     document.getElementById('hostButtonContainer').style.display = 'block';
@@ -346,6 +394,7 @@
             myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss;
             renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD();
             if (data.gameStarted) {
+                gameStarted = true;
                 document.getElementById('waitingBanner').style.display = 'none';
             }
         });
@@ -423,7 +472,6 @@
             ctx.restore();
         }
 
-        // 🐐 บอสแพะปีศาจฉบับสมบูรณ์ (มีตัว มีหาง และมีขาขยับเดินได้)
         function drawBoss(ctx) {
             ctx.save(); ctx.translate(renderBossX, renderBossY);
             if (bossData.poisonedUntil && Date.now() < bossData.poisonedUntil) {
@@ -432,7 +480,6 @@
                 ctx.fillStyle = 'rgba(52, 152, 219, 0.5)'; ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
             }
 
-            // 🦵 ขาปีศาจ 4 ข้าง (ขยับเดิน)
             let walkAnim = bossData.isAlive ? Math.sin(Date.now() / 100) * 6 : 0;
             ctx.fillStyle = '#4a235a'; ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50';
             ctx.fillRect(-16, 25, 6, 18 + walkAnim); ctx.strokeRect(-16, 25, 6, 18 + walkAnim);
@@ -440,19 +487,16 @@
             ctx.fillRect(-10, 25, 6, 18 - walkAnim); ctx.strokeRect(-10, 25, 6, 18 - walkAnim);
             ctx.fillRect(4, 25, 6, 18 + walkAnim); ctx.strokeRect(4, 25, 6, 18 + walkAnim);
 
-            // 🌀 หางปีศาจแกว่งไปมา
             let tailWag = Math.sin(Date.now() / 150) * 15;
             ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 4;
             ctx.beginPath(); ctx.moveTo(0, 30); ctx.quadraticCurveTo(-30 + tailWag, 55, -20 + tailWag*1.5, 70); ctx.stroke();
             ctx.fillStyle = '#6c3483';
             ctx.beginPath(); ctx.moveTo(-20 + tailWag*1.5, 70); ctx.lineTo(-26 + tailWag*1.5, 60); ctx.lineTo(-12 + tailWag*1.5, 63); ctx.closePath(); ctx.fill();
 
-            // 🧥 ลำตัวปีศาจ
             ctx.fillStyle = bossData.isAlive ? '#512e5f' : '#7f8c8d';
             ctx.beginPath(); ctx.ellipse(0, 15, 26, 22, 0, 0, Math.PI * 2); ctx.fill();
             ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
 
-            // 🐐 หัวและเขาปีศาจ
             ctx.fillStyle = '#111111'; ctx.lineWidth = 3;
             ctx.beginPath(); ctx.moveTo(-15, -20); ctx.bezierCurveTo(-50, -50, -70, -10, -45, 10); ctx.bezierCurveTo(-55, -10, -45, -35, -15, -15); ctx.fill(); ctx.stroke();
             ctx.beginPath(); ctx.moveTo(15, -20); ctx.bezierCurveTo(50, -50, 70, -10, 45, 10); ctx.bezierCurveTo(55, -10, 45, -35, 15, -15); ctx.fill(); ctx.stroke();
@@ -521,7 +565,6 @@
                 ctx.save(); ctx.translate(-camX, -camY);
                 drawBoss(ctx);
 
-                // เรนเดอร์เอฟเฟกต์ภาพสกิลวงแหวนเวท
                 for (let i = skillVisualEffects.length - 1; i >= 0; i--) {
                     let fx = skillVisualEffects[i];
                     fx.radius += 8;
