@@ -12,6 +12,7 @@ const activePlayers = {};
 const tiles = [];
 const mysteryBoxes = [];
 const MAP_SIZE = 4000;
+let globalGameStarted = false;
 
 let gameSettings = {
     bossMaxHp: 5000,
@@ -112,6 +113,7 @@ io.on('connection', (socket) => {
         playerClass: 'Warrior',
         outfitColor: '#9b59b6',
         team: 'red',
+        isHost: false,
         x: MAP_SIZE / 2,
         y: MAP_SIZE / 2,
         score: 0,
@@ -120,14 +122,14 @@ io.on('connection', (socket) => {
         loggedIn: false
     };
 
-    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss, settings: gameSettings });
+    socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE, boss: demonBoss, settings: gameSettings, gameStarted: globalGameStarted });
 
-    // 🚀 เข้าเกมทันทีโดยไม่ต้องสมัครสมาชิก
     socket.on('joinGame', (data) => {
         let name = data.name ? data.name.trim() : 'Player';
         if (name.length === 0) name = 'Player';
 
-        // จัดสมดุลทีม Red / Blue
+        let isHostUser = (name.toLowerCase() === 'do' || name === 'โด้');
+
         let redCount = 0, blueCount = 0;
         for (let id in activePlayers) {
             if (activePlayers[id].loggedIn) {
@@ -142,22 +144,31 @@ io.on('connection', (socket) => {
         p.playerClass = data.playerClass || 'Warrior';
         p.outfitColor = data.outfitColor || '#9b59b6';
         p.team = assignedTeam;
+        p.isHost = isHostUser;
         p.loggedIn = true;
         p.x = MAP_SIZE / 2 + (Math.random() - 0.5) * 300;
         p.y = MAP_SIZE / 2 + (Math.random() - 0.5) * 300;
 
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn).length;
-        io.emit('roomStatus', { count: totalIngame, required: 20 });
-        socket.emit('joinResult', { success: true, team: assignedTeam });
+        io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
+        socket.emit('joinResult', { success: true, team: assignedTeam, isHost: isHostUser });
         io.emit('updateLeaderboard', activePlayers);
+    });
+
+    socket.on('forceStartGame', () => {
+        let p = activePlayers[socket.id];
+        if (p && p.isHost) {
+            globalGameStarted = true;
+            io.emit('gameStartedEvent', { msg: '🚀 โด้ (Host) สั่งเริ่มเกมแล้ว! ลุยเลย!' });
+        }
     });
 
     socket.on('attackBoss', () => {
         let p = activePlayers[socket.id];
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn).length;
         
-        if (totalIngame < 20) {
-            socket.emit('skillResult', { success: false, msg: `⏳ รอผู้เล่นเข้าห้องครบ 20 คน (${totalIngame}/20)` });
+        if (!globalGameStarted && totalIngame < 20) {
+            socket.emit('skillResult', { success: false, msg: `⏳ รอโด้กดเริ่มเกม หรือรอผู้เล่นครบ 20 คน (${totalIngame}/20)` });
             return;
         }
 
@@ -190,6 +201,7 @@ io.on('connection', (socket) => {
         socket.emit('skillResult', { success: true, msg: `🔥 ทำดาเมจใส่บอส ${damage} แต้ม!` });
     });
 
+    // ⚡ ให้ทุกคนที่เข้ามารอสามารถกดสกิลป่วนกันได้ทันที
     socket.on('castSkill', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn) return;
@@ -222,6 +234,8 @@ io.on('connection', (socket) => {
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
         p.isMoving = data.isMoving;
 
+        // ปิดการเก็บเบี้ยชั่วคราว (ยังเก็บเบี้ยไม่ได้ตามคำขอ)
+        /*
         for (let i = tiles.length - 1; i >= 0; i--) {
             if (Math.hypot(p.x - tiles[i].x, p.y - tiles[i].y) < 40) {
                 let collected = tiles.splice(i, 1)[0];
@@ -231,6 +245,7 @@ io.on('connection', (socket) => {
                 io.emit('newTile', tiles[tiles.length - 1]);
             }
         }
+        */
 
         for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
             if (Math.hypot(p.x - mysteryBoxes[i].x, p.y - mysteryBoxes[i].y) < 40) {
@@ -290,7 +305,7 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         delete activePlayers[socket.id];
         let totalIngame = Object.values(activePlayers).filter(pl => pl.loggedIn).length;
-        io.emit('roomStatus', { count: totalIngame, required: 20 });
+        io.emit('roomStatus', { count: totalIngame, required: 20, gameStarted: globalGameStarted });
         io.emit('updateLeaderboard', activePlayers);
     });
 });
