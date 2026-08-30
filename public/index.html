@@ -90,7 +90,7 @@
             pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50;
         }
         .header { padding: 15px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; align-items: flex-start; }
-        .leaderboard { background: rgba(21, 19, 40, 0.85); border: 2px solid #9b59b6; padding: 10px 15px; border-radius: 10px; font-size: 13px; min-width: 210px; pointer-events: auto; }
+        .leaderboard { background: rgba(21, 19, 40, 0.85); border: 2px solid #f39c12; padding: 10px 15px; border-radius: 10px; font-size: 13px; min-width: 210px; pointer-events: auto; }
         
         .boss-hud-container {
             position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
@@ -275,12 +275,9 @@
             <div style="color: #f1c40f; text-shadow: 0 0 10px rgba(241,196,15,0.5);">คะแนน: <span id="scoreDisplay">0</span></div>
             <button onclick="returnToLobby()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 กลับ Lobby</button>
             
-            <!-- กระดานผู้นำคะแนนและดาเมจบอส -->
+            <!-- กระดานดาเมจบอสสูงสุด (แสดงเฉพาะดาเมจบอสอย่างเดียว) -->
             <div class="leaderboard">
-                <h3 style="color: #f1c40f; margin-bottom: 3px; text-align: center;">🏆 ทำเนียบจอมเวทย์</h3>
-                <ol id="leaderboardList" style="padding-left: 15px;"></ol>
-                
-                <h3 style="color: #f39c12; margin-top: 8px; margin-bottom: 3px; text-align: center;">🐐 ดาเมจบอสสูงสุด</h3>
+                <h3 style="color: #f39c12; margin-bottom: 3px; text-align: center;">🐐 ดาเมจบอสสูงสุด</h3>
                 <ol id="bossLeaderboardList" style="padding-left: 15px;"></ol>
             </div>
         </div>
@@ -558,22 +555,12 @@
             } 
         });
         
-        // อัปเดตกระดานคะแนนและกระดานดาเมจบอส
+        // อัปเดตกระดานจัดอันดับเฉพาะดาเมจบอสสูงสุดอย่างเดียว
         socket.on('updateLeaderboard', (allPlayers) => {
             let list = Object.values(allPlayers);
-            
-            // 1. จัดอันดับตามคะแนนรวม
-            let scoreSorted = [...list].sort((a,b) => b.score - a.score);
-            let htmlScore = ''; 
-            scoreSorted.slice(0, 3).forEach((p, i) => { 
-                htmlScore += `<li>${i+1}. ${p.name} (${p.score})</li>`; 
-            });
-            document.getElementById('leaderboardList').innerHTML = htmlScore;
-
-            // 2. จัดอันดับตามดาเมจบอสสูงสุด
             let bossSorted = [...list].sort((a,b) => (b.bossDamage || 0) - (a.bossDamage || 0));
             let htmlBoss = ''; 
-            bossSorted.slice(0, 3).forEach((p, i) => { 
+            bossSorted.slice(0, 5).forEach((p, i) => { 
                 htmlBoss += `<li>${i+1}. ${p.name} (${p.bossDamage || 0} DMG)</li>`; 
             });
             document.getElementById('bossLeaderboardList').innerHTML = htmlBoss;
