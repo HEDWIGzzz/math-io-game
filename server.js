@@ -263,6 +263,7 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
+    // 🔐 Admin Auth & Registration
     socket.on('adminAuth', async (data) => {
         let name = data.name ? data.name.trim() : '';
         let pass = data.pass ? data.pass.trim() : '';
@@ -271,7 +272,7 @@ io.on('connection', (socket) => {
             const isMatch = await bcrypt.compare(pass, playersDb[name].password);
             if (isMatch) {
                 socket.isVerifiedAdmin = true;
-                socket.emit('adminAuthResult', { success: true, settings: gameSettings });
+                socket.emit('adminAuthResult', { success: true, settings: gameSettings, players: activePlayers });
                 return;
             }
         }
@@ -305,9 +306,34 @@ io.on('connection', (socket) => {
             saveDatabase(playersDb);
 
             socket.isVerifiedAdmin = true;
-            socket.emit('adminAuthResult', { success: true, settings: gameSettings });
+            socket.emit('adminAuthResult', { success: true, settings: gameSettings, players: activePlayers });
         } catch (e) {
             socket.emit('adminAuthResult', { success: false, msg: '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+        }
+    });
+
+    // ⚙️ Admin Actions on Players (Kick / Reset Score)
+    socket.on('adminKickPlayer', (targetSocketId) => {
+        if (!socket.isVerifiedAdmin) return;
+        if (activePlayers[targetSocketId]) {
+            io.to(targetSocketId).emit('kickedOut', { msg: '❌ คุณถูกผู้ดูแลระบบเตะออกจากเกม!' });
+            setTimeout(() => {
+                const targetSocket = io.sockets.sockets.get(targetSocketId);
+                if (targetSocket) targetSocket.disconnect();
+            }, 200);
+        }
+    });
+
+    socket.on('adminResetScore', (targetSocketId) => {
+        if (!socket.isVerifiedAdmin) return;
+        if (activePlayers[targetSocketId]) {
+            let p = activePlayers[targetSocketId];
+            p.score = 0;
+            if (playersDb[p.name]) {
+                playersDb[p.name].score = 0;
+                saveDatabase(playersDb);
+            }
+            io.emit('updateLeaderboard', activePlayers);
         }
     });
 
@@ -602,6 +628,7 @@ setInterval(() => {
     }
 }, 50);
 
+// ส่งข้อมูลอัปเดตสถานะเกมทั้งหมด (รวมถึงตำแหน่งผู้เล่นให้ Admin ส่องจอได้)
 setInterval(() => {
     io.emit('stateUpdate', { players: activePlayers, boss: demonBoss });
 }, 1000 / 60);
