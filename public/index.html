@@ -76,22 +76,21 @@
         .sys-msg { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(241,196,15,0.8); opacity: 0; transition: 0.3s; pointer-events: none; }
         .sys-msg.show { opacity: 1; top: 10%; }
 
-        #mobileDpad {
-            position: absolute; bottom: 160px; left: 20px; width: 130px; height: 130px;
-            pointer-events: auto; display: none; z-index: 50;
+        /* Virtual Joystick Styles */
+        #virtualJoystick {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 60; display: none;
         }
-        .d-btn {
-            position: absolute; background: rgba(155, 89, 182, 0.3); border: 2px solid rgba(155, 89, 182, 0.7);
-            border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center;
-            font-size: 20px; font-weight: bold; color: white;
+        #joystickBase {
+            position: absolute; width: 90px; height: 90px; border-radius: 50%;
+            background: rgba(155, 89, 182, 0.2); border: 2px solid rgba(155, 89, 182, 0.6);
+            transform: translate(-50%, -50%); display: none;
         }
-        .d-btn:active { background: rgba(155, 89, 182, 0.8); }
-        #btnUp { top: 0; left: 42px; }
-        #btnDown { bottom: 0; left: 42px; }
-        #btnLeft { top: 42px; left: 0; }
-        #btnRight { top: 42px; right: 0; }
-
-        @media (pointer: coarse) { #mobileDpad { display: block; } }
+        #joystickThumb {
+            position: absolute; width: 45px; height: 45px; border-radius: 50%;
+            background: rgba(155, 89, 182, 0.8); top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
@@ -139,11 +138,11 @@
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="mobileDpad">
-        <div class="d-btn" id="btnUp">▲</div>
-        <div class="d-btn" id="btnLeft">◀</div>
-        <div class="d-btn" id="btnRight">▶</div>
-        <div class="d-btn" id="btnDown">▼</div>
+    <!-- Virtual Floating Joystick Overlay -->
+    <div id="virtualJoystick">
+        <div id="joystickBase">
+            <div id="joystickThumb"></div>
+        </div>
     </div>
 
     <div id="ui-layer">
@@ -208,18 +207,68 @@
             if (k === 'd' || k === 'arrowright') keys.d = state;
         }
 
-        function setupTouchButton(id, keyName) {
-            const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
-            btn.addEventListener('mousedown', () => keys[keyName] = true);
-            btn.addEventListener('mouseup', () => keys[keyName] = false);
-            btn.addEventListener('mouseleave', () => keys[keyName] = false);
+        // Virtual Joystick Controller (Anywhere on screen, hidden when not pressed)
+        let activeTouchId = null;
+        let joystickStartX = 0;
+        let joystickStartY = 0;
+
+        window.addEventListener('pointerdown', (e) => {
+            if (!gameStarted) return;
+            // Ignore if clicking UI elements, buttons, inputs, modals, etc.
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select') || 
+                e.target.closest('.modal-box') || e.target.closest('.bottom-panel') || e.target.closest('.header')) {
+                return;
+            }
+
+            activeTouchId = e.pointerId;
+            joystickStartX = e.clientX;
+            joystickStartY = e.clientY;
+
+            const base = document.getElementById('joystickBase');
+            const thumb = document.getElementById('joystickThumb');
+            base.style.left = joystickStartX + 'px';
+            base.style.top = joystickStartY + 'px';
+            base.style.display = 'block';
+            thumb.style.transform = 'translate(-50%, -50%) translate(0px, 0px)';
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (activeTouchId === null || e.pointerId !== activeTouchId) return;
+
+            let dx = e.clientX - joystickStartX;
+            let dy = e.clientY - joystickStartY;
+            let dist = Math.hypot(dx, dy);
+            let maxR = 35;
+
+            if (dist > maxR) {
+                dx = (dx / dist) * maxR;
+                dy = (dy / dist) * maxR;
+            }
+
+            const thumb = document.getElementById('joystickThumb');
+            thumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+
+            let threshold = 8;
+            keys.w = dy < -threshold;
+            keys.s = dy > threshold;
+            keys.a = dx < -threshold;
+            keys.d = dx > threshold;
+        });
+
+        function endJoystick(e) {
+            if (activeTouchId === null || (e && e.pointerId !== undefined && e.pointerId !== activeTouchId)) return;
+            activeTouchId = null;
+            keys.w = false;
+            keys.a = false;
+            keys.s = false;
+            keys.d = false;
+
+            const base = document.getElementById('joystickBase');
+            base.style.display = 'none';
         }
-        setupTouchButton('btnUp', 'w');
-        setupTouchButton('btnDown', 's');
-        setupTouchButton('btnLeft', 'a');
-        setupTouchButton('btnRight', 'd');
+
+        window.addEventListener('pointerup', endJoystick);
+        window.addEventListener('pointercancel', endJoystick);
 
         function joinGame() {
             const name = document.getElementById('playerNameInput').value.trim() || 'จอมเวทย์ฝึกหัด';
