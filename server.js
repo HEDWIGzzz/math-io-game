@@ -84,7 +84,6 @@ io.on('connection', (socket) => {
 
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE });
 
-    // ระบบสมัครสมาชิก
     socket.on('registerPlayer', async (data) => {
         let name = data.name ? data.name.trim() : '';
         let password = data.password ? data.password.trim() : '';
@@ -131,7 +130,6 @@ io.on('connection', (socket) => {
         socket.emit('authResult', { success: true, action: 'register', msg: 'ACCOUNT CREATED!' });
     });
 
-    // ระบบเข้าสู่ระบบ
     socket.on('loginPlayer', async (data) => {
         let name = data.name ? data.name.trim() : '';
         let password = data.password ? data.password.trim() : '';
@@ -160,14 +158,9 @@ io.on('connection', (socket) => {
         activePlayers[socket.id].hat = pData.hat || 'none';
         activePlayers[socket.id].characterData = pData.characterData || {};
 
-        socket.emit('authResult', { 
-            success: true, 
-            action: 'login',
-            playerData: pData 
-        });
+        socket.emit('authResult', { success: true, action: 'login', playerData: pData });
     });
 
-    // บันทึกตัวละคร
     socket.on('saveCharacter', (data) => {
         let p = activePlayers[socket.id];
         if (!p || !p.name) return;
@@ -188,7 +181,6 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
-    // เข้าสู่ Main Lobby
     socket.on('enterGameLobby', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.name) return;
@@ -197,43 +189,97 @@ io.on('connection', (socket) => {
         io.emit('updateLeaderboard', activePlayers);
     });
 
-    // ระบบใช้สกิลป่วนเพื่อน (Prank Skill)
+    // ⚡ ระบบสกิลเฉพาะตาม 8 คลาส (Unique Class Prank Skills)
     socket.on('castSkill', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.inLobby) return;
 
         let now = Date.now();
-        if (p.lastSkillTime && now - p.lastSkillTime < 4000) {
-            socket.emit('skillResult', { success: false, msg: 'สกิลกำลัง Cool Down (รอ 4 วินาที)' });
+        if (p.lastSkillTime && now - p.lastSkillTime < 4500) {
+            socket.emit('skillResult', { success: false, msg: '⏳ สกิลกำลัง Cool Down (รอ 4.5 วินาที)' });
             return;
         }
         p.lastSkillTime = now;
 
         let affectedCount = 0;
+        let pClass = p.playerClass;
+
         for (let id in activePlayers) {
             if (id !== socket.id) {
                 let target = activePlayers[id];
                 let dist = Math.hypot(p.x - target.x, p.y - target.y);
-                if (dist < 280) {
-                    io.to(id).emit('trolled', { 
-                        casterName: p.name, 
-                        playerClass: p.playerClass,
-                        msg: `💥 คุณโดนสกิล [${p.playerClass}] ของ ${p.name} แกล้งเข้าแล้ว!` 
-                    });
+                
+                if (dist < 300) {
                     affectedCount++;
+                    let effectType = 'blind'; // ค่าเริ่มต้น
+
+                    if (pClass === 'Assassin') {
+                        effectType = 'blind'; // มองไม่เห็น + ปุ่มกลับด้าน
+                        io.to(id).emit('trolledEffect', { type: 'blind', msg: `🌑 โดน [Assassin] ${p.name} ปล่อยควันมืดใส่จอ!` });
+                    } 
+                    else if (pClass === 'Warrior') {
+                        effectType = 'push'; // กระเด็นถอยหลัง
+                        let angle = Math.atan2(target.y - p.y, target.x - p.x);
+                        target.x = Math.max(50, Math.min(MAP_SIZE - 50, target.x + Math.cos(angle) * 150));
+                        target.y = Math.max(50, Math.min(MAP_SIZE - 50, target.y + Math.sin(angle) * 150));
+                        io.to(id).emit('trolledEffect', { type: 'push', msg: `⚔️ โดน [Warrior] ${p.name} ฟาดคลื่นกระเด็น!` });
+                    } 
+                    else if (pClass === 'Tank') {
+                        effectType = 'stun'; // สตันขยับไม่ได้ 2 วิ
+                        target.stunnedUntil = Date.now() + 2000;
+                        io.to(id).emit('trolledEffect', { type: 'stun', msg: `🛡️ โดน [Tank] ${p.name} กระแทกพื้นจนสตัน!` });
+                    } 
+                    else if (pClass === 'Archer') {
+                        effectType = 'snip'; // ขโมยคะแนน
+                        if (target.score >= 15) {
+                            target.score -= 15;
+                            p.score += 15;
+                            if (playersDb[target.name]) playersDb[target.name].score = target.score;
+                            if (playersDb[p.name]) playersDb[p.name].score = p.score;
+                            saveDatabase(playersDb);
+                        }
+                        io.to(id).emit('trolledEffect', { type: 'snip', msg: `🏹 โดน [Archer] ${p.name} แอบชิ่งคะแนนไป 15 แต้ม!` });
+                    } 
+                    else if (pClass === 'Mage') {
+                        effectType = 'swap'; // วาร์ปสลับตำแหน่ง!
+                        let tempX = p.x; let tempY = p.y;
+                        p.x = target.x; p.y = target.y;
+                        target.x = tempX; target.y = tempY;
+                        io.to(id).emit('trolledEffect', { type: 'swap', msg: `🔮 โดน [Mage] ${p.name} ร่ายเวทสลับร่างวาร์ป!` });
+                    } 
+                    else if (pClass === 'Support') {
+                        effectType = 'invert'; // จอสีเพี้ยน Negative
+                        io.to(id).emit('trolledEffect', { type: 'invert', msg: `✨ โดน [Support] ${p.name} สาดแสงเวทจอเพี้ยน!` });
+                    } 
+                    else if (pClass === 'Monk') {
+                        effectType = 'spin'; // หมุนติ้ว
+                        io.to(id).emit('trolledEffect', { type: 'spin', msg: `🥋 โโดน [Monk] ${p.name} ต่อยชุดใหญ่จนหัวหมุน!` });
+                    } 
+                    else if (pClass === 'Berserker') {
+                        effectType = 'rage'; // กระเด็น + สตันสั้นๆ
+                        let angle = Math.atan2(target.y - p.y, target.x - p.x);
+                        target.x += Math.cos(angle) * 100;
+                        target.y += Math.sin(angle) * 100;
+                        target.stunnedUntil = Date.now() + 1500;
+                        io.to(id).emit('trolledEffect', { type: 'rage', msg: `🔥 โดนคำรามบ้าคลั่งจาก [Berserker] ${p.name}!` });
+                    }
                 }
             }
         }
 
         socket.emit('skillResult', { 
             success: true, 
-            msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนสำเร็จโดนเพื่อน ${affectedCount} คน!` : `✨ ร่ายสกิลเวทมนตร์กวนๆ สำเร็จ!` 
+            msg: affectedCount > 0 ? `✨ ใช้สกิล [${pClass}] ป่วนสำเร็จโดนเพื่อน ${affectedCount} คน!` : `✨ ร่ายสกิลประจำคลาสสำเร็จ!` 
         });
+        io.emit('updateLeaderboard', activePlayers);
     });
 
     socket.on('move', (data) => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.inLobby) return;
+
+        // ถ้าติดสถานะ Stun ขยับไม่ได้
+        if (p.stunnedUntil && Date.now() < p.stunnedUntil) return;
 
         p.x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
         p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
