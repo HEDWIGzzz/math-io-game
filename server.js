@@ -34,7 +34,7 @@ const tiles = [];
 const mysteryBoxes = [];
 const MAP_SIZE = 4000;
 
-// 🐐 ข้อมูลบอสแพะปีศาจ (Demon Goat Boss)
+// 🐐 ข้อมูลบอสแพะปีศาจ พร้อมสถานะดีบัฟ
 let demonBoss = {
     x: MAP_SIZE / 2,
     y: MAP_SIZE / 2,
@@ -43,7 +43,9 @@ let demonBoss = {
     hp: 5000,
     maxHp: 5000,
     name: 'Demon Goat Lord',
-    isAlive: true
+    isAlive: true,
+    slowedUntil: 0,
+    poisonedUntil: 0
 };
 
 for (let i = 0; i < 150; i++) spawnTile();
@@ -277,6 +279,24 @@ io.on('connection', (socket) => {
         }
         p.lastSkillTime = now;
 
+        let pClass = p.playerClass;
+        let distToBoss = Math.hypot(p.x - demonBoss.x, p.y - demonBoss.y);
+        let bossHit = false;
+
+        if (distToBoss < 280 && demonBoss.isAlive) {
+            bossHit = true;
+            if (pClass === 'Mage' || pClass === 'Support') {
+                demonBoss.slowedUntil = Date.now() + 5000;
+                io.emit('bossDebuff', { type: 'slow', msg: `🔮 [${p.name}] ร่ายเวทแช่แข็งใส่แพะปีศาจ!` });
+            } else if (pClass === 'Assassin' || pClass === 'Archer') {
+                demonBoss.poisonedUntil = Date.now() + 6000;
+                io.emit('bossDebuff', { type: 'poison', msg: `🧪 [${p.name}] ปล่อยพิษใส่แพะปีศาจ!` });
+            } else {
+                demonBoss.slowedUntil = Date.now() + 3000;
+                io.emit('bossDebuff', { type: 'stun', msg: `⚔️ [${p.name}] โจมตีหนักใส่แพะปีศาจจนชะงัก!` });
+            }
+        }
+
         let affectedCount = 0;
         for (let id in activePlayers) {
             if (id !== socket.id) {
@@ -284,11 +304,13 @@ io.on('connection', (socket) => {
                 let dist = Math.hypot(p.x - target.x, p.y - target.y);
                 if (dist < 280) {
                     affectedCount++;
-                    io.to(id).emit('trolledEffect', { type: 'blind', msg: `🌑 โดนสกิลป่วนจาก ${p.name}!` });
+                    io.to(id).emit('trolledEffect', { type: 'blind', msg: `🌑 โดนสกิลป่วนจาก [${pClass}] ${p.name}!` });
                 }
             }
         }
-        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนสำเร็จโดนเพื่อน ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
+
+        let resMsg = bossHit ? `✨ ใช้สกิล [${pClass}] โดนแพะปีศาจเต็มๆ!` : (affectedCount > 0 ? `✨ ใช้สกิลป่วนโดนเพื่อน ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!`);
+        socket.emit('skillResult', { success: true, msg: resMsg });
     });
 
     socket.on('move', (data) => {
@@ -385,21 +407,62 @@ io.on('connection', (socket) => {
     });
 });
 
-// 🐐 ลูปอัปเดต AI การเดินไปเดินมาของแพะปีศาจ
+// 🐐 ลูป AI บอส + ระบบบอสโจมตีสวนกลับผู้เล่นที่เข้าใกล้เกินไป
 setInterval(() => {
     if (demonBoss.isAlive) {
+        // พิษกัดเลือดบอส
+        if (demonBoss.poisonedUntil && Date.now() < demonBoss.poisonedUntil) {
+            demonBoss.hp -= 2;
+            if (demonBoss.hp <= 0) {
+                demonBoss.hp = 0;
+                demonBoss.isAlive = false;
+                io.emit('bossDefeated', { msg: `🎉 พิษสังหารแพะปีศาจจนสิ้นใจ!` });
+                setTimeout(() => {
+                    demonBoss.hp = demonBoss.maxHp;
+                    demonBoss.isAlive = true;
+                    io.emit('bossRespawn', { msg: `⚠️ แพะปีศาจฟื้นคืนชีพแล้ว!` });
+                }, 30000);
+            }
+        }
+
+        let speed = (demonBoss.slowedUntil && Date.now() < demonBoss.slowedUntil) ? 0.7 : 1.8;
+
         let dx = demonBoss.targetX - demonBoss.x;
         let dy = demonBoss.targetY - demonBoss.y;
         let dist = Math.hypot(dx, dy);
 
         if (dist < 15) {
-            // สุ่มจุดหมายปลายทางใหม่รอบๆ ศูนย์กลางแผนที่
             let center = MAP_SIZE / 2;
             demonBoss.targetX = center + (Math.random() - 0.5) * 800;
             demonBoss.targetY = center + (Math.random() - 0.5) * 800;
         } else {
-            demonBoss.x += (dx / dist) * 1.8; // ความเร็วในการเดินของบอส
-            demonBoss.y += (dy / dist) * 1.8;
+            demonBoss.x += (dx / dist) * speed;
+            demonBoss.y += (dy / dist) * speed;
+        }
+
+        // ⚔️ บอสโจมตีผู้เล่นที่เข้ามาประชิด (ระยะ < 100)
+        for (let id in activePlayers) {
+            let p = activePlayers[id];
+            if (p.loggedIn && !p.inLobby) {
+                let distToPlayer = Math.hypot(p.x - demonBoss.x, p.y - demonBoss.y);
+                if (distToPlayer < 100) {
+                    let now = Date.now();
+                    if (!p.lastBossAttack || now - p.lastBossAttack > 1500) {
+                        p.lastBossAttack = now;
+                        let penalty = 20;
+                        p.score = Math.max(0, p.score - penalty);
+                        if (playersDb[p.name]) playersDb[p.name].score = p.score;
+                        saveDatabase(playersDb);
+
+                        // กระเด็นถอยหลัง
+                        let angle = Math.atan2(p.y - demonBoss.y, p.x - demonBoss.x);
+                        p.x = Math.max(50, Math.min(MAP_SIZE - 50, p.x + Math.cos(angle) * 100));
+                        p.y = Math.max(50, Math.min(MAP_SIZE - 50, p.y + Math.sin(angle) * 100));
+
+                        io.to(id).emit('bossHitPlayer', { msg: `💥 โดนแพะปีศาจฟาดกระเด็น! เสีย ${penalty} คะแนน!` });
+                    }
+                }
+            }
         }
     }
 }, 50);
