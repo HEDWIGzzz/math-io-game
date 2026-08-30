@@ -309,6 +309,10 @@
         let previewAngle = 0;
         let currentMysteryAns = null;
 
+        // สถานะโดนป่วน (Debuff States)
+        let isTrolled = false;
+        let trollTimer = 0;
+
         const classInfo = {
             'Assassin': { desc: '“รวดเร็ว คล่องตัว และเชี่ยวชาญการโจมตีจากจังหวะที่คู่ต่อสู้เผลอ”<br>SKILL: 🌑 Shadow Prank' },
             'Warrior': { desc: '“สมส่วนแบบนักรบ แข็งแกร่งและสมดุลในการต่อสู้ระยะประชิด”<br>SKILL: ⚔️ Power Slash' },
@@ -495,8 +499,11 @@
             showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c");
         });
 
+        // เมื่อโดนเพื่อนป่วนในเกม จะติดสถานะ Debuff
         socket.on('trolled', (data) => {
             showMsg(data.msg, "#e74c3c");
+            isTrolled = true;
+            trollTimer = Date.now() + 3500; // ติดสถานะป่วน 3.5 วินาที
         });
 
         const keys = { w: false, a: false, s: false, d: false };
@@ -504,10 +511,11 @@
         window.addEventListener('keyup', e => { if(gameStarted) setKey(e.key, false); });
         function setKey(k, state) {
             k = k.toLowerCase();
-            if (k === 'w' || k === 'arrowup') keys.w = state;
-            if (k === 's' || k === 'arrowdown') keys.s = state;
-            if (k === 'a' || k === 'arrowleft') keys.a = state;
-            if (k === 'd' || k === 'arrowright') keys.d = state;
+            let isRev = (isTrolled && Date.now() < trollTimer); // ถ้าติดสถานะป่วน ปุ่มเดินจะกลับด้าน!
+            if (k === 'w' || k === 'arrowup') keys[isRev ? 's' : 'w'] = state;
+            if (k === 's' || k === 'arrowdown') keys[isRev ? 'w' : 's'] = state;
+            if (k === 'a' || k === 'arrowleft') keys[isRev ? 'd' : 'a'] = state;
+            if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
         }
 
         let activeTouchId = null;
@@ -553,10 +561,16 @@
             thumb.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
 
             let threshold = 8;
-            keys.w = dy < -threshold;
-            keys.s = dy > threshold;
-            keys.a = dx < -threshold;
-            keys.d = dx > threshold;
+            let isRev = (isTrolled && Date.now() < trollTimer);
+            let vertUp = isRev ? dy > threshold : dy < -threshold;
+            let vertDown = isRev ? dy < -threshold : dy > threshold;
+            let horizLeft = isRev ? dx > threshold : dx < -threshold;
+            let horizRight = isRev ? dx < -threshold : dx > threshold;
+
+            keys.w = vertUp;
+            keys.s = vertDown;
+            keys.a = horizLeft;
+            keys.d = horizRight;
         }, { passive: true });
 
         function endJoystick(e) {
@@ -921,10 +935,25 @@
                 let camX = me.x - (width / 2);
                 let camY = me.y - (height / 2);
 
+                // หากติดสถานะโดนป่วน กล้องจะสั่น (Screen Shake)
+                if (isTrolled && Date.now() < trollTimer) {
+                    camX += (Math.random() - 0.5) * 16;
+                    camY += (Math.random() - 0.5) * 16;
+                }
+
                 drawCastleBackground(camX, camY);
 
                 ctx.save();
                 ctx.translate(-camX, -camY);
+
+                // ถ้าติดสถานะโดนป่วน ให้วาดเอฟเฟกต์มึนงงรอบตัวผู้เล่น
+                if (isTrolled && Date.now() < trollTimer) {
+                    ctx.strokeStyle = 'rgba(231, 76, 60, 0.7)';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(me.x, me.y, 35 + Math.sin(Date.now()/50)*10, 0, Math.PI*2);
+                    ctx.stroke();
+                }
 
                 ctx.font = '18px Kanit'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 tiles.forEach(t => {
