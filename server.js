@@ -12,7 +12,6 @@ app.use(express.static('public'));
 
 const DB_FILE = path.join(__dirname, 'database.json');
 
-// โหลดฐานข้อมูลผู้เล่นจากไฟล์
 function loadDatabase() {
     if (fs.existsSync(DB_FILE)) {
         try {
@@ -75,76 +74,100 @@ io.on('connection', (socket) => {
         x: MAP_SIZE / 2,
         y: MAP_SIZE / 2,
         score: 0,
-        isMoving: false
+        isMoving: false,
+        loggedIn: false
     };
 
     socket.emit('initGame', { id: socket.id, tiles, mysteryBoxes, mapSize: MAP_SIZE });
 
-    socket.on('setupPlayer', (data) => {
-        let name = data.name ? data.name.trim().substring(0, 15) : 'จอมเวทย์ฝึกหัด';
-        
-        // ตรวจสอบว่ามีข้อมูลในฐานข้อมูลหรือไม่ ถ้ามีให้โหลดคะแนนเดิม
-        if (playersDb[name]) {
-            activePlayers[socket.id].score = playersDb[name].score || 0;
-        } else {
-            playersDb[name] = { score: 0 };
+    // ระบบจัดการเข้าสู่ระบบและสมัครสมาชิก
+    socket.on('authPlayer', (data) => {
+        let name = data.name ? data.name.trim().substring(0, 15) : '';
+        let password = data.password ? data.password.trim() : '';
+        let isRegister = data.isRegister;
+
+        if (!name || !password) {
+            socket.emit('authResult', { success: false, msg: 'กรุณากรอกชื่อและรหัสผ่านให้ครบถ้วน' });
+            return;
+        }
+
+        if (isRegister) {
+            if (playersDb[name]) {
+                socket.emit('authResult', { success: false, msg: 'ชื่อนี้มีผู้ใช้งานแล้ว กรุณาเลือกชื่ออื่นหรือเข้าสู่ระบบ' });
+                return;
+            }
+            // สมัครสมาชิกใหม่
+            playersDb[name] = { password: password, score: 0 };
             saveDatabase(playersDb);
+        } else {
+            // เข้าสู่ระบบ
+            if (!playersDb[name]) {
+                socket.emit('authResult', { success: false, msg: 'ไม่พบชื่อผู้ใช้นี้ กรุณาสมัครสมาชิกก่อน' });
+                return;
+            }
+            if (playersDb[name].password !== password) {
+                socket.emit('authResult', { success: false, msg: 'รหัสผ่านไม่ถูกต้อง!' });
+                return;
+            }
         }
 
         activePlayers[socket.id].name = name;
+        activePlayers[socket.id].score = playersDb[name].score || 0;
         activePlayers[socket.id].avatar = data.avatar || 'hero';
         activePlayers[socket.id].outfitColor = data.outfitColor || '#3498db';
         activePlayers[socket.id].hat = data.hat || 'none';
+        activePlayers[socket.id].loggedIn = true;
 
-        socket.emit('loginSuccess', { score: activePlayers[socket.id].score });
+        socket.emit('authResult', { success: true, score: activePlayers[socket.id].score });
         io.emit('updateLeaderboard', activePlayers);
     });
 
     socket.on('move', (data) => {
-        if (activePlayers[socket.id]) {
-            activePlayers[socket.id].x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
-            activePlayers[socket.id].y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
-            activePlayers[socket.id].isMoving = data.isMoving;
+        let p = activePlayers[socket.id];
+        if (!p || !p.loggedIn) return;
 
-            for (let i = tiles.length - 1; i >= 0; i--) {
-                let dx = activePlayers[socket.id].x - tiles[i].x;
-                let dy = activePlayers[socket.id].y - tiles[i].y;
-                if (Math.hypot(dx, dy) < 40) {
-                    let collectedTile = tiles[i];
-                    tiles.splice(i, 1);
-                    io.emit('tileRemoved', collectedTile.id);
-                    socket.emit('tileCollected', collectedTile);
-                    spawnTile();
-                    io.emit('newTile', tiles[tiles.length - 1]);
-                }
+        p.x = Math.max(50, Math.min(MAP_SIZE - 50, data.x));
+        p.y = Math.max(50, Math.min(MAP_SIZE - 50, data.y));
+        p.isMoving = data.isMoving;
+
+        for (let i = tiles.length - 1; i >= 0; i--) {
+            let dx = p.x - tiles[i].x;
+            let dy = p.y - tiles[i].y;
+            if (Math.hypot(dx, dy) < 40) {
+                let collectedTile = tiles[i];
+                tiles.splice(i, 1);
+                io.emit('tileRemoved', collectedTile.id);
+                socket.emit('tileCollected', collectedTile);
+                spawnTile();
+                io.emit('newTile', tiles[tiles.length - 1]);
             }
+        }
 
-            for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
-                let dx = activePlayers[socket.id].x - mysteryBoxes[i].x;
-                let dy = activePlayers[socket.id].y - mysteryBoxes[i].y;
-                if (Math.hypot(dx, dy) < 40) {
-                    let box = mysteryBoxes[i];
-                    mysteryBoxes.splice(i, 1);
-                    io.emit('mysteryBoxRemoved', box.id);
-                    
-                    let n1 = Math.floor(Math.random() * 20) + 1;
-                    let n2 = Math.floor(Math.random() * 20) + 1;
-                    let ops = ['+', '-', '*'];
-                    let op = ops[Math.floor(Math.random() * ops.length)];
-                    let ans = eval(`${n1} ${op} ${n2}`);
-                    
-                    socket.emit('openMysteryBox', { q: `${n1} ${op} ${n2} = ?`, ans: ans });
+        for (let i = mysteryBoxes.length - 1; i >= 0; i--) {
+            let dx = p.x - mysteryBoxes[i].x;
+            let dy = p.y - mysteryBoxes[i].y;
+            if (Math.hypot(dx, dy) < 40) {
+                let box = mysteryBoxes[i];
+                mysteryBoxes.splice(i, 1);
+                io.emit('mysteryBoxRemoved', box.id);
+                
+                let n1 = Math.floor(Math.random() * 20) + 1;
+                let n2 = Math.floor(Math.random() * 20) + 1;
+                let ops = ['+', '-', '*'];
+                let op = ops[Math.floor(Math.random() * ops.length)];
+                let ans = eval(`${n1} ${op} ${n2}`);
+                
+                socket.emit('openMysteryBox', { q: `${n1} ${op} ${n2} = ?`, ans: ans });
 
-                    spawnMysteryBox();
-                    io.emit('newMysteryBox', mysteryBoxes[mysteryBoxes.length - 1]);
-                }
+                spawnMysteryBox();
+                io.emit('newMysteryBox', mysteryBoxes[mysteryBoxes.length - 1]);
             }
         }
     });
 
     socket.on('submitEquation', (eqStr) => {
         let p = activePlayers[socket.id];
-        if (!p) return;
+        if (!p || !p.loggedIn) return;
         try {
             let parts = eqStr.split('=');
             if (parts.length === 2 && parts[0] && parts[1]) {
@@ -153,7 +176,7 @@ io.on('connection', (socket) => {
 
                 if (left === right) {
                     p.score += eqStr.length * 15;
-                    playersDb[p.name] = { score: p.score };
+                    playersDb[p.name].score = p.score;
                     saveDatabase(playersDb);
 
                     socket.emit('equationResult', { success: true, score: p.score });
@@ -171,10 +194,10 @@ io.on('connection', (socket) => {
 
     socket.on('submitMysteryAnswer', (data) => {
         let p = activePlayers[socket.id];
-        if (p) {
+        if (p && p.loggedIn) {
             if (parseInt(data.userAns) === parseInt(data.correctAns)) {
                 p.score += 60;
-                playersDb[p.name] = { score: p.score };
+                playersDb[p.name].score = p.score;
                 saveDatabase(playersDb);
 
                 socket.emit('mysteryResult', { success: true });
