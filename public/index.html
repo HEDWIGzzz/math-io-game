@@ -18,7 +18,7 @@
         .modal-box {
             background: #221e3f; padding: 25px; border-radius: 16px; text-align: center;
             display: flex; flex-direction: column; gap: 14px; border: 3px solid #9b59b6; box-shadow: 0 0 40px rgba(155, 89, 182, 0.4);
-            width: 100%; max-width: 440px; max-height: 92vh; overflow-y: auto;
+            width: 100%; max-width: 420px; max-height: 92vh; overflow-y: auto;
         }
         .modal-box h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); font-size: 24px; }
         .modal-box input, .modal-box select {
@@ -26,28 +26,10 @@
             font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%;
         }
         .modal-box label { font-size: 13px; color: #d7bde2; text-align: left; font-weight: bold; }
-        .password-container { position: relative; display: flex; align-items: center; width: 100%; }
-        .password-container input { width: 100%; padding-right: 45px; }
-        .toggle-eye { position: absolute; right: 12px; background: none; border: none; color: #d7bde2; cursor: pointer; font-size: 18px; outline: none; padding: 5px; }
-        .btn-group { display: flex; gap: 10px; margin-top: 5px; }
-        .modal-box button.action-btn { flex: 1; padding: 12px; font-size: 16px; font-family: 'Kanit', sans-serif; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; }
-        .btn-login { background: linear-gradient(135deg, #2980b9, #27ae60); color: white; }
-        .btn-register { background: linear-gradient(135deg, #8e44ad, #d35400); color: white; }
-        .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; margin-top: 5px; font-size: 18px; }
-        .error-text { color: #e74c3c; font-size: 13px; min-height: 20px; font-weight: bold; }
-        .success-text { color: #2ecc71; font-size: 14px; font-weight: bold; }
+        .btn-enter { background: linear-gradient(135deg, #f1c40f, #d35400); color: #2d3436; width: 100%; padding: 14px; font-size: 18px; font-family: 'Kanit'; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
 
         #previewCanvas { background: #151328; border: 2px dashed #9b59b6; border-radius: 12px; margin: 0 auto; display: block; cursor: grab; }
         .class-desc { background: rgba(155, 89, 182, 0.15); border: 1px solid #9b59b6; padding: 10px; border-radius: 8px; font-size: 13px; color: #f39c12; text-align: left; }
-
-        #lobbyOverlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 12, 27, 0.85); display: none; flex-direction: column;
-            justify-content: space-between; padding: 30px; z-index: 90; pointer-events: auto;
-        }
-        .lobby-header { display: flex; justify-content: space-between; align-items: center; background: #221e3f; padding: 15px 25px; border-radius: 12px; border: 2px solid #9b59b6; }
-        .lobby-menu { display: flex; flex-direction: column; gap: 15px; width: 280px; align-self: center; margin-bottom: 40px; }
-        .lobby-btn { padding: 15px; font-size: 18px; font-family: 'Kanit'; font-weight: bold; background: linear-gradient(135deg, #8e44ad, #3498db); color: white; border: none; border-radius: 10px; cursor: pointer; text-align: center; }
 
         #waitingBanner {
             position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
@@ -58,7 +40,6 @@
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
         .header { padding: 15px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; align-items: flex-start; }
         
-        /* กระดานคะแนนแบ่งทีม */
         .leaderboard { background: rgba(21, 19, 40, 0.9); border: 2px solid #f1c40f; padding: 10px 15px; border-radius: 10px; font-size: 12px; min-width: 230px; pointer-events: auto; }
         .team-score-box { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; }
         
@@ -110,40 +91,15 @@
 </head>
 <body>
 
-    <div id="authModal" class="screen-layer">
+    <!-- หน้าจอใส่ชื่อและเลือกตัวละคร (เข้าเกมทันที) -->
+    <div id="setupModal" class="screen-layer">
         <div class="modal-box">
-            <h2>🏰 MAGE CASTLE ARENA</h2>
-            <div id="authError" class="error-text"></div>
-            <div id="authSuccess" class="success-text"></div>
+            <h2>✨ MAGE CASTLE ARENA</h2>
+            <canvas id="previewCanvas" width="140" height="140"></canvas>
             <div>
                 <label>ชื่อผู้เล่น (Username)</label>
-                <input type="text" id="playerNameInput" placeholder="3-15 ตัวอักษร..." maxlength="15" autocomplete="off">
+                <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ..." maxlength="15" autocomplete="off">
             </div>
-            <div>
-                <label>รหัสผ่าน (Password)</label>
-                <div class="password-container">
-                    <input type="password" id="playerPasswordInput" placeholder="อย่างน้อย 6 ตัวอักษร..." maxlength="20" autocomplete="off">
-                    <button type="button" class="toggle-eye" onclick="togglePassword('playerPasswordInput', this)">👁</button>
-                </div>
-            </div>
-            <div id="confirmPasswordGroup" style="display: none;">
-                <label>ยืนยันรหัสผ่าน (Confirm Password)</label>
-                <div class="password-container">
-                    <input type="password" id="playerConfirmPasswordInput" placeholder="กรอกรหัสผ่านอีกครั้ง..." maxlength="20" autocomplete="off">
-                    <button type="button" class="toggle-eye" onclick="togglePassword('playerConfirmPasswordInput', this)">👁</button>
-                </div>
-            </div>
-            <div class="btn-group" id="authBtnGroup">
-                <button class="action-btn btn-login" onclick="submitLogin()">เข้าสู่ระบบ</button>
-                <button class="action-btn btn-register" onclick="switchToRegister()">สมัครสมาชิก</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="customizationModal" class="screen-layer" style="display: none;">
-        <div class="modal-box">
-            <h2>✨ CREATE YOUR CHARACTER</h2>
-            <canvas id="previewCanvas" width="140" height="140"></canvas>
             <div>
                 <label>เลือกสายอาชีพ (SELECT CLASS)</label>
                 <select id="playerClass" onchange="onClassChange()">
@@ -162,34 +118,18 @@
                 <label>สีตัวละคร (OUTFIT COLOR)</label>
                 <input type="color" id="playerColor" value="#9b59b6" style="height: 35px; cursor: pointer;" oninput="updatePreview()">
             </div>
-            <div class="btn-group">
-                <button class="action-btn" style="background:#7f8c8d; color:white;" onclick="resetCharacter()">↻ รีเซ็ต</button>
-                <button class="action-btn btn-register" style="flex:2;" onclick="saveCharacterData()">💾 บันทึกตัวละคร</button>
-            </div>
-            <button class="btn-enter" id="enterGameBtn" style="opacity: 0.5; pointer-events: none;" onclick="enterMainLobby()">▶ เข้าสู่เกม</button>
+            <button class="btn-enter" onclick="joinGame()">▶ เข้าสู่สนามรบทันที</button>
         </div>
-    </div>
-
-    <div id="lobbyOverlay">
-        <div class="lobby-header">
-            <div>ชื่อ: <span id="lobbyName" style="color: #f1c40f; font-weight: bold;">-</span></div>
-            <div>ทีม: <span id="lobbyTeam" style="color: #3498db; font-weight: bold;">-</span></div>
-            <div>คะแนน: <span id="lobbyScore" style="color: #f1c40f;">0</span></div>
-        </div>
-        <div class="lobby-menu">
-            <button class="lobby-btn" onclick="startPvPGame()">⚔️ เข้าสู่สนามรบ (Boss Raid)</button>
-        </div>
-        <div style="text-align: center; color: #a569bd; font-size: 13px;">Red Team vs Blue Team - Math.io</div>
     </div>
 
     <div id="waitingBanner">⏳ กำลังรอผู้เล่นเข้าห้อง (0/20 คน)</div>
 
-    <div id="mysteryModal">
-        <div class="mystery-box">
-            <h2>✨ กล่องสมบัติเวทมนตร์!</h2>
-            <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #f1c40f;">15 + 8 = ?</div>
-            <input type="number" id="mysteryInput" placeholder="ผลลัพธ์...">
-            <button onclick="submitMystery()" style="background: #f1c40f; color: #2d3436; font-weight: bold; padding: 10px; border-radius: 8px; border:none; cursor:pointer;">ปลดผนึกเวท!</button>
+    <div id="mysteryModal" class="screen-layer" style="display:none;">
+        <div class="mystery-box" style="background:#221e3f; padding:30px; border-radius:15px; text-align:center; border:4px solid #f39c12; width:90%; max-width:350px;">
+            <h2 style="color:#f39c12;">✨ กล่องสมบัติเวทมนตร์!</h2>
+            <div id="mysteryQuestion" style="font-size: 28px; font-weight: bold; color: #f1c40f; margin: 15px 0;">15 + 8 = ?</div>
+            <input type="number" id="mysteryInput" placeholder="ผลลัพธ์..." style="padding:10px; font-size:20px; width:100%; text-align:center; background:#151328; color:#fff; border:2px solid #f39c12; border-radius:8px;">
+            <button onclick="submitMystery()" style="background: #f39c12; color: #2d3436; font-weight: bold; padding: 10px; border-radius: 8px; border:none; cursor:pointer; margin-top:15px; width:100%;">ปลดผนึกเวท!</button>
         </div>
     </div>
 
@@ -208,9 +148,8 @@
 
         <div class="header">
             <div style="color: #f1c40f;">คะแนนส่วนตัว: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
-            <button onclick="returnToLobby()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 กลับ Lobby</button>
+            <button onclick="window.location.reload()" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; cursor: pointer; pointer-events: auto;">🏠 ออกจากเกม</button>
             
-            <!-- กระดานคะแนน Red vs Blue -->
             <div class="leaderboard">
                 <div class="team-score-box">
                     <span style="color: #e74c3c;">🔴 ทีมสีแดง: <span id="redTeamDmg">0</span> DMG</span>
@@ -254,7 +193,7 @@
         resize();
 
         let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
-        let myScore = 0, myTeam = 'red', gameStarted = false, characterSaved = false, previewAngle = 0, currentMysteryAns = null;
+        let myScore = 0, myTeam = 'red', gameStarted = false, previewAngle = 0, currentMysteryAns = null;
         let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true };
         let renderBossX = 2000, renderBossY = 1850;
         let floatingTexts = [], activeEffect = null, effectTimer = 0;
@@ -265,76 +204,6 @@
 
         function attackBoss() { socket.emit('attackBoss'); }
         function castPrankSkill() { socket.emit('castSkill'); }
-
-        socket.on('stateUpdate', (data) => {
-            players = data.players;
-            if (data.boss) bossData = data.boss;
-            if (players[myId]) {
-                myScore = players[myId].score;
-                myTeam = players[myId].team || 'red';
-                document.getElementById('scoreDisplay').innerText = myScore;
-                document.getElementById('lobbyScore').innerText = myScore;
-                let badge = document.getElementById('myTeamBadge');
-                badge.innerText = myTeam === 'red' ? 'ทีมสีแดง 🔴' : 'ทีมสีน้ำเงิน 🔵';
-                badge.style.color = myTeam === 'red' ? '#e74c3c' : '#3498db';
-                document.getElementById('lobbyTeam').innerText = myTeam === 'red' ? 'ทีมสีแดง 🔴' : 'ทีมสีน้ำเงิน 🔵';
-                document.getElementById('lobbyTeam').style.color = myTeam === 'red' ? '#e74c3c' : '#3498db';
-            }
-        });
-
-        socket.on('roomStatus', (data) => {
-            let banner = document.getElementById('waitingBanner');
-            if (data.count < data.required) {
-                banner.innerText = `⏳ กำลังรอผู้เล่นเข้าห้อง (${data.count}/${data.required} คน)`;
-                banner.style.display = 'block';
-            } else {
-                banner.style.display = 'none';
-            }
-        });
-
-        socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
-        socket.on('kickedOut', (data) => { alert(data.msg); window.location.reload(); });
-        socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 3500; });
-
-        const classInfo = {
-            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมตรงข้าม”', 'Warrior': '“นักรบสมดุลในสมรภูมิ”',
-            'Tank': '“เกราะหนาป้องกันตัว”', 'Archer': '“ยิงโจมตีระยะไกล”',
-            'Mage': '“เวทมนตร์ป่วนพื้นที่”', 'Support': '“สนับสนุนเพื่อนร่วมทีม”',
-            'Monk': '“หมัดคอมโบต่อเนื่อง”', 'Berserker': '“บ้าคลั่งในสงคราม”'
-        };
-        function onClassChange() {
-            let cls = document.getElementById('playerClass').value;
-            document.getElementById('classDescription').innerHTML = `<b>${cls.toUpperCase()}</b><br>${classInfo[cls]}`;
-            updatePreview();
-        }
-
-        function togglePassword(id, btn) {
-            let input = document.getElementById(id);
-            input.type = input.type === "password" ? "text" : "password";
-            btn.innerText = input.type === "password" ? "👁" : "🙈";
-        }
-
-        function switchToRegister() {
-            document.querySelector('.modal-box h2').innerText = "CREATE ACCOUNT";
-            document.getElementById('confirmPasswordGroup').style.display = "block";
-            document.getElementById('authBtnGroup').innerHTML = `<button class="action-btn btn-register" onclick="submitRegister()">สมัครสมาชิก</button><button class="action-btn" style="background:#7f8c8d; color:white;" onclick="switchToLogin()">กลับ</button>`;
-        }
-        function switchToLogin() {
-            document.querySelector('.modal-box h2').innerText = "🏰 MAGE CASTLE ARENA";
-            document.getElementById('confirmPasswordGroup').style.display = "none";
-            document.getElementById('authBtnGroup').innerHTML = `<button class="action-btn btn-login" onclick="submitLogin()">เข้าสู่ระบบ</button><button class="action-btn btn-register" onclick="switchToRegister()">สมัครสมาชิก</button>`;
-        }
-
-        function submitLogin() { socket.emit('loginPlayer', { name: document.getElementById('playerNameInput').value.trim(), password: document.getElementById('playerPasswordInput').value.trim() }); }
-        function submitRegister() { socket.emit('registerPlayer', { name: document.getElementById('playerNameInput').value.trim(), password: document.getElementById('playerPasswordInput').value.trim(), confirmPassword: document.getElementById('playerConfirmPasswordInput').value.trim() }); }
-
-        socket.on('authResult', (res) => {
-            if (res.success) {
-                document.getElementById('authModal').style.display = 'none';
-                document.getElementById('customizationModal').style.display = 'flex';
-                updatePreview();
-            } else { document.getElementById('authError').innerText = res.msg; }
-        });
 
         const pCanvas = document.getElementById('previewCanvas');
         let isDragging = false, lastMouseX = 0;
@@ -349,14 +218,64 @@
             drawCastleAvatar(pCtx, 0, 0, { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, team: 'red' }, true);
             pCtx.restore();
         }
+        updatePreview();
 
-        function resetCharacter() { document.getElementById('playerClass').value = 'Warrior'; document.getElementById('playerColor').value = '#9b59b6'; previewAngle = 0; onClassChange(); }
-        function saveCharacterData() { socket.emit('saveCharacter', { playerClass: document.getElementById('playerClass').value, outfitColor: document.getElementById('playerColor').value, hat: 'none' }); }
-        socket.on('saveResult', (res) => { if (res.success) { characterSaved = true; showMsg(res.msg, "#2ecc71"); document.getElementById('enterGameBtn').style.opacity = "1"; document.getElementById('enterGameBtn').style.pointerEvents = "auto"; } });
+        const classInfo = {
+            'Assassin': '“ลอบเร้นและป่วนผู้เล่นทีมตรงข้าม”', 'Warrior': '“นักรบสมดุลในสมรภูมิ”',
+            'Tank': '“เกราะหนาป้องกันตัว”', 'Archer': '“ยิงโจมตีระยะไกล”',
+            'Mage': '“เวทมนตร์ป่วนพื้นที่”', 'Support': '“สนับสนุนเพื่อนร่วมทีม”',
+            'Monk': '“หมัดคอมโบต่อเนื่อง”', 'Berserker': '“บ้าคลั่งในสงคราม”'
+        };
+        function onClassChange() {
+            let cls = document.getElementById('playerClass').value;
+            document.getElementById('classDescription').innerHTML = `<b>${cls.toUpperCase()}</b><br>${classInfo[cls]}`;
+            updatePreview();
+        }
 
-        function enterMainLobby() { if (!characterSaved) return; document.getElementById('customizationModal').style.display = 'none'; document.getElementById('lobbyOverlay').style.display = 'flex'; document.getElementById('lobbyName').innerText = document.getElementById('playerNameInput').value.trim(); }
-        function startPvPGame() { document.getElementById('lobbyOverlay').style.display = 'none'; document.getElementById('ui-layer').style.display = 'flex'; socket.emit('enterGameLobby'); gameStarted = true; showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f"); }
-        function returnToLobby() { gameStarted = false; document.getElementById('ui-layer').style.display = 'none'; document.getElementById('lobbyOverlay').style.display = 'flex'; }
+        function joinGame() {
+            let name = document.getElementById('playerNameInput').value.trim();
+            if (!name) { alert("กรุณากรอกชื่อผู้เล่นก่อนเข้าเกม"); return; }
+            socket.emit('joinGame', {
+                name: name,
+                playerClass: document.getElementById('playerClass').value,
+                outfitColor: document.getElementById('playerColor').value
+            });
+        }
+
+        socket.on('joinResult', (res) => {
+            if (res.success) {
+                document.getElementById('setupModal').style.display = 'none';
+                document.getElementById('ui-layer').style.display = 'flex';
+                gameStarted = true;
+                showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f");
+            }
+        });
+
+        socket.on('stateUpdate', (data) => {
+            players = data.players;
+            if (data.boss) bossData = data.boss;
+            if (players[myId]) {
+                myScore = players[myId].score;
+                myTeam = players[myId].team || 'red';
+                document.getElementById('scoreDisplay').innerText = myScore;
+                let badge = document.getElementById('myTeamBadge');
+                badge.innerText = myTeam === 'red' ? 'ทีมสีแดง 🔴' : 'ทีมสีน้ำเงิน 🔵';
+                badge.style.color = myTeam === 'red' ? '#e74c3c' : '#3498db';
+            }
+        });
+
+        socket.on('roomStatus', (data) => {
+            let banner = document.getElementById('waitingBanner');
+            if (data.count < data.required) {
+                banner.innerText = `⏳ กำลังรอผู้เล่นเข้าห้อง (${data.count}/${data.required} คน)`;
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+            }
+        });
+
+        socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
+        socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 3500; });
 
         const keys = { w: false, a: false, s: false, d: false };
         window.addEventListener('keydown', e => { if(gameStarted) setKey(e.key, true); });
@@ -392,12 +311,11 @@
             else { showMsg("❌ " + res.msg, "#e74c3c"); } 
         });
 
-        // อัปเดตกระดานคะแนนรวมของทีมและดาเมจบอส
         socket.on('updateLeaderboard', (allPlayers) => {
             let list = Object.values(allPlayers);
             let redTotal = 0, blueTotal = 0;
             list.forEach(p => {
-                if (!p.inLobby) {
+                if (p.loggedIn) {
                     if (p.team === 'red') redTotal += (p.bossDamage || 0);
                     else blueTotal += (p.bossDamage || 0);
                 }
@@ -428,7 +346,6 @@
         function drawCastleAvatar(ctx, x, y, pl, isMoving) {
             ctx.save(); ctx.translate(x, y);
             let walkAnim = isMoving ? Math.sin(Date.now() / 70) * 6 : 0;
-            // วาดวงแหวนสีทีมใต้เท้า
             ctx.fillStyle = pl.team === 'red' ? 'rgba(231, 76, 60, 0.6)' : 'rgba(52, 152, 219, 0.6)';
             ctx.beginPath(); ctx.ellipse(0, 20, 16, 8, 0, 0, Math.PI * 2); ctx.fill();
 
@@ -511,6 +428,7 @@
 
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
+                    if (!pl.loggedIn) continue;
                     drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
                     ctx.fillStyle = pl.team === 'red' ? '#e74c3c' : '#3498db';
                     ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
