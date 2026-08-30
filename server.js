@@ -9,6 +9,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// เปิดใช้งาน static folder สำหรับเสิร์ฟไฟล์ใน public (รองรับทั้ง index.html และ admin.html)
 app.use(express.static('public'));
 
 const DB_FILE = path.join(__dirname, 'database.json');
@@ -55,7 +56,7 @@ const AMATH_SCORES = {
     "+": 2, "-": 2, "+/-": 1, "×": 2, "÷": 2, "×/÷": 1, "=": 1, "BLANK": 0
 };
 
-// 📐 ฟังก์ชันคำนวณคะแนนตามตาราง AMATH_SCORES
+// 📐 ฟังก์ชันคำนวณคะแนนตามตาราง AMATH_SCORES (รองรับตัวเลข 2 หลักและเครื่องหมาย)
 function calculateAMathScore(eqStr) {
     let baseScore = 0;
     let i = 0;
@@ -106,7 +107,7 @@ let demonBoss = {
 for (let i = 0; i < 150; i++) spawnTile();
 for (let i = 0; i < 35; i++) spawnMysteryBox();
 
-// 🎲 ฟังก์ชันสุ่มและกระจายเบี้ย (ใช้เครื่องหมาย '×' และ '÷' จริง)
+// 🎲 ฟังก์ชันสุ่มและกระจายเบี้ย (รองรับเลข 0-20 และเครื่องหมาย '×' / '÷')
 function spawnTile() {
     let randType = Math.random();
     let char, type;
@@ -114,9 +115,9 @@ function spawnTile() {
     if (randType < 0.65) {
         let numRand = Math.random();
         if (numRand < 0.8) {
-            char = Math.floor(Math.random() * 10).toString(); // 0-9
+            char = Math.floor(Math.random() * 10).toString(); // เลขเดี่ยว 0-9
         } else {
-            char = Math.floor(Math.random() * 11 + 10).toString(); // 10-20
+            char = Math.floor(Math.random() * 11 + 10).toString(); // เลขพิเศษ 10-20
         }
         type = 'num';
     } else if (randType < 0.9) {
@@ -264,6 +265,7 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
+    // ⚙️ อัปเดตตั้งค่า Admin จากหน้าจอเกมหลัก
     socket.on('updateAdminSettings', (newSettings) => {
         let p = activePlayers[socket.id];
         if (!p || (p.name !== 'admin' && p.name !== 'Do')) {
@@ -285,6 +287,45 @@ io.on('connection', (socket) => {
 
         io.emit('settingsUpdated', { settings: gameSettings, boss: demonBoss });
         socket.emit('skillResult', { success: true, msg: '⚙️ บันทึกการตั้งค่า Admin สำเร็จ!' });
+    });
+
+    // 🔐 ยืนยันตัวตนสำหรับหน้าเว็บ Admin แยก (/admin.html)
+    socket.on('adminAuth', async (data) => {
+        let name = data.name ? data.name.trim() : '';
+        let pass = data.pass ? data.pass.trim() : '';
+
+        if ((name === 'admin' || name === 'Do') && playersDb[name]) {
+            const isMatch = await bcrypt.compare(pass, playersDb[name].password);
+            if (isMatch) {
+                socket.isVerifiedAdmin = true;
+                socket.emit('adminAuthResult', { success: true, settings: gameSettings });
+                return;
+            }
+        }
+        socket.emit('adminAuthResult', { success: false, msg: '❌ ชื่อผู้ใช้หรือรหัสผ่าน Admin ไม่ถูกต้อง!' });
+    });
+
+    // ⚙️ อัปเดตตั้งค่าจากหน้าเว็บ Admin แยก
+    socket.on('updateAdminSettingsFromWeb', (newSettings) => {
+        if (!socket.isVerifiedAdmin) {
+            socket.emit('adminUpdateResult', { success: false, msg: '❌ ไม่มีสิทธิ์ดำเนินการ กรุณาเข้าสู่ระบบใหม่' });
+            return;
+        }
+
+        gameSettings.bossMaxHp = parseInt(newSettings.bossMaxHp) || 5000;
+        gameSettings.bossSpeed = parseFloat(newSettings.bossSpeed) || 1.8;
+        gameSettings.scoreMultiplier = parseInt(newSettings.scoreMultiplier) || 15;
+        gameSettings.bossPenalty = parseInt(newSettings.bossPenalty) || 20;
+
+        if (demonBoss.hp >= demonBoss.maxHp) {
+            demonBoss.maxHp = gameSettings.bossMaxHp;
+            demonBoss.hp = gameSettings.bossMaxHp;
+        } else {
+            demonBoss.maxHp = gameSettings.bossMaxHp;
+        }
+
+        io.emit('settingsUpdated', { settings: gameSettings, boss: demonBoss });
+        socket.emit('adminUpdateResult', { success: true, msg: '⚙️ อัปเดตค่าเกมสำเร็จทั้งหมดแล้ว!' });
     });
 
     socket.on('enterGameLobby', () => {
@@ -442,7 +483,6 @@ io.on('connection', (socket) => {
         io.emit('newTile', droppedTile);
     });
 
-    // 📐 ตรวจสอบและประมวลผลสมการ พร้อมแปลง '×' และ '÷' เป็นสัญลักษณ์คำนวณทางโปรแกรม
     socket.on('submitEquation', (eqStr) => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.inLobby) return;
@@ -549,7 +589,7 @@ setInterval(() => {
                         p.x = Math.max(50, Math.min(MAP_SIZE - 50, p.x + Math.cos(angle) * 100));
                         p.y = Math.max(50, Math.min(MAP_SIZE - 50, p.y + Math.sin(angle) * 100));
 
-                        io.to(id).emit('bossHitPlayer', { msg: `💥 โดนแพะปีศ*จฟาดกระเด็น! เสีย ${penalty} คะแนน!` });
+                        io.to(id).emit('bossHitPlayer', { msg: `💥 โดนแพะปีศาจฟาดกระเด็น! เสีย ${penalty} คะแนน!` });
                     }
                 }
             }
