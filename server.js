@@ -34,13 +34,15 @@ const tiles = [];
 const mysteryBoxes = [];
 const MAP_SIZE = 4000;
 
-// 👹 ข้อมูลบอสปีศาจประจำเซิร์ฟเวอร์
+// 🐐 ข้อมูลบอสแพะปีศาจ (Demon Goat Boss)
 let demonBoss = {
     x: MAP_SIZE / 2,
-    y: MAP_SIZE / 2 - 150,
+    y: MAP_SIZE / 2,
+    targetX: MAP_SIZE / 2,
+    targetY: MAP_SIZE / 2,
     hp: 5000,
     maxHp: 5000,
-    name: 'Demon Lord X',
+    name: 'Demon Goat Lord',
     isAlive: true
 };
 
@@ -198,7 +200,6 @@ io.on('connection', (socket) => {
         io.emit('updateLeaderboard', activePlayers);
     });
 
-    // ⚔️ ระบบใช้คะแนนโจมตีบอสประจำเซิร์ฟเวอร์ (ใช้ 50 คะแนนต่อครั้ง)
     socket.on('attackBoss', () => {
         let p = activePlayers[socket.id];
         if (!p || !p.loggedIn || p.inLobby || !demonBoss.isAlive) return;
@@ -211,11 +212,11 @@ io.on('connection', (socket) => {
 
         let scoreCost = 50;
         if (p.score < scoreCost) {
-            socket.emit('skillResult', { success: false, msg: `❌ คะแนนไม่พอโจมตี (ต้องการ ${scoreCost} แต้ม สะสมจากสมการก่อน!)` });
+            socket.emit('skillResult', { success: false, msg: `❌ คะแนนไม่พอโจมตี (ต้องการ ${scoreCost} แต้ม)` });
             return;
         }
 
-        p.score -= scoreCost; // หักคะแนนผู้เล่นเพื่อใช้เป็นพลังงานโจมตี
+        p.score -= scoreCost;
         let damage = 80 * (p.upgrades.damageLevel || 1);
         demonBoss.hp -= damage;
 
@@ -225,18 +226,18 @@ io.on('connection', (socket) => {
         if (demonBoss.hp <= 0) {
             demonBoss.hp = 0;
             demonBoss.isAlive = false;
-            io.emit('bossDefeated', { msg: `🎉 มหาเทพปีศาจ ${demonBoss.name} ถูกกำจัดราบคาบด้วยพลังคะแนนของทุกคน!` });
+            io.emit('bossDefeated', { msg: `🎉 แพะปีศาจ ${demonBoss.name} ถูกกำจัดราบคาบ!` });
             
             setTimeout(() => {
                 demonBoss.hp = demonBoss.maxHp;
                 demonBoss.isAlive = true;
-                io.emit('bossRespawn', { msg: `⚠️ ปีศาจตนใหม่ฟื้นคืนชีพกลับมาแล้ว!` });
+                io.emit('bossRespawn', { msg: `⚠️ แพะปีศาจตนใหม่ฟื้นคืนชีพกลับมาแล้ว!` });
             }, 30000);
         }
 
         io.emit('bossUpdate', demonBoss);
         io.emit('updateLeaderboard', activePlayers);
-        socket.emit('skillResult', { success: true, msg: `🔥 ใช้ ${scoreCost} คะแนนระเบิดพลังใส่บอส สร้างดาเมจ ${damage} แต้ม!` });
+        socket.emit('skillResult', { success: true, msg: `🔥 ใช้ ${scoreCost} คะแนนโจมตีบอส สร้างดาเมจ ${damage} แต้ม!` });
     });
 
     socket.on('buyUpgrade', (type) => {
@@ -277,56 +278,17 @@ io.on('connection', (socket) => {
         p.lastSkillTime = now;
 
         let affectedCount = 0;
-        let pClass = p.playerClass;
-
         for (let id in activePlayers) {
             if (id !== socket.id) {
                 let target = activePlayers[id];
                 let dist = Math.hypot(p.x - target.x, p.y - target.y);
-                
                 if (dist < 280) {
                     affectedCount++;
-                    if (pClass === 'Assassin') {
-                        io.to(id).emit('trolledEffect', { type: 'blind', msg: `🌑 โดน [Assassin] ${p.name} ปล่อยควันมืดใส่จอ!` });
-                    } else if (pClass === 'Warrior') {
-                        let angle = Math.atan2(target.y - p.y, target.x - p.x);
-                        target.x = Math.max(50, Math.min(MAP_SIZE - 50, target.x + Math.cos(angle) * 150));
-                        target.y = Math.max(50, Math.min(MAP_SIZE - 50, target.y + Math.sin(angle) * 150));
-                        io.to(id).emit('trolledEffect', { type: 'push', msg: `⚔️ โดน [Warrior] ${p.name} ฟาดคลื่นกระเด็น!` });
-                    } else if (pClass === 'Tank') {
-                        target.stunnedUntil = Date.now() + 2000;
-                        io.to(id).emit('trolledEffect', { type: 'stun', msg: `🛡️ โดน [Tank] ${p.name} กระแทกพื้นจนสตัน!` });
-                    } else if (pClass === 'Archer') {
-                        if (target.score >= 15) {
-                            target.score -= 15;
-                            p.score += 15;
-                            if (playersDb[target.name]) playersDb[target.name].score = target.score;
-                            if (playersDb[p.name]) playersDb[p.name].score = p.score;
-                            saveDatabase(playersDb);
-                        }
-                        io.to(id).emit('trolledEffect', { type: 'snip', msg: `🏹 โดน [Archer] ${p.name} แอบชิ่งคะแนนไป!` });
-                    } else if (pClass === 'Mage') {
-                        let tempX = p.x; let tempY = p.y;
-                        p.x = target.x; p.y = target.y;
-                        target.x = tempX; target.y = tempY;
-                        io.to(id).emit('trolledEffect', { type: 'swap', msg: `🔮 โดน [Mage] ${p.name} ร่ายเวทสลับร่าง!` });
-                    } else if (pClass === 'Support') {
-                        io.to(id).emit('trolledEffect', { type: 'invert', msg: `✨ โดน [Support] ${p.name} สาดแสงจอเพี้ยน!` });
-                    } else if (pClass === 'Monk') {
-                        io.to(id).emit('trolledEffect', { type: 'spin', msg: `🥋 โดน [Monk] ${p.name} ต่อยจนหัวหมุน!` });
-                    } else if (pClass === 'Berserker') {
-                        let angle = Math.atan2(target.y - p.y, target.x - p.x);
-                        target.x += Math.cos(angle) * 100;
-                        target.y += Math.sin(angle) * 100;
-                        target.stunnedUntil = Date.now() + 1500;
-                        io.to(id).emit('trolledEffect', { type: 'rage', msg: `🔥 โดนคำรามคลั่งจาก [Berserker] ${p.name}!` });
-                    }
+                    io.to(id).emit('trolledEffect', { type: 'blind', msg: `🌑 โดนสกิลป่วนจาก ${p.name}!` });
                 }
             }
         }
-
-        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนสำเร็จโดนเพื่อน ${affectedCount} คน!` : `✨ ร่ายสกิลประจำคลาสสำเร็จ!` });
-        io.emit('updateLeaderboard', activePlayers);
+        socket.emit('skillResult', { success: true, msg: affectedCount > 0 ? `✨ ใช้สกิลป่วนสำเร็จโดนเพื่อน ${affectedCount} คน!` : `✨ ร่ายสกิลสำเร็จ!` });
     });
 
     socket.on('move', (data) => {
@@ -366,7 +328,6 @@ io.on('connection', (socket) => {
                 let ans = eval(`${n1} ${op} ${n2}`);
                 
                 socket.emit('openMysteryBox', { q: `${n1} ${op} ${n2} = ?`, ans: ans });
-
                 spawnMysteryBox();
                 io.emit('newMysteryBox', mysteryBoxes[mysteryBoxes.length - 1]);
             }
@@ -392,10 +353,10 @@ io.on('connection', (socket) => {
                     socket.emit('equationResult', { success: true, score: p.score });
                     io.emit('updateLeaderboard', activePlayers);
                 } else {
-                    socket.emit('equationResult', { success: false, msg: "สมการไม่ถูกต้อง (ผลลัพธ์สองฝั่งไม่เท่ากัน)" });
+                    socket.emit('equationResult', { success: false, msg: "สมการไม่ถูกต้อง" });
                 }
             } else {
-                socket.emit('equationResult', { success: false, msg: "รูปแบบสมการต้องมีเครื่องหมาย = คั่นกลาง" });
+                socket.emit('equationResult', { success: false, msg: "รูปแบบสมการต้องมีเครื่องหมาย =" });
             }
         } catch (e) {
             socket.emit('equationResult', { success: false, msg: "โครงสร้างทางคณิตศาสตร์ผิดพลาด" });
@@ -409,7 +370,6 @@ io.on('connection', (socket) => {
                 p.score += 60;
                 playersDb[p.name].score = p.score;
                 saveDatabase(playersDb);
-
                 socket.emit('mysteryResult', { success: true });
                 io.emit('updateLeaderboard', activePlayers);
             } else {
@@ -425,8 +385,27 @@ io.on('connection', (socket) => {
     });
 });
 
+// 🐐 ลูปอัปเดต AI การเดินไปเดินมาของแพะปีศาจ
 setInterval(() => {
-    io.emit('stateUpdate', activePlayers);
+    if (demonBoss.isAlive) {
+        let dx = demonBoss.targetX - demonBoss.x;
+        let dy = demonBoss.targetY - demonBoss.y;
+        let dist = Math.hypot(dx, dy);
+
+        if (dist < 15) {
+            // สุ่มจุดหมายปลายทางใหม่รอบๆ ศูนย์กลางแผนที่
+            let center = MAP_SIZE / 2;
+            demonBoss.targetX = center + (Math.random() - 0.5) * 800;
+            demonBoss.targetY = center + (Math.random() - 0.5) * 800;
+        } else {
+            demonBoss.x += (dx / dist) * 1.8; // ความเร็วในการเดินของบอส
+            demonBoss.y += (dy / dist) * 1.8;
+        }
+    }
+}, 50);
+
+setInterval(() => {
+    io.emit('stateUpdate', { players: activePlayers, boss: demonBoss });
 }, 1000 / 60);
 
 const PORT = process.env.PORT || 3000;
