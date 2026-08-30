@@ -46,6 +46,50 @@ let gameSettings = {
     bossPenalty: 20
 };
 
+// 📐 พจนานุกรมคะแนนอิงตามเบี้ย A-Math ของโด้
+const AMATH_SCORES = {
+    "0": 1, "1": 1, "2": 1, "3": 1,
+    "4": 2, "5": 2, "6": 2, "7": 2, "8": 2, "9": 2,
+    "10": 3, "11": 4, "12": 3, "13": 6, "14": 4,
+    "15": 4, "16": 4, "17": 6, "18": 4, "19": 7, "20": 5,
+    "+": 2, "-": 2, "+/-": 1, "×": 2, "÷": 2, "×/÷": 1, "=": 1, "BLANK": 0
+};
+
+// 📐 ฟังก์ชันคำนวณคะแนนตามตาราง AMATH_SCORES (รองรับตัวเลข 2 หลักและเครื่องหมาย)
+function calculateAMathScore(eqStr) {
+    let baseScore = 0;
+    let i = 0;
+
+    while (i < eqStr.length) {
+        let char = eqStr[i];
+
+        if (i + 1 < eqStr.length && !isNaN(char) && !isNaN(eqStr[i + 1])) {
+            let twoDigit = char + eqStr[i + 1];
+            if (AMATH_SCORES[twoDigit] !== undefined) {
+                baseScore += AMATH_SCORES[twoDigit];
+                i += 2;
+                continue;
+            }
+        }
+
+        let token = char;
+        if (char === '*') token = '×';
+        if (char === '/') token = '÷';
+
+        if (AMATH_SCORES[token] !== undefined) {
+            baseScore += AMATH_SCORES[token];
+        } else if (!isNaN(char)) {
+            baseScore += AMATH_SCORES[char] || 1;
+        }
+        i++;
+    }
+
+    let complexityMultiplier = (eqStr.includes('*') || eqStr.includes('/') || eqStr.includes('×') || eqStr.includes('÷')) ? 2 : 1;
+    let finalScore = baseScore * complexityMultiplier * (gameSettings.scoreMultiplier || 15);
+    return Math.max(10, finalScore);
+}
+
+// 🐐 ข้อมูลบอสแพะปีศาจ
 let demonBoss = {
     x: MAP_SIZE / 2,
     y: MAP_SIZE / 2,
@@ -209,7 +253,6 @@ io.on('connection', (socket) => {
         socket.emit('saveResult', { success: true, msg: 'CHARACTER SAVED!' });
     });
 
-    // ⚙️ อัปเดตตั้งค่า Admin (จำกัดให้เฉพาะ Do หรือ admin เท่านั้นที่เปลี่ยนได้)
     socket.on('updateAdminSettings', (newSettings) => {
         let p = activePlayers[socket.id];
         if (!p || (p.name !== 'admin' && p.name !== 'Do')) {
@@ -261,8 +304,10 @@ io.on('connection', (socket) => {
         let damage = 150;
         demonBoss.hp -= damage;
 
-        if (playersDb[p.name]) playersDb[p.name].score = p.score;
-        saveDatabase(playersDb);
+        if (playersDb[p.name]) {
+            playersDb[p.name].score = p.score;
+            saveDatabase(playersDb);
+        }
 
         if (demonBoss.hp <= 0) {
             demonBoss.hp = 0;
@@ -379,7 +424,7 @@ io.on('connection', (socket) => {
                 let right = eval(parts[1].replace(/\b0+(\d)/g, '$1'));
 
                 if (left === right) {
-                    let earnedScore = eqStr.length * gameSettings.scoreMultiplier;
+                    let earnedScore = calculateAMathScore(eqStr);
                     p.score += earnedScore;
                     if (playersDb[p.name]) {
                         playersDb[p.name].score = p.score;
@@ -423,7 +468,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// บอส AI ลูป
 setInterval(() => {
     if (demonBoss.isAlive) {
         if (demonBoss.poisonedUntil && Date.now() < demonBoss.poisonedUntil) {
