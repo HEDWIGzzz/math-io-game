@@ -1,1 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math.io - Admin Control Panel</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap');
+        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+        body { font-family: 'Kanit', sans-serif; background: #0f0c1b; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; padding: 20px; }
+        .admin-box {
+            background: #221e3f; padding: 30px; border-radius: 16px; text-align: center;
+            display: flex; flex-direction: column; gap: 16px; border: 3px solid #e74c3c;
+            box-shadow: 0 0 40px rgba(231, 76, 60, 0.4); width: 100%; max-width: 480px;
+        }
+        h2 { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+        .form-group { text-align: left; display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 13px; color: #d7bde2; font-weight: bold; }
+        input {
+            padding: 12px; font-size: 16px; border-radius: 8px; border: 2px solid #9b59b6;
+            text-align: center; font-family: 'Kanit', sans-serif; background: #151328; color: white; outline: none; width: 100%;
+        }
+        .action-btn {
+            padding: 14px; font-size: 18px; font-family: 'Kanit', sans-serif; font-weight: bold;
+            border: none; border-radius: 8px; cursor: pointer; background: linear-gradient(135deg, #e74c3c, #d35400);
+            color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: 0.2s; margin-top: 10px;
+        }
+        .action-btn:hover { transform: scale(1.02); }
+        .error-text { color: #e74c3c; font-size: 14px; font-weight: bold; min-height: 20px; }
+        .success-text { color: #2ecc71; font-size: 14px; font-weight: bold; min-height: 20px; }
+        #loginSection, #controlSection { display: flex; flex-direction: column; gap: 14px; }
+        #controlSection { display: none; }
+    </style>
+</head>
+<body>
 
+    <div class="admin-box">
+        <h2>⚙️ ADMIN CONTROL PANEL</h2>
+        
+        <!-- ส่วนเข้าสู่ระบบ Admin -->
+        <div id="loginSection">
+            <p style="font-size: 13px; color: #d7bde2;">กรุณายืนยันตัวตนผู้ดูแลระบบ (Admin / Do)</p>
+            <div id="loginError" class="error-text"></div>
+            <div class="form-group">
+                <label>ชื่อผู้ใช้งาน (Username)</label>
+                <input type="text" id="adminUser" placeholder="admin หรือ Do..." autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>รหัสผ่าน (Password)</label>
+                <input type="password" id="adminPass" placeholder="รหัสผ่าน..." autocomplete="off">
+            </div>
+            <button class="action-btn" onclick="adminLogin()">🔑 เข้าสู่ระบบ Admin</button>
+        </div>
+
+        <!-- ส่วนหน้าจอตั้งค่าเกม -->
+        <div id="controlSection">
+            <div id="adminMsg" class="success-text"></div>
+            <div class="form-group">
+                <label>พลังชีวิตสูงสุดของบอส (Boss Max HP)</label>
+                <input type="number" id="settingBossHp" value="5000">
+            </div>
+            <div class="form-group">
+                <label>ความเร็วการเดินของบอส (Boss Speed)</label>
+                <input type="number" step="0.1" id="settingBossSpeed" value="1.8">
+            </div>
+            <div class="form-group">
+                <label>ตัวคูณคะแนนสมการ (Score Multiplier)</label>
+                <input type="number" id="settingScoreMult" value="15">
+            </div>
+            <div class="form-group">
+                <label>ดาเมจบทลงโทษบอสโจมตี (Boss Penalty)</label>
+                <input type="number" id="settingBossPenalty" value="20">
+            </div>
+            <button class="action-btn" onclick="saveSettings()">💾 บันทึกและอัปเดตเกมทันที</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        function adminLogin() {
+            let name = document.getElementById('adminUser').value.trim();
+            let pass = document.getElementById('adminPass').value.trim();
+
+            if (!name || !pass) {
+                document.getElementById('loginError').innerText = "กรุณากรอกข้อมูลให้ครบถ้วน";
+                return;
+            }
+
+            socket.emit('adminAuth', { name, pass });
+        }
+
+        socket.on('adminAuthResult', (res) => {
+            if (res.success) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('controlSection').style.display = 'flex';
+                if (res.settings) {
+                    document.getElementById('settingBossHp').value = res.settings.bossMaxHp;
+                    document.getElementById('settingBossSpeed').value = res.settings.bossSpeed;
+                    document.getElementById('settingScoreMult').value = res.settings.scoreMultiplier;
+                    document.getElementById('settingBossPenalty').value = res.settings.bossPenalty;
+                }
+            } else {
+                document.getElementById('loginError').innerText = res.msg;
+            }
+        });
+
+        function saveSettings() {
+            let hp = document.getElementById('settingBossHp').value;
+            let speed = document.getElementById('settingBossSpeed').value;
+            let mult = document.getElementById('settingScoreMult').value;
+            let penalty = document.getElementById('settingBossPenalty').value;
+
+            socket.emit('updateAdminSettingsFromWeb', {
+                bossMaxHp: hp,
+                bossSpeed: speed,
+                scoreMultiplier: mult,
+                bossPenalty: penalty
+            });
+        }
+
+        socket.on('adminUpdateResult', (res) => {
+            let msgEl = document.getElementById('adminMsg');
+            msgEl.innerText = res.msg;
+            msgEl.style.color = res.success ? '#2ecc71' : '#e74c3c';
+            setTimeout(() => { msgEl.innerText = ''; }, 3000);
+        });
+    </script>
+</body>
+</html>
