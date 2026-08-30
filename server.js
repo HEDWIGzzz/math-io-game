@@ -106,21 +106,37 @@ let demonBoss = {
 for (let i = 0; i < 150; i++) spawnTile();
 for (let i = 0; i < 35; i++) spawnMysteryBox();
 
+// 🎲 ฟังก์ชันสุ่มและกระจายเบี้ย (รองรับ 0-20 และเครื่องหมาย A-Math ครบถ้วน)
 function spawnTile() {
-    const types = [
-        { char: Math.floor(Math.random() * 10).toString(), t: 'num' },
-        { char: '+', t: 'op' }, { char: '-', t: 'op' }, { char: '*', t: 'op' }, { char: '/', t: 'op' },
-        { char: '=', t: 'eq' }
-    ];
-    let rand = Math.random();
-    let selected = (rand < 0.65) ? types[0] : (rand < 0.9 ? types[Math.floor(Math.random() * 4) + 1] : types[5]);
+    let randType = Math.random();
+    let char, type;
+
+    if (randType < 0.65) {
+        // สุ่มตัวเลข: 80% เป็นเลข 0-9, 20% เป็นเลขพิเศษ 10-20
+        let numRand = Math.random();
+        if (numRand < 0.8) {
+            char = Math.floor(Math.random() * 10).toString(); // 0-9
+        } else {
+            char = Math.floor(Math.random() * 11 + 10).toString(); // 10-20
+        }
+        type = 'num';
+    } else if (randType < 0.9) {
+        // สุ่มเครื่องหมายคำนวณ (+, -, *, /)
+        const ops = ['+', '-', '*', '/'];
+        char = ops[Math.floor(Math.random() * ops.length)];
+        type = 'op';
+    } else {
+        // เครื่องหมายเท่ากับ (=)
+        char = '=';
+        type = 'eq';
+    }
 
     tiles.push({
         id: Math.random().toString(36).substr(2, 9),
         x: Math.random() * (MAP_SIZE - 200) + 100,
         y: Math.random() * (MAP_SIZE - 200) + 100,
-        char: selected.char,
-        type: selected.t
+        char: char,
+        type: type
     });
 }
 
@@ -133,8 +149,6 @@ function spawnMysteryBox() {
 }
 
 io.on('connection', (socket) => {
-    console.log('Student/Player connected:', socket.id);
-
     activePlayers[socket.id] = {
         socketId: socket.id,
         playerId: 'PLY_' + Math.random().toString(36).substr(2, 9),
@@ -431,7 +445,7 @@ io.on('connection', (socket) => {
                         saveDatabase(playersDb);
                     }
 
-                    socket.emit('equationResult', { success: true, score: p.score });
+                    socket.emit('equationResult', { success: true, score: p.score, earnedScore: earnedScore });
                     io.emit('updateLeaderboard', activePlayers);
                 } else {
                     socket.emit('equationResult', { success: false, msg: "สมการไม่ถูกต้อง" });
@@ -462,7 +476,6 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        console.log('Player disconnected:', socket.id);
         delete activePlayers[socket.id];
         io.emit('updateLeaderboard', activePlayers);
     });
