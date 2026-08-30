@@ -31,7 +31,6 @@
         #previewCanvas { background: #151328; border: 2px dashed #9b59b6; border-radius: 12px; margin: 0 auto; display: block; cursor: grab; }
         .class-desc { background: rgba(155, 89, 182, 0.15); border: 1px solid #9b59b6; padding: 10px; border-radius: 8px; font-size: 13px; color: #f39c12; text-align: left; }
 
-        /* ป้ายรอและปุ่มเริ่มเกมตรงกลางหน้าจอ */
         #waitingBanner {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(231, 76, 60, 0.95); border: 3px solid #f1c40f; padding: 30px 45px;
@@ -44,7 +43,6 @@
             cursor: pointer; margin-top: 15px; display: inline-block; box-shadow: 0 4px 20px rgba(46,204,113,0.5);
         }
 
-        /* สไตล์ Virtual Joystick */
         #virtualJoystick { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; display: block; }
         #joystickBase { position: absolute; width: 110px; height: 110px; border-radius: 50%; background: rgba(155, 89, 182, 0.25); border: 2px solid rgba(155, 89, 182, 0.7); transform: translate(-50%, -50%); display: none; pointer-events: none; }
         #joystickThumb { position: absolute; width: 55px; height: 55px; border-radius: 50%; background: rgba(155, 89, 182, 0.85); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
@@ -178,7 +176,6 @@
         </div>
     </div>
 
-    <!-- Virtual Joystick Container -->
     <div id="virtualJoystick">
         <div id="joystickBase">
             <div id="joystickThumb"></div>
@@ -195,7 +192,7 @@
         </div>
 
         <div class="header">
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;" id="playerInfoSection">
                 <div style="color: #f1c40f;">คะแนนส่วนตัว: <span id="scoreDisplay">0</span> | ทีม: <span id="myTeamBadge" style="font-weight: bold;">-</span></div>
                 <button id="hostConfigBtn" class="host-config-btn" onclick="toggleHostConfig(true)">⚙️ ตั้งค่าเกม</button>
             </div>
@@ -212,12 +209,12 @@
             </div>
         </div>
 
-        <button class="boss-attack-btn" onclick="attackBoss()">🐐 โจมตีบอส<br><span style="font-size: 9px;">ใช้ 50 แต้ม</span></button>
-        <button class="skill-btn-hud" onclick="castPrankSkill()">⚡ สกิลป่วนทีมตรงข้าม</button>
+        <button class="boss-attack-btn" id="bossAttackBtn" onclick="attackBoss()">🐐 โจมตีบอส<br><span style="font-size: 9px;">ใช้ 50 แต้ม</span></button>
+        <button class="skill-btn-hud" id="skillBtnHud" onclick="castPrankSkill()">⚡ สกิลป่วนทีมตรงข้าม</button>
 
         <div class="sys-msg" id="sysMsg">แจ้งเตือน</div>
 
-        <div class="bottom-panel">
+        <div class="bottom-panel" id="bottomPanel">
             <div class="equation-area" id="equationZone"></div>
             <div class="controls">
                 <button class="action-btn btn-clear" onclick="returnTiles()">ล้างคาถา</button>
@@ -249,6 +246,7 @@
         let renderBossX = 2000, renderBossY = 1850;
         let floatingTexts = [], activeEffect = null, effectTimer = 0;
         let skillVisualEffects = [];
+        let hostCamX = MAP_SIZE / 2, hostCamY = MAP_SIZE / 2; // กล้องสำหรับ Host ไว้เดินดูแผนที่
 
         function addFloatingText(text, x, y, color = '#f1c40f') {
             floatingTexts.push({ text, x, y, vy: -1.5, alpha: 1.0, color });
@@ -322,7 +320,11 @@
                 
                 if (isHost) {
                     document.getElementById('hostConfigBtn').style.display = 'inline-block';
-                    showMsg("👑 ยินดีต้อนรับ Host! คุณสามารถกดเริ่มเกมและตั้งค่าเกมได้", "#f1c40f");
+                    document.getElementById('bottomPanel').style.display = 'none';
+                    document.getElementById('bossAttackBtn').style.display = 'none';
+                    document.getElementById('skillBtnHud').style.display = 'none';
+                    document.getElementById('playerInfoSection').innerHTML = `<div style="color: #f1c40f; font-weight: bold;">👑 โหมด Host (ผู้สังเกตการณ์)</div>`;
+                    showMsg("👑 ยินดีต้อนรับ Host! คุณสามารถกดเริ่มเกม ดูผู้เล่น และตั้งค่าเกมได้", "#f1c40f");
                 } else {
                     showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f");
                 }
@@ -350,7 +352,7 @@
                     addFloatingText(`-${dmg}`, bossData.x + (Math.random() - 0.5) * 40, bossData.y - 60, '#e74c3c');
                 }
             }
-            if (players[myId]) {
+            if (!isHost && players[myId]) {
                 myScore = players[myId].score;
                 myTeam = players[myId].team || 'red';
                 document.getElementById('scoreDisplay').innerText = myScore;
@@ -374,7 +376,7 @@
         });
 
         socket.on('skillResult', (res) => { showMsg(res.msg, res.success ? "#f1c40f" : "#e74c3c"); });
-        socket.on('trolledEffect', (data) => { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 4000; });
+        socket.on('trolledEffect', (data) => { if(!isHost) { showMsg(data.msg, "#e74c3c"); activeEffect = data.type; effectTimer = Date.now() + 4000; } });
         
         socket.on('playerCastSkill', (data) => {
             skillVisualEffects.push({
@@ -395,22 +397,22 @@
         window.addEventListener('keyup', e => { if(gameStarted) setKey(e.key, false); });
         function setKey(k, state) {
             k = k.toLowerCase();
-            let isConfused = (activeEffect === 'confuse' && Date.now() < effectTimer);
-            let isRev = ((activeEffect === 'blind' || isConfused) && Date.now() < effectTimer);
+            let isConfused = (!isHost && activeEffect === 'confuse' && Date.now() < effectTimer);
+            let isRev = (!isHost && (activeEffect === 'blind' || isConfused) && Date.now() < effectTimer);
             if (k === 'w' || k === 'arrowup') keys[isRev ? 's' : 'w'] = state;
             if (k === 's' || k === 'arrowdown') keys[isRev ? 'w' : 's'] = state;
             if (k === 'a' || k === 'arrowleft') keys[isRev ? 'd' : 'a'] = state;
             if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
         }
 
-        // ระบบ Virtual Joystick บนมือถือ
+        // Virtual Joystick บนมือถือ (สำหรับผู้เล่นทั่วไป)
         const joystickBase = document.getElementById('joystickBase');
         const joystickThumb = document.getElementById('joystickThumb');
         let joystickTouchId = null;
         let joystickCenter = { x: 0, y: 0 };
 
         window.addEventListener('touchstart', (e) => {
-            if (!gameStarted) return;
+            if (!gameStarted || isHost) return;
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
             
             let touch = e.changedTouches[0];
@@ -425,7 +427,7 @@
         }, { passive: false });
 
         window.addEventListener('touchmove', (e) => {
-            if (joystickTouchId === null) return;
+            if (joystickTouchId === null || isHost) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 let touch = e.changedTouches[i];
                 if (touch.identifier === joystickTouchId) {
@@ -450,7 +452,7 @@
         }, { passive: false });
 
         window.addEventListener('touchend', (e) => {
-            if (joystickTouchId === null) return;
+            if (joystickTouchId === null || isHost) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 let touch = e.changedTouches[i];
                 if (touch.identifier === joystickTouchId) {
@@ -469,13 +471,14 @@
                 document.getElementById('waitingBanner').style.display = 'none';
             }
         });
-        socket.on('tileCollected', (tile) => { inventory.push(tile); renderUI(); });
+        socket.on('tileCollected', (tile) => { if(!isHost) { inventory.push(tile); renderUI(); } });
         socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
         socket.on('newTile', (tile) => { tiles.push(tile); });
         socket.on('mysteryBoxRemoved', (id) => { mysteryBoxes = mysteryBoxes.filter(b => b.id !== id); });
         socket.on('newMysteryBox', (box) => { mysteryBoxes.push(box); });
 
         socket.on('openMysteryBox', (data) => {
+            if (isHost) return;
             currentMysteryAns = data.ans;
             document.getElementById('mysteryQuestion').innerText = data.q;
             document.getElementById('mysteryInput').value = '';
@@ -502,7 +505,7 @@
             let list = Object.values(allPlayers);
             let redTotal = 0, blueTotal = 0;
             list.forEach(p => {
-                if (p.loggedIn) {
+                if (p.loggedIn && !p.isHost) {
                     if (p.team === 'red') redTotal += (p.bossDamage || 0);
                     else blueTotal += (p.bossDamage || 0);
                 }
@@ -510,7 +513,6 @@
             document.getElementById('redTeamDmg').innerText = redTotal;
             document.getElementById('blueTeamDmg').innerText = blueTotal;
 
-            // กรอง Host ออกจากบอร์ดจัดอันดับดาเมจบอส
             let bossSorted = [...list].filter(p => !p.isHost).sort((a,b) => (b.bossDamage || 0) - (a.bossDamage || 0));
             let html = '';
             bossSorted.slice(0, 5).forEach((p, i) => {
@@ -521,14 +523,15 @@
         });
 
         function renderUI() {
+            if (isHost) return;
             const invZone = document.getElementById('inventoryZone'), eqZone = document.getElementById('equationZone');
             invZone.innerHTML = ''; eqZone.innerHTML = '';
             inventory.forEach((tile, index) => { let el = document.createElement('div'); el.className = `tile ${tile.type}`; el.innerText = tile.char; el.onclick = () => { equation.push(inventory.splice(index, 1)[0]); renderUI(); }; invZone.appendChild(el); });
             equation.forEach((tile, index) => { let el = document.createElement('div'); el.className = `tile ${tile.type}`; el.innerText = tile.char; el.onclick = () => { inventory.push(equation.splice(index, 1)[0]); renderUI(); }; eqZone.appendChild(el); });
         }
-        function returnTiles() { inventory = inventory.concat(equation); equation = []; renderUI(); }
-        function dropTile() { if (inventory.length === 0) return; socket.emit('dropTile', inventory.pop()); renderUI(); }
-        function sendEquation() { if (equation.length === 0) return; socket.emit('submitEquation', equation.map(t => t.char).join('')); }
+        function returnTiles() { if(!isHost) { inventory = inventory.concat(equation); equation = []; renderUI(); } }
+        function dropTile() { if (!isHost && inventory.length > 0) { socket.emit('dropTile', inventory.pop()); renderUI(); } }
+        function sendEquation() { if (!isHost && equation.length > 0) { socket.emit('submitEquation', equation.map(t => t.char).join('')); } }
         function showMsg(text, color) { const msg = document.getElementById('sysMsg'); msg.innerText = text; msg.style.color = color; msg.classList.add('show'); setTimeout(() => msg.classList.remove('show'), 2500); }
 
         function drawCastleAvatar(ctx, x, y, pl, isMoving) {
@@ -595,20 +598,31 @@
         }
 
         function gameLoop() {
-            if (gameStarted && myId && players[myId]) {
-                let p = players[myId];
-                let dx = 0, dy = 0, speed = 5;
+            if (gameStarted && myId) {
+                if (!isHost && players[myId]) {
+                    let p = players[myId];
+                    let dx = 0, dy = 0, speed = 5;
 
-                if (activeEffect && Date.now() < effectTimer) {
-                    if (activeEffect === 'slow') speed = 3;
-                    if (activeEffect === 'heavySlow' || activeEffect === 'freeze' || activeEffect === 'burn') speed = 1.5;
+                    if (activeEffect && Date.now() < effectTimer) {
+                        if (activeEffect === 'slow') speed = 3;
+                        if (activeEffect === 'heavySlow' || activeEffect === 'freeze' || activeEffect === 'burn') speed = 1.5;
+                    }
+
+                    if (keys.w) dy -= speed; if (keys.s) dy += speed;
+                    if (keys.a) dx -= speed; if (keys.d) dx += speed;
+
+                    if (dx !== 0 || dy !== 0) socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
+                    else socket.emit('move', { x: p.x, y: p.y, isMoving: false });
+                } else if (isHost) {
+                    // Host ใช้กล้องอิสระควบคุมด้วย WASD/Arrow keys เดินชมแผนที่
+                    let camSpeed = 12;
+                    if (keys.w) hostCamY -= camSpeed;
+                    if (keys.s) hostCamY += camSpeed;
+                    if (keys.a) hostCamX -= camSpeed;
+                    if (keys.d) hostCamX += camSpeed;
+                    hostCamX = Math.max(100, Math.min(MAP_SIZE - 100, hostCamX));
+                    hostCamY = Math.max(100, Math.min(MAP_SIZE - 100, hostCamY));
                 }
-
-                if (keys.w) dy -= speed; if (keys.s) dy += speed;
-                if (keys.a) dx -= speed; if (keys.d) dx += speed;
-
-                if (dx !== 0 || dy !== 0) socket.emit('move', { x: p.x + dx, y: p.y + dy, isMoving: true });
-                else socket.emit('move', { x: p.x, y: p.y, isMoving: false });
 
                 renderBossX += (bossData.x - renderBossX) * 0.15;
                 renderBossY += (bossData.y - renderBossY) * 0.15;
@@ -621,6 +635,7 @@
                         renderPlayers[id].name = serverPl.name; renderPlayers[id].playerClass = serverPl.playerClass;
                         renderPlayers[id].outfitColor = serverPl.outfitColor; renderPlayers[id].team = serverPl.team;
                         renderPlayers[id].isMoving = serverPl.isMoving;
+                        renderPlayers[id].isHost = serverPl.isHost;
                     }
                     if (renderPlayers[id].targetX !== undefined) {
                         renderPlayers[id].x += (renderPlayers[id].targetX - renderPlayers[id].x) * 0.3;
@@ -629,9 +644,16 @@
                 }
                 for (let id in renderPlayers) if (!players[id]) delete renderPlayers[id];
 
-                let me = renderPlayers[myId] || p;
-                let camX = me.x - (width / 2), camY = me.y - (height / 2);
-                if (activeEffect && Date.now() < effectTimer) { camX += (Math.random() - 0.5) * 20; camY += (Math.random() - 0.5) * 20; }
+                let camX, camY;
+                if (isHost) {
+                    camX = hostCamX - (width / 2);
+                    camY = hostCamY - (height / 2);
+                } else {
+                    let me = renderPlayers[myId] || players[myId];
+                    camX = me.x - (width / 2);
+                    camY = me.y - (height / 2);
+                    if (activeEffect && Date.now() < effectTimer) { camX += (Math.random() - 0.5) * 20; camY += (Math.random() - 0.5) * 20; }
+                }
 
                 drawBackground(camX, camY);
                 ctx.save(); ctx.translate(-camX, -camY);
@@ -678,7 +700,7 @@
 
                 for (let id in renderPlayers) {
                     let pl = renderPlayers[id];
-                    if (!pl.loggedIn) continue;
+                    if (!pl.loggedIn || pl.isHost) continue; // Host ไม่มีตัวละครบนแมพ
                     drawCastleAvatar(ctx, pl.x, pl.y, pl, pl.isMoving);
                     ctx.fillStyle = pl.team === 'red' ? '#e74c3c' : '#3498db';
                     ctx.font = 'bold 14px Kanit'; ctx.textAlign = 'center';
