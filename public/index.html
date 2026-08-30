@@ -33,8 +33,14 @@
 
         #waitingBanner {
             position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-            background: rgba(231, 76, 60, 0.9); border: 2px solid #f1c40f; padding: 8px 20px;
-            border-radius: 10px; font-size: 14px; font-weight: bold; z-index: 85; display: none; text-align: center;
+            background: rgba(231, 76, 60, 0.9); border: 2px solid #f1c40f; padding: 12px 25px;
+            border-radius: 12px; font-size: 15px; font-weight: bold; z-index: 85; display: none; text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .host-start-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; border: none;
+            padding: 8px 18px; border-radius: 8px; font-family: 'Kanit'; font-weight: bold; font-size: 15px;
+            cursor: pointer; margin-top: 8px; display: inline-block; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; z-index: 50; }
@@ -97,7 +103,7 @@
             <canvas id="previewCanvas" width="140" height="140"></canvas>
             <div>
                 <label>ชื่อผู้เล่น (Username)</label>
-                <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ..." maxlength="15" autocomplete="off">
+                <input type="text" id="playerNameInput" placeholder="พิมพ์ชื่อของคุณ (พิมพ์ Do เพื่อเป็น Host)..." maxlength="15" autocomplete="off">
             </div>
             <div>
                 <label>เลือกสายอาชีพ (SELECT CLASS)</label>
@@ -121,7 +127,12 @@
         </div>
     </div>
 
-    <div id="waitingBanner">⏳ กำลังรอผู้เล่นเข้าห้อง (0/20 คน)</div>
+    <div id="waitingBanner">
+        <div id="waitingText">⏳ กำลังรอผู้เล่นเข้าห้อง (0/20 คน)</div>
+        <div id="hostButtonContainer" style="display: none;">
+            <button class="host-start-btn" onclick="forceStartGame()">🚀 เริ่มเกมทันที (สำหรับโด้)</button>
+        </div>
+    </div>
 
     <div id="mysteryModal" class="screen-layer" style="display:none;">
         <div class="mystery-box" style="background:#221e3f; padding:30px; border-radius:15px; text-align:center; border:4px solid #f39c12; width:90%; max-width:350px;">
@@ -192,7 +203,7 @@
         resize();
 
         let myId = null, players = {}, renderPlayers = {}, tiles = [], mysteryBoxes = [], inventory = [], equation = [];
-        let myScore = 0, myTeam = 'red', gameStarted = false, previewAngle = 0, currentMysteryAns = null;
+        let myScore = 0, myTeam = 'red', gameStarted = false, isHost = false, previewAngle = 0, currentMysteryAns = null;
         let bossData = { x: 2000, y: 1850, hp: 5000, maxHp: 5000, name: 'Demon Goat Lord', isAlive: true, slowedUntil: 0, poisonedUntil: 0 };
         let renderBossX = 2000, renderBossY = 1850;
         let floatingTexts = [], activeEffect = null, effectTimer = 0;
@@ -203,6 +214,7 @@
 
         function attackBoss() { socket.emit('attackBoss'); }
         function castPrankSkill() { socket.emit('castSkill'); }
+        function forceStartGame() { socket.emit('forceStartGame'); }
 
         const pCanvas = document.getElementById('previewCanvas');
         let isDragging = false, lastMouseX = 0;
@@ -243,11 +255,22 @@
 
         socket.on('joinResult', (res) => {
             if (res.success) {
+                isHost = res.isHost;
                 document.getElementById('setupModal').style.display = 'none';
                 document.getElementById('ui-layer').style.display = 'flex';
                 gameStarted = true;
-                showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f");
+                if (isHost) {
+                    showMsg("👑 ยินดีต้อนรับ Host (โด้)! คุณสามารถกดเริ่มเกมได้ทันที", "#f1c40f");
+                } else {
+                    showMsg("⚔️ เข้าสู่สนามรบ Red vs Blue!", "#f1c40f");
+                }
             }
+        });
+
+        socket.on('gameStartedEvent', (data) => {
+            gameStarted = true;
+            document.getElementById('waitingBanner').style.display = 'none';
+            showMsg(data.msg, "#2ecc71");
         });
 
         socket.on('stateUpdate', (data) => {
@@ -273,8 +296,11 @@
 
         socket.on('roomStatus', (data) => {
             let banner = document.getElementById('waitingBanner');
-            if (data.count < data.required) {
-                banner.innerText = `⏳ กำลังรอผู้เล่นเข้าห้อง (${data.count}/${data.required} คน)`;
+            if (!data.gameStarted) {
+                document.getElementById('waitingText').innerText = `⏳ กำลังรอผู้เล่นเข้าห้อง (${data.count}/${data.required} คน)`;
+                if (isHost) {
+                    document.getElementById('hostButtonContainer').style.display = 'block';
+                }
                 banner.style.display = 'block';
             } else {
                 banner.style.display = 'none';
@@ -303,7 +329,13 @@
             if (k === 'd' || k === 'arrowright') keys[isRev ? 'a' : 'd'] = state;
         }
 
-        socket.on('initGame', (data) => { myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss; renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD(); });
+        socket.on('initGame', (data) => {
+            myId = data.id; tiles = data.tiles; mysteryBoxes = data.mysteryBoxes; MAP_SIZE = data.mapSize; bossData = data.boss;
+            renderBossX = bossData.x; renderBossY = bossData.y; updateBossHUD();
+            if (data.gameStarted) {
+                document.getElementById('waitingBanner').style.display = 'none';
+            }
+        });
         socket.on('tileCollected', (tile) => { inventory.push(tile); renderUI(); });
         socket.on('tileRemoved', (id) => { tiles = tiles.filter(t => t.id !== id); });
         socket.on('newTile', (tile) => { tiles.push(tile); });
@@ -378,39 +410,56 @@
             ctx.restore();
         }
 
-        // 🐐 รูปวาดแพะปีศาจสุดเท่ตัวจริงกลับมาแล้ว!
+        // 🐐 รูปวาดแพะปีศาจฉบับสมบูรณ์ (มีตัวและหางปีศาจ)
         function drawBoss(ctx) {
             ctx.save(); ctx.translate(renderBossX, renderBossY);
-
-            // เอฟเฟกต์สถานะ
             if (bossData.poisonedUntil && Date.now() < bossData.poisonedUntil) {
-                ctx.fillStyle = 'rgba(155, 89, 182, 0.5)';
-                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(155, 89, 182, 0.5)'; ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
             } else if (bossData.slowedUntil && Date.now() < bossData.slowedUntil) {
-                ctx.fillStyle = 'rgba(52, 152, 219, 0.5)';
-                ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.5)'; ctx.beginPath(); ctx.arc(0, 0, 75, 0, Math.PI * 2); ctx.fill();
             }
 
+            // 🌀 หางปีศาจแกว่งไปมา
+            let tailWag = Math.sin(Date.now() / 150) * 15;
+            ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 35);
+            ctx.quadraticCurveTo(-30 + tailWag, 60, -20 + tailWag*1.5, 75);
+            ctx.stroke();
+            // ปลายหางสามเหลี่ยม
+            ctx.fillStyle = '#6c3483';
+            ctx.beginPath();
+            ctx.moveTo(-20 + tailWag*1.5, 75);
+            ctx.lineTo(-25 + tailWag*1.5, 65);
+            ctx.lineTo(-12 + tailWag*1.5, 68);
+            ctx.closePath();
+            ctx.fill();
+
+            // 🧥 ลำตัวปีศาจ
+            ctx.fillStyle = bossData.isAlive ? '#512e5f' : '#7f8c8d';
+            ctx.beginPath();
+            ctx.ellipse(0, 15, 26, 22, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
+
+            // 🐐 หัวและเขาปีศาจ
+            ctx.fillStyle = '#111111'; ctx.lineWidth = 3;
             // เขาซ้าย
-            ctx.fillStyle = '#111111'; ctx.strokeStyle = '#000000'; ctx.lineWidth = 3;
             ctx.beginPath(); ctx.moveTo(-15, -20); ctx.bezierCurveTo(-50, -50, -70, -10, -45, 10); ctx.bezierCurveTo(-55, -10, -45, -35, -15, -15); ctx.fill(); ctx.stroke();
             // เขาขวา
             ctx.beginPath(); ctx.moveTo(15, -20); ctx.bezierCurveTo(50, -50, 70, -10, 45, 10); ctx.bezierCurveTo(55, -10, 45, -35, 15, -15); ctx.fill(); ctx.stroke();
 
-            // ตัวบอส
+            // หน้าบอส
             ctx.fillStyle = bossData.isAlive ? '#6c3483' : '#7f8c8d';
-            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-25, 10); ctx.lineTo(-15, 35); ctx.lineTo(15, 35); ctx.lineTo(25, 10); ctx.closePath(); ctx.fill();
-            ctx.lineWidth = 3; ctx.strokeStyle = '#2c3e50'; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(-25, 0); ctx.lineTo(25, 0); ctx.closePath(); ctx.fill();
+            ctx.stroke();
 
             // ตา
-            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-12, -10, 8, 0, Math.PI * 2); ctx.arc(12, -10, 8, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(-12, -10, 3, 0, Math.PI * 2); ctx.arc(12, -10, 3, 0, Math.PI * 2); ctx.fill();
-
-            // จมูก
-            ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.ellipse(0, 15, 10, 16, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(-10, -12, 7, 0, Math.PI * 2); ctx.arc(10, -12, 7, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(-10, -12, 2.5, 0, Math.PI * 2); ctx.arc(10, -12, 2.5, 0, Math.PI * 2); ctx.fill();
 
             ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px Kanit'; ctx.textAlign = 'center';
-            ctx.fillText(`🐐 ${bossData.name}`, 0, -65);
+            ctx.fillText(`🐐 ${bossData.name}`, 0, -75);
             ctx.restore();
         }
 
