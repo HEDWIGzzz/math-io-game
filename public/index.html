@@ -1,1191 +1,136 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-    <title>Math.io</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        :root {
-            color-scheme: dark;
-            font-family:
-                system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
-                sans-serif;
-        }
-
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #020617;
-            color: white;
-        }
-
-        button,
-        input,
-        select {
-            font: inherit;
-        }
-
-        button {
-            border: 0;
-            cursor: pointer;
-        }
-
-        #gameCanvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            background: #0f172a;
-        }
-
-        .panel {
-            background: rgba(15, 23, 42, 0.92);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 14px;
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
-            backdrop-filter: blur(10px);
-        }
-
-        #loginScreen {
-            position: fixed;
-            inset: 0;
-            z-index: 20;
-            display: grid;
-            place-items: center;
-            padding: 20px;
-            background:
-                radial-gradient(
-                    circle at top,
-                    #1e3a8a,
-                    #020617 65%
-                );
-        }
-
-        #loginPanel {
-            width: min(420px, 100%);
-            padding: 28px;
-        }
-
-        #loginPanel h1 {
-            margin: 0 0 8px;
-            font-size: 40px;
-            text-align: center;
-        }
-
-        #loginPanel p {
-            margin: 0 0 22px;
-            color: #cbd5e1;
-            text-align: center;
-        }
-
-        .field {
-            display: grid;
-            gap: 7px;
-            margin-bottom: 15px;
-        }
-
-        .field input,
-        .field select {
-            width: 100%;
-            padding: 12px 14px;
-            color: white;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 10px;
-            outline: none;
-        }
-
-        .field input:focus,
-        .field select:focus {
-            border-color: #60a5fa;
-        }
-
-        #joinButton {
-            width: 100%;
-            padding: 13px;
-            color: white;
-            font-weight: 800;
-            background: #2563eb;
-            border-radius: 10px;
-        }
-
-        #joinButton:hover {
-            background: #1d4ed8;
-        }
-
-        #joinMessage {
-            min-height: 22px;
-            margin-top: 12px;
-            color: #fca5a5;
-            text-align: center;
-        }
-
-        #hud {
-            display: none;
-        }
-
-        #statusPanel {
-            position: fixed;
-            top: 14px;
-            left: 14px;
-            z-index: 5;
-            min-width: 210px;
-            padding: 12px 14px;
-        }
-
-        #leaderboard {
-            position: fixed;
-            top: 14px;
-            right: 14px;
-            z-index: 5;
-            width: 220px;
-            padding: 12px;
-        }
-
-        #leaderboard h3 {
-            margin: 0 0 9px;
-        }
-
-        .leader-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 5px 0;
-            color: #e2e8f0;
-        }
-
-        #equationPanel {
-            position: fixed;
-            left: 50%;
-            bottom: 18px;
-            z-index: 6;
-            width: min(850px, calc(100vw - 24px));
-            padding: 12px;
-            transform: translateX(-50%);
-        }
-
-        #equation {
-            min-height: 48px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 10px;
-            padding: 8px;
-            overflow-x: auto;
-            background: rgba(2, 6, 23, 0.65);
-            border-radius: 9px;
-        }
-
-        #inventory {
-            display: flex;
-            gap: 7px;
-            min-height: 50px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-        }
-
-        .tile-button {
-            flex: 0 0 44px;
-            height: 44px;
-            color: #0f172a;
-            font-weight: 900;
-            font-size: 18px;
-            background: #f8fafc;
-            border: 3px solid #cbd5e1;
-            border-radius: 8px;
-        }
-
-        .tile-button.selected {
-            opacity: 0.35;
-            transform: scale(0.92);
-        }
-
-        .equation-tile {
-            display: grid;
-            flex: 0 0 40px;
-            height: 40px;
-            place-items: center;
-            color: #0f172a;
-            font-weight: 900;
-            background: #fde68a;
-            border-radius: 7px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .action-button {
-            padding: 9px 13px;
-            color: white;
-            font-weight: 700;
-            background: #334155;
-            border-radius: 8px;
-        }
-
-        #submitButton {
-            background: #16a34a;
-        }
-
-        #clearButton {
-            background: #dc2626;
-        }
-
-        #toast {
-            position: fixed;
-            top: 90px;
-            left: 50%;
-            z-index: 30;
-            max-width: min(500px, 90vw);
-            padding: 11px 16px;
-            opacity: 0;
-            text-align: center;
-            background: rgba(15, 23, 42, 0.94);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 999px;
-            pointer-events: none;
-            transform: translate(-50%, -15px);
-            transition: 0.2s ease;
-        }
-
-        #toast.show {
-            opacity: 1;
-            transform: translate(-50%, 0);
-        }
-
-        #roundMessage {
-            position: fixed;
-            inset: 0;
-            z-index: 25;
-            display: none;
-            place-items: center;
-            font-size: clamp(30px, 7vw, 72px);
-            font-weight: 900;
-            text-align: center;
-            background: rgba(2, 6, 23, 0.78);
-        }
-
-        #mobileControls {
-            position: fixed;
-            left: 18px;
-            bottom: 185px;
-            z-index: 8;
-            display: none;
-            grid-template-columns: repeat(3, 54px);
-            grid-template-rows: repeat(2, 54px);
-            gap: 5px;
-        }
-
-        .mobile-button {
-            color: white;
-            font-size: 22px;
-            background: rgba(51, 65, 85, 0.85);
-            border-radius: 12px;
-            touch-action: none;
-        }
-
-        #mobileUp {
-            grid-column: 2;
-        }
-
-        #mobileLeft {
-            grid-column: 1;
-            grid-row: 2;
-        }
-
-        #mobileDown {
-            grid-column: 2;
-            grid-row: 2;
-        }
-
-        #mobileRight {
-            grid-column: 3;
-            grid-row: 2;
-        }
-
-        #attackMobile {
-            position: fixed;
-            right: 20px;
-            bottom: 200px;
-            z-index: 8;
-            display: none;
-            width: 72px;
-            height: 72px;
-            color: white;
-            font-weight: 900;
-            background: #dc2626;
-            border-radius: 50%;
-            touch-action: none;
-        }
-
-        @media (pointer: coarse) {
-            #mobileControls {
-                display: grid;
-            }
-
-            #attackMobile {
-                display: block;
-            }
-
-            #equationPanel {
-                bottom: 8px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+  >
+  <meta name="theme-color" content="#07111f">
+  <title>Math.io</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
-
 <body>
+  <main id="setupScreen" class="setup-screen">
+    <section class="setup-card">
+      <div>
+        <p class="eyebrow">MULTIPLAYER MATH ADVENTURE</p>
+        <h1>Math.io</h1>
+        <p class="subtitle">สร้างสมการ ใช้สกิล และปกป้องฐานของทีม</p>
+      </div>
+
+      <div class="setup-grid">
+        <section class="form-panel">
+          <label>
+            ชื่อผู้เล่น
+            <input id="playerName" maxlength="16" value="นักคำนวณ" autocomplete="off">
+          </label>
+
+          <div>
+            <span class="field-title">เลือกทีม</span>
+            <div id="teamOptions" class="option-grid team-options"></div>
+          </div>
+
+          <div>
+            <span class="field-title">เลือกสายตัวละคร</span>
+            <div id="classOptions" class="class-options"></div>
+          </div>
+
+          <div id="classDescription" class="description-box"></div>
+        </section>
+
+        <section class="custom-panel">
+          <h2>ตกแต่งตัวละคร</h2>
+          <canvas id="previewCanvas" width="280" height="280"></canvas>
+
+          <div id="cosmeticControls" class="cosmetic-controls"></div>
+
+          <div class="row">
+            <label>
+              สีหลัก
+              <input id="primaryColor" type="color" value="#3b82f6">
+            </label>
+            <label>
+              สีรอง
+              <input id="secondaryColor" type="color" value="#f8fafc">
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="randomizeButton" class="secondary-button">สุ่มชุด</button>
+            <button id="resetButton" class="secondary-button">คืนค่า</button>
+          </div>
+        </section>
+      </div>
+
+      <p id="setupError" class="error-message"></p>
+      <button id="joinButton" class="primary-button">เข้าสู่สนาม</button>
+    </section>
+  </main>
+
+  <main id="gameScreen" class="game-screen hidden">
     <canvas id="gameCanvas"></canvas>
 
-    <section id="loginScreen">
-        <div id="loginPanel" class="panel">
-            <h1>Math.io</h1>
-            <p>สร้างสมการ สะสมคะแนน และทำลายฐานคู่แข่ง</p>
-
-            <label class="field">
-                <span>ชื่อผู้เล่น</span>
-                <input
-                    id="nameInput"
-                    maxlength="16"
-                    placeholder="กรอกชื่อ"
-                    autocomplete="off"
-                >
-            </label>
-
-            <label class="field">
-                <span>เลือกทีม</span>
-                <select id="teamSelect">
-                    <option value="red">🔴 Red</option>
-                    <option value="blue">🔵 Blue</option>
-                    <option value="green">🟢 Green</option>
-                    <option value="yellow">🟡 Yellow</option>
-                </select>
-            </label>
-
-            <button id="joinButton">เข้าเกม</button>
-            <div id="joinMessage"></div>
-        </div>
+    <section class="top-hud">
+      <div class="hud-card">
+        <strong id="identityText">ผู้เล่น</strong>
+        <span id="scoreText">คะแนน 0</span>
+      </div>
+      <div id="baseBars" class="base-bars"></div>
+      <div id="leaderboard" class="hud-card leaderboard"></div>
     </section>
 
-    <main id="hud">
-        <section id="statusPanel" class="panel">
-            <div>
-                <strong id="playerName">Player</strong>
-            </div>
-            <div>ทีม: <span id="playerTeam">-</span></div>
-            <div>คะแนน: <span id="playerScore">0</span></div>
-            <div>กระเป๋า: <span id="bagCount">0/14</span></div>
-            <small>WASD เพื่อเดิน • E เพื่อโจมตีฐาน</small>
-        </section>
-
-        <section id="leaderboard" class="panel">
-            <h3>🏆 ตารางคะแนน</h3>
-            <div id="leaderboardRows"></div>
-        </section>
-
-        <section id="equationPanel" class="panel">
-            <div id="equation"></div>
-            <div id="inventory"></div>
-
-            <div class="actions">
-                <button
-                    id="submitButton"
-                    class="action-button"
-                >
-                    ส่งสมการ
-                </button>
-
-                <button
-                    id="clearButton"
-                    class="action-button"
-                >
-                    ล้าง
-                </button>
-            </div>
-        </section>
-
-        <div id="mobileControls">
-            <button
-                id="mobileUp"
-                class="mobile-button"
-                data-key="up"
-            >▲</button>
-
-            <button
-                id="mobileLeft"
-                class="mobile-button"
-                data-key="left"
-            >◀</button>
-
-            <button
-                id="mobileDown"
-                class="mobile-button"
-                data-key="down"
-            >▼</button>
-
-            <button
-                id="mobileRight"
-                class="mobile-button"
-                data-key="right"
-            >▶</button>
+    <section class="bottom-hud">
+      <div class="hud-card inventory-card">
+        <div class="inventory-heading">
+          <strong>กระเป๋า</strong>
+          <span id="capacityText">0/14</span>
         </div>
-
-        <button id="attackMobile">โจมตี</button>
-    </main>
-
-    <div id="toast"></div>
-    <div id="roundMessage"></div>
-
-    <script src="/socket.io/socket.io.js"></script>
-
-    <script>
-        'use strict';
-
-        const socket = io();
-
-        const canvas = document.getElementById('gameCanvas');
-        const context = canvas.getContext('2d');
-
-        const loginScreen =
-            document.getElementById('loginScreen');
-
-        const hud = document.getElementById('hud');
-        const nameInput = document.getElementById('nameInput');
-        const teamSelect = document.getElementById('teamSelect');
-        const joinButton = document.getElementById('joinButton');
-
-        const joinMessage =
-            document.getElementById('joinMessage');
-
-        const playerNameElement =
-            document.getElementById('playerName');
-
-        const playerTeamElement =
-            document.getElementById('playerTeam');
-
-        const playerScoreElement =
-            document.getElementById('playerScore');
-
-        const bagCountElement =
-            document.getElementById('bagCount');
-
-        const inventoryElement =
-            document.getElementById('inventory');
-
-        const equationElement =
-            document.getElementById('equation');
-
-        const leaderboardRows =
-            document.getElementById('leaderboardRows');
-
-        const submitButton =
-            document.getElementById('submitButton');
-
-        const clearButton =
-            document.getElementById('clearButton');
-
-        const attackMobile =
-            document.getElementById('attackMobile');
-
-        const toastElement = document.getElementById('toast');
-
-        const roundMessage =
-            document.getElementById('roundMessage');
-
-        let myId = null;
-        let joined = false;
-        let mapSize = 2400;
-
-        let players = [];
-        let bases = {};
-        let inventory = [];
-        let selectedTileIds = [];
-
-        const tiles = new Map();
-
-        const teamColors = {
-            red: '#ef4444',
-            blue: '#3b82f6',
-            green: '#22c55e',
-            yellow: '#eab308'
-        };
-
-        const keys = {
-            up: false,
-            down: false,
-            left: false,
-            right: false
-        };
-
-        let toastTimeout = null;
-
-        function resizeCanvas() {
-            const ratio = Math.min(
-                window.devicePixelRatio || 1,
-                2
-            );
-
-            canvas.width = Math.floor(
-                window.innerWidth * ratio
-            );
-
-            canvas.height = Math.floor(
-                window.innerHeight * ratio
-            );
-
-            canvas.style.width = `${window.innerWidth}px`;
-            canvas.style.height = `${window.innerHeight}px`;
-
-            context.setTransform(
-                ratio,
-                0,
-                0,
-                ratio,
-                0,
-                0
-            );
-        }
-
-        function showToast(message) {
-            if (!message) return;
-
-            toastElement.textContent = message;
-            toastElement.classList.add('show');
-
-            clearTimeout(toastTimeout);
-
-            toastTimeout = setTimeout(() => {
-                toastElement.classList.remove('show');
-            }, 2400);
-        }
-
-        function getMyPlayer() {
-            return players.find(player => player.id === myId);
-        }
-
-        function updateHud() {
-            const me = getMyPlayer();
-
-            if (me) {
-                playerNameElement.textContent = me.name;
-                playerTeamElement.textContent =
-                    me.team.toUpperCase();
-
-                playerTeamElement.style.color =
-                    teamColors[me.team];
-
-                playerScoreElement.textContent = me.score;
-            }
-
-            bagCountElement.textContent =
-                `${inventory.length}/14`;
-        }
-
-        function renderInventory() {
-            inventoryElement.replaceChildren();
-            equationElement.replaceChildren();
-
-            for (const tile of inventory) {
-                const button = document.createElement('button');
-
-                button.className = 'tile-button';
-                button.textContent = tile.char;
-
-                if (selectedTileIds.includes(tile.id)) {
-                    button.classList.add('selected');
-                }
-
-                button.addEventListener('click', () => {
-                    if (selectedTileIds.includes(tile.id)) {
-                        selectedTileIds =
-                            selectedTileIds.filter(
-                                id => id !== tile.id
-                            );
-                    } else {
-                        selectedTileIds.push(tile.id);
-                    }
-
-                    renderInventory();
-                });
-
-                inventoryElement.appendChild(button);
-            }
-
-            for (const selectedId of selectedTileIds) {
-                const tile = inventory.find(
-                    item => item.id === selectedId
-                );
-
-                if (!tile) continue;
-
-                const tileElement =
-                    document.createElement('button');
-
-                tileElement.className = 'equation-tile';
-                tileElement.textContent = tile.char;
-
-                tileElement.addEventListener('click', () => {
-                    selectedTileIds =
-                        selectedTileIds.filter(
-                            id => id !== selectedId
-                        );
-
-                    renderInventory();
-                });
-
-                equationElement.appendChild(tileElement);
-            }
-
-            updateHud();
-        }
-
-        function renderLeaderboard() {
-            const sorted = [...players]
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 8);
-
-            leaderboardRows.replaceChildren();
-
-            sorted.forEach((player, index) => {
-                const row = document.createElement('div');
-                row.className = 'leader-row';
-
-                const name = document.createElement('span');
-                const score = document.createElement('strong');
-
-                name.textContent =
-                    `${index + 1}. ${player.name}`;
-
-                name.style.color =
-                    teamColors[player.team] || '#fff';
-
-                score.textContent = player.score;
-
-                row.append(name, score);
-                leaderboardRows.appendChild(row);
-            });
-        }
-
-        function drawGrid(cameraX, cameraY) {
-            const gridSize = 80;
-
-            context.strokeStyle =
-                'rgba(148, 163, 184, 0.09)';
-
-            context.lineWidth = 1;
-            context.beginPath();
-
-            const startX =
-                Math.floor(cameraX / gridSize) * gridSize;
-
-            const startY =
-                Math.floor(cameraY / gridSize) * gridSize;
-
-            for (
-                let x = startX;
-                x < cameraX + window.innerWidth + gridSize;
-                x += gridSize
-            ) {
-                context.moveTo(
-                    x - cameraX,
-                    0
-                );
-
-                context.lineTo(
-                    x - cameraX,
-                    window.innerHeight
-                );
-            }
-
-            for (
-                let y = startY;
-                y < cameraY + window.innerHeight + gridSize;
-                y += gridSize
-            ) {
-                context.moveTo(
-                    0,
-                    y - cameraY
-                );
-
-                context.lineTo(
-                    window.innerWidth,
-                    y - cameraY
-                );
-            }
-
-            context.stroke();
-        }
-
-        function drawBase(base, cameraX, cameraY) {
-            const x = base.x - cameraX;
-            const y = base.y - cameraY;
-
-            if (
-                x < -150 ||
-                y < -150 ||
-                x > window.innerWidth + 150 ||
-                y > window.innerHeight + 150
-            ) {
-                return;
-            }
-
-            context.save();
-            context.globalAlpha = base.alive ? 1 : 0.25;
-
-            context.fillStyle =
-                teamColors[base.team] || '#fff';
-
-            context.fillRect(
-                x - 58,
-                y - 58,
-                116,
-                116
-            );
-
-            context.fillStyle = '#0f172a';
-
-            context.fillRect(
-                x - 42,
-                y - 42,
-                84,
-                84
-            );
-
-            context.font = '34px sans-serif';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.fillText('🏰', x, y);
-
-            context.fillStyle = '#020617';
-
-            context.fillRect(
-                x - 62,
-                y - 82,
-                124,
-                13
-            );
-
-            context.fillStyle =
-                teamColors[base.team] || '#fff';
-
-            context.fillRect(
-                x - 60,
-                y - 80,
-                120 * (base.hp / base.maxHp),
-                9
-            );
-
-            context.fillStyle = '#fff';
-            context.font = 'bold 13px sans-serif';
-
-            context.fillText(
-                `${base.hp}/${base.maxHp}`,
-                x,
-                y - 96
-            );
-
-            context.restore();
-        }
-
-        function drawTile(tile, cameraX, cameraY) {
-            const x = tile.x - cameraX;
-            const y = tile.y - cameraY;
-
-            if (
-                x < -40 ||
-                y < -40 ||
-                x > window.innerWidth + 40 ||
-                y > window.innerHeight + 40
-            ) {
-                return;
-            }
-
-            context.fillStyle =
-                tile.char === '='
-                    ? '#fde047'
-                    : tile.type === 'operator'
-                        ? '#fca5a5'
-                        : '#f8fafc';
-
-            context.strokeStyle = '#94a3b8';
-            context.lineWidth = 3;
-
-            context.beginPath();
-            context.roundRect(
-                x - 21,
-                y - 21,
-                42,
-                42,
-                8
-            );
-
-            context.fill();
-            context.stroke();
-
-            context.fillStyle = '#0f172a';
-            context.font = 'bold 17px sans-serif';
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-            context.fillText(tile.char, x, y);
-        }
-
-        function drawPlayer(player, cameraX, cameraY) {
-            const x = player.x - cameraX;
-            const y = player.y - cameraY;
-
-            context.beginPath();
-            context.arc(x, y, 21, 0, Math.PI * 2);
-
-            context.fillStyle =
-                teamColors[player.team] || '#fff';
-
-            context.fill();
-
-            context.lineWidth =
-                player.id === myId ? 5 : 2;
-
-            context.strokeStyle =
-                player.id === myId ? '#fff' : '#0f172a';
-
-            context.stroke();
-
-            context.fillStyle = '#fff';
-            context.font = 'bold 13px sans-serif';
-            context.textAlign = 'center';
-            context.textBaseline = 'bottom';
-
-            context.fillText(
-                player.name,
-                x,
-                y - 28
-            );
-
-            context.font = '12px sans-serif';
-            context.fillStyle = '#fde68a';
-
-            context.fillText(
-                `${player.score}`,
-                x,
-                y + 40
-            );
-        }
-
-        function drawWorldBorder(cameraX, cameraY) {
-            context.strokeStyle = '#64748b';
-            context.lineWidth = 8;
-
-            context.strokeRect(
-                -cameraX,
-                -cameraY,
-                mapSize,
-                mapSize
-            );
-        }
-
-        function render() {
-            context.clearRect(
-                0,
-                0,
-                window.innerWidth,
-                window.innerHeight
-            );
-
-            context.fillStyle = '#0f172a';
-            context.fillRect(
-                0,
-                0,
-                window.innerWidth,
-                window.innerHeight
-            );
-
-            const me = getMyPlayer();
-
-            const cameraX = me
-                ? Math.max(
-                    0,
-                    Math.min(
-                        mapSize - window.innerWidth,
-                        me.x - window.innerWidth / 2
-                    )
-                )
-                : 0;
-
-            const cameraY = me
-                ? Math.max(
-                    0,
-                    Math.min(
-                        mapSize - window.innerHeight,
-                        me.y - window.innerHeight / 2
-                    )
-                )
-                : 0;
-
-            drawGrid(cameraX, cameraY);
-            drawWorldBorder(cameraX, cameraY);
-
-            for (const base of Object.values(bases)) {
-                drawBase(base, cameraX, cameraY);
-            }
-
-            for (const tile of tiles.values()) {
-                drawTile(tile, cameraX, cameraY);
-            }
-
-            for (const player of players) {
-                drawPlayer(player, cameraX, cameraY);
-            }
-
-            requestAnimationFrame(render);
-        }
-
-        function setKeyboardKey(code, pressed) {
-            switch (code) {
-                case 'KeyW':
-                case 'ArrowUp':
-                    keys.up = pressed;
-                    return true;
-
-                case 'KeyS':
-                case 'ArrowDown':
-                    keys.down = pressed;
-                    return true;
-
-                case 'KeyA':
-                case 'ArrowLeft':
-                    keys.left = pressed;
-                    return true;
-
-                case 'KeyD':
-                case 'ArrowRight':
-                    keys.right = pressed;
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
-        window.addEventListener('keydown', event => {
-            if (setKeyboardKey(event.code, true)) {
-                event.preventDefault();
-            }
-
-            if (
-                event.code === 'KeyE' &&
-                !event.repeat &&
-                joined
-            ) {
-                socket.emit('attackBase');
-            }
-        });
-
-        window.addEventListener('keyup', event => {
-            if (setKeyboardKey(event.code, false)) {
-                event.preventDefault();
-            }
-        });
-
-        window.addEventListener('blur', () => {
-            keys.up = false;
-            keys.down = false;
-            keys.left = false;
-            keys.right = false;
-        });
-
-        document
-            .querySelectorAll('.mobile-button')
-            .forEach(button => {
-                const direction = button.dataset.key;
-
-                function press(event) {
-                    event.preventDefault();
-                    keys[direction] = true;
-                }
-
-                function release(event) {
-                    event.preventDefault();
-                    keys[direction] = false;
-                }
-
-                button.addEventListener('pointerdown', press);
-                button.addEventListener('pointerup', release);
-                button.addEventListener('pointercancel', release);
-                button.addEventListener('pointerleave', release);
-            });
-
-        attackMobile.addEventListener('pointerdown', event => {
-            event.preventDefault();
-
-            if (joined) {
-                socket.emit('attackBase');
-            }
-        });
-
-        setInterval(() => {
-            if (!joined) return;
-
-            socket.emit('movementInput', {
-                x:
-                    (keys.right ? 1 : 0) -
-                    (keys.left ? 1 : 0),
-
-                y:
-                    (keys.down ? 1 : 0) -
-                    (keys.up ? 1 : 0)
-            });
-        }, 50);
-
-        joinButton.addEventListener('click', () => {
-            joinMessage.textContent = '';
-
-            socket.emit('joinGame', {
-                name: nameInput.value,
-                team: teamSelect.value
-            });
-        });
-
-        nameInput.addEventListener('keydown', event => {
-            if (event.key === 'Enter') {
-                joinButton.click();
-            }
-        });
-
-        submitButton.addEventListener('click', () => {
-            if (!joined || selectedTileIds.length === 0) {
-                return;
-            }
-
-            socket.emit(
-                'submitEquation',
-                selectedTileIds
-            );
-        });
-
-        clearButton.addEventListener('click', () => {
-            selectedTileIds = [];
-            renderInventory();
-        });
-
-        socket.on('initialData', data => {
-            myId = data.socketId;
-            mapSize = data.mapSize;
-            players = data.players || [];
-            bases = data.bases || {};
-
-            tiles.clear();
-
-            for (const tile of data.tiles || []) {
-                tiles.set(tile.id, tile);
-            }
-
-            updateHud();
-            renderLeaderboard();
-        });
-
-        socket.on('joinResult', result => {
-            if (!result.success) {
-                joinMessage.textContent =
-                    result.message || 'เข้าเกมไม่สำเร็จ';
-
-                return;
-            }
-
-            joined = true;
-            loginScreen.style.display = 'none';
-            hud.style.display = 'block';
-
-            showToast('เข้าเกมสำเร็จ');
-        });
-
-        socket.on('worldState', state => {
-            players = state.players || [];
-            bases = state.bases || bases;
-
-            updateHud();
-            renderLeaderboard();
-        });
-
-        socket.on('inventory', newInventory => {
-            inventory = Array.isArray(newInventory)
-                ? newInventory
-                : [];
-
-            selectedTileIds =
-                selectedTileIds.filter(selectedId =>
-                    inventory.some(
-                        tile => tile.id === selectedId
-                    )
-                );
-
-            renderInventory();
-        });
-
-        socket.on('tileRemoved', tileId => {
-            tiles.delete(tileId);
-        });
-
-        socket.on('tileAdded', tile => {
-            tiles.set(tile.id, tile);
-        });
-
-        socket.on('baseHit', data => {
-            if (bases[data.team]) {
-                bases[data.team].hp = data.hp;
-                bases[data.team].alive = data.alive;
-            }
-        });
-
-        socket.on('equationResult', result => {
-            showToast(result.message);
-
-            if (result.success) {
-                selectedTileIds = [];
-                renderInventory();
-            }
-        });
-
-        socket.on('attackResult', result => {
-            showToast(result.message);
-        });
-
-        socket.on('notification', data => {
-            showToast(data.message);
-        });
-
-        socket.on('roundEnded', data => {
-            roundMessage.textContent = data.message;
-            roundMessage.style.display = 'grid';
-        });
-
-        socket.on('roundReset', data => {
-            bases = data.bases || bases;
-            selectedTileIds = [];
-            roundMessage.style.display = 'none';
-            renderInventory();
-
-            showToast('เริ่มรอบใหม่แล้ว');
-        });
-
-        socket.on('disconnect', () => {
-            showToast('ขาดการเชื่อมต่อกับ Server');
-        });
-
-        window.addEventListener('resize', resizeCanvas);
-
-        resizeCanvas();
-        render();
-    </script>
+        <div id="inventory" class="tile-list"></div>
+      </div>
+
+      <div class="hud-card equation-card">
+        <strong>สมการ</strong>
+        <div id="equationBuilder" class="equation-builder"></div>
+        <div class="button-row">
+          <button id="clearEquation" class="secondary-button">ล้าง</button>
+          <button id="submitEquation" class="primary-button small">ตรวจสมการ</button>
+        </div>
+      </div>
+
+      <div class="hud-card action-card">
+        <button id="activeSkill" class="skill-button">สกิลประจำสาย</button>
+        <button id="teamSkill" class="skill-button">สกิลทีม</button>
+        <button id="attackButton" class="attack-button">โจมตีฐาน (E)</button>
+      </div>
+    </section>
+
+    <section id="mobileControls" class="mobile-controls">
+      <div class="dpad">
+        <button data-key="up">▲</button>
+        <button data-key="left">◀</button>
+        <button data-key="down">▼</button>
+        <button data-key="right">▶</button>
+      </div>
+      <div class="mobile-actions">
+        <button id="mobileSkill">สกิล</button>
+        <button id="mobileAttack">E</button>
+      </div>
+    </section>
+
+    <div id="notice" class="notice"></div>
+
+    <div id="roundOverlay" class="round-overlay hidden">
+      <div class="overlay-card">
+        <h2 id="winnerText">ทีมชนะ!</h2>
+        <p>กำลังเริ่มรอบใหม่</p>
+      </div>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/shared/game-config.js"></script>
+  <script src="/character.js"></script>
+  <script src="/game.js"></script>
 </body>
 </html>
