@@ -1,14 +1,14 @@
 {
-  "name": "math-io-game",
+  "name": "math-io",
   "version": "1.0.0",
-  "description": "Magical Castle Arena",
+  "description": "Multiplayer equation battle game",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "socket.io": "^4.7.5",
-    "bcryptjs": "^2.4.3"
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
   }
 }
